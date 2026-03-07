@@ -15,7 +15,7 @@ export default function Home() {
 
       {/* Hero Section */}
       <main className="flex flex-1 flex-col items-center  bg-white justify-center text-center px-6 sm:px-16">
-        <h2 className="text-4xl sm:text-5xl font-bold text-gray-900  mb-6">
+        <h2 className="text-[50px] sm:text-5xl font-bold text-green-900 mb-6">
           Find Your Dream Home with Lucy Charms
         </h2>
         <p className="text-lg sm:text-xl text-gray-700  mb-8 max-w-2xl">
