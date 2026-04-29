@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import ListingDetailFactCell from '@/components/listings/detail/ListingDetailFactCell';
 import ListingDetailLocationSection from '@/components/listings/detail/ListingDetailLocationSection';
 import ListingDetailSidebar from '@/components/listings/detail/ListingDetailSidebar';
 import {
   getListingDetailMetrics,
   getListingMapUrls,
-} from '@/components/listings/detail/listingDetailFormat';
+} from '@/components/listings/detail/ListingDetailFormat';
 import { getListingDetail } from '@/components/listings/listingDetailData';
 import Image from 'next/image';
 import {
@@ -19,7 +20,6 @@ import {
   RulerIcon,
 } from 'lucide-react';
 import ListingDetailSpecPill from '@/components/listings/detail/ListingDetailSpecPill';
-import ListingDetailFactCell from '@/components/listings/detail/ListingDetailFactCell';
 
 type PageProps = {
   params: Promise<{ id: string }>;
