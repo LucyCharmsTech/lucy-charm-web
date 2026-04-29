@@ -1,4 +1,4 @@
-"use client"
+'use client';
 
 import { useEffect } from 'react';
 import { useHealthStore } from '@/stores/healthIndicatorStore';
@@ -14,8 +14,7 @@ export default function HealthIndicator() {
   }, [fetchHealth]);
 
   // Determine color
-  const color =
-    loading ? 'gray' : status === 'ok' ? 'green' : 'red';
+  const color = loading ? 'gray' : status === 'ok' ? 'green' : 'red';
 
   return (
     <div

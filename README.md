@@ -83,13 +83,13 @@ This project uses **Zustand v5** for client-side state management.
 
 ### Conventions
 
-| Rule | Detail |
-|---|---|
-| One store per domain | e.g. `stores/authStore.ts`, `stores/listingStore.ts` |
-| Always type the state | Define a TypeScript `interface` for every store |
-| Colocate actions | Actions (`set`, async thunks) live inside the store, not in components |
-| Apply `devtools` middleware | Wrap every store so state is inspectable in Redux DevTools |
-| Use `"use client"` | Any component that consumes a Zustand hook must be a Client Component |
+| Rule                        | Detail                                                                 |
+| --------------------------- | ---------------------------------------------------------------------- |
+| One store per domain        | e.g. `stores/authStore.ts`, `stores/listingStore.ts`                   |
+| Always type the state       | Define a TypeScript `interface` for every store                        |
+| Colocate actions            | Actions (`set`, async thunks) live inside the store, not in components |
+| Apply `devtools` middleware | Wrap every store so state is inspectable in Redux DevTools             |
+| Use `"use client"`          | Any component that consumes a Zustand hook must be a Client Component  |
 
 ### Store template
 
@@ -119,7 +119,7 @@ export const useExampleStore = create<ExampleState>()(
         set({ error: 'Failed to load items', loading: false });
       }
     },
-  }))
+  })),
 );
 ```
 
@@ -127,7 +127,7 @@ export const useExampleStore = create<ExampleState>()(
 
 ```tsx
 // components/ExampleList.tsx
-"use client"
+'use client';
 
 import { useEffect } from 'react';
 import { useExampleStore } from '@/stores/exampleStore';
@@ -152,6 +152,7 @@ export default function ExampleList() {
 ```
 
 **Key points:**
+
 - Always destructure only what the component needs — this avoids unnecessary re-renders.
 - Never call API functions directly inside components. Go through the store action instead.
 - For derived/computed values, use a selector: `const count = useExampleStore((s) => s.items.length)`.
@@ -172,13 +173,13 @@ A single, shared Axios instance is configured in `lib/axios.ts`. **Never create 
 
 Features of the shared instance:
 
-| Feature | Implementation |
-|---|---|
-| Base URL | `NEXT_PUBLIC_API_URL` env var, falls back to `http://localhost:8000/api/v1` |
-| Auth token | Request interceptor reads `localStorage.getItem('token')` and injects `Authorization: Bearer <token>` |
-| SSR safety | `typeof window !== 'undefined'` guard prevents `localStorage` access on the server |
-| Global 401 handling | Response interceptor catches 401s for centralised session expiry logic |
-| Timeout | 10 000 ms |
+| Feature             | Implementation                                                                                        |
+| ------------------- | ----------------------------------------------------------------------------------------------------- |
+| Base URL            | `NEXT_PUBLIC_API_URL` env var, falls back to `http://localhost:8000/api/v1`                           |
+| Auth token          | Request interceptor reads `localStorage.getItem('token')` and injects `Authorization: Bearer <token>` |
+| SSR safety          | `typeof window !== 'undefined'` guard prevents `localStorage` access on the server                    |
+| Global 401 handling | Response interceptor catches 401s for centralised session expiry logic                                |
+| Timeout             | 10 000 ms                                                                                             |
 
 ### Service layer — `services/`
 
@@ -196,17 +197,21 @@ export const getListings = (): Promise<AxiosResponse<Listing[]>> =>
 export const getListingById = (id: string): Promise<AxiosResponse<Listing>> =>
   api.get(`/listings/${id}`);
 
-export const createListing = (payload: Partial<Listing>): Promise<AxiosResponse<Listing>> =>
-  api.post('/listings', payload);
+export const createListing = (
+  payload: Partial<Listing>,
+): Promise<AxiosResponse<Listing>> => api.post('/listings', payload);
 
-export const updateListing = (id: string, payload: Partial<Listing>): Promise<AxiosResponse<Listing>> =>
-  api.patch(`/listings/${id}`, payload);
+export const updateListing = (
+  id: string,
+  payload: Partial<Listing>,
+): Promise<AxiosResponse<Listing>> => api.patch(`/listings/${id}`, payload);
 
 export const deleteListing = (id: string): Promise<AxiosResponse<void>> =>
   api.delete(`/listings/${id}`);
 ```
 
 **Rules:**
+
 - Always import from `@/lib/axios`, never from `axios` directly.
 - Always type both the request payload and the response with TypeScript generics.
 - Service functions must be pure — no `set`, no `useStore`, no side effects.
@@ -214,9 +219,9 @@ export const deleteListing = (id: string): Promise<AxiosResponse<void>> =>
 
 ### Environment variables
 
-| Variable | Required | Description |
-|---|---|---|
-| `NEXT_PUBLIC_API_URL` | Yes | Base URL of the backend API (e.g. `https://api.lucycharm.com/api/v1`) |
+| Variable              | Required | Description                                                           |
+| --------------------- | -------- | --------------------------------------------------------------------- |
+| `NEXT_PUBLIC_API_URL` | Yes      | Base URL of the backend API (e.g. `https://api.lucycharm.com/api/v1`) |
 
 ---
 

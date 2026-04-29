@@ -17,10 +17,13 @@ export const useHealthStore = create<HealthState>()(
       set({ loading: true });
       try {
         const res = await testHealth();
-        set({ status: res.data.status === 'ok' ? 'ok' : 'error', loading: false });
+        set({
+          status: res.data.status === 'ok' ? 'ok' : 'error',
+          loading: false,
+        });
       } catch (err) {
         set({ status: 'error', loading: false });
       }
     },
-  }))
+  })),
 );
