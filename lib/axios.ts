@@ -5,28 +5,35 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // optional timeout
+  timeout: 10000,
 });
 
-// Request interceptor: e.g., attach auth token
+// Request interceptor — attach Bearer token from the auth store when present.
+// We import the store's getState directly (avoids React hook rules in plain TS).
 api.interceptors.request.use(
   (config) => {
-    const token =
-      typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // Dynamic import avoids circular-dependency issues at module load time
+    if (typeof window !== 'undefined') {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { useAuthStore } = require('@/stores/authStore');
+      const token: string | null = useAuthStore.getState().accessToken;
+      if (token && config.headers) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     return config;
   },
   (error) => Promise.reject(error),
 );
 
-// Response interceptor: e.g., handle errors globally
+// Response interceptor — on 401 clear auth so the app redirects to login.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // handle unauthorized globally
+    if (error.response?.status === 401 && typeof window !== 'undefined') {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { useAuthStore } = require('@/stores/authStore');
+      useAuthStore.getState().clearAuth();
     }
     return Promise.reject(error);
   },

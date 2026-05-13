@@ -1,14 +1,5 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-
-import ListingDetailFactCell from '@/components/listings/detail/ListingDetailFactCell';
-import ListingDetailLocationSection from '@/components/listings/detail/ListingDetailLocationSection';
-import ListingDetailSidebar from '@/components/listings/detail/ListingDetailSidebar';
-import {
-  getListingDetailMetrics,
-  getListingMapUrls,
-} from '@/components/listings/detail/ListingDetailFormat';
-import { getListingDetail } from '@/components/listings/listingDetailData';
 import Image from 'next/image';
 import {
   BathIcon,
@@ -19,7 +10,23 @@ import {
   MapPinIcon,
   RulerIcon,
 } from 'lucide-react';
+
+import ListingDetailLocationSection from '@/components/listings/detail/ListingDetailLocationSection';
+import ListingDetailSidebar from '@/components/listings/detail/ListingDetailSidebar';
+import {
+  getListingDetailMetrics,
+  getListingMapUrls,
+} from '@/components/listings/detail/ListingDetailFormat';
 import ListingDetailSpecPill from '@/components/listings/detail/ListingDetailSpecPill';
+import ListingDetailFactCell from '@/components/listings/detail/ListingDetailFactCell';
+import ListingDetailChatWidget from '@/components/listings/detail/ListingDetailChatWidget';
+
+// Data sources
+import { getListingDetail } from '@/components/listings/listingDetailData';
+import { apiListingToDetail } from '@/lib/listingAdapter';
+import { serverFetch, isUuid } from '@/lib/serverFetch';
+import type { ApiListing } from '@/types/api';
+import type { ListingDetail } from '@/components/listings/listingDetailData';
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -27,11 +34,25 @@ type PageProps = {
 
 export default async function ListingDetailPage({ params }: PageProps) {
   const { id } = await params;
-  // Server-only: resolve listing by id (mock/API); triggers 404 when unknown.
-  const listing = getListingDetail(id);
+
+  let listing: ListingDetail | null = null;
+
+  if (isUuid(id)) {
+    // Real listing from the backend — fetch by UUID
+    const apiListing = await serverFetch<ApiListing>(`/listings/${id}`);
+    if (apiListing) {
+      listing = apiListingToDetail(apiListing);
+    }
+    // If API returned nothing for a valid UUID, 404 below
+  } else {
+    // Legacy mock ID (e.g. '1', '2') — use local mock data
+    listing = getListingDetail(id);
+  }
+
   if (!listing) {
     notFound();
   }
+
   // Parsed beds/baths/sqft + formatted property type for reuse across sections.
   const metrics = getListingDetailMetrics(listing);
   const { mapEmbedUrl, mapsLink } = getListingMapUrls(listing);
@@ -221,6 +242,12 @@ export default async function ListingDetailPage({ params }: PageProps) {
           <ListingDetailSidebar listing={listing} />
         </div>
       </div>
+
+      {/* AI chat widget — fixed bottom-right; passes listing UUID so Lucy has full context. */}
+      <ListingDetailChatWidget
+        listingId={listing.id}
+        listingTitle={listing.title}
+      />
     </div>
   );
 }

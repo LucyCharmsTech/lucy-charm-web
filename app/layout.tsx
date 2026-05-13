@@ -12,8 +12,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={cn('font-sans', geist.variable)}>
-      <body className="antialiased">
+    <html lang="en" className={cn('font-sans', geist.variable)} suppressHydrationWarning>
+      {/* suppressHydrationWarning: extensions (e.g. cz-shortcut-listen on body) mutate the DOM before hydrate */}
+      <body className="antialiased" suppressHydrationWarning>
         <HealthIndicator />
         <NavBar />
         {children}

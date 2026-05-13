@@ -1,57 +1,90 @@
 import BlimpIllustration from '@/components/BlimpIllustration';
 import AiPoweredSection from '@/components/AiPoweredSection';
 import CitySearchSection from '@/components/CitySearchSection';
-import FeaturedListingsSection from '@/components/FeaturedListingsSection';
+import FeaturedListingsSection, {
+  type FeaturedListing,
+} from '@/components/FeaturedListingsSection';
 import Footer from '@/components/Footer';
 import Link from 'next/link';
+import { apiListingToItem } from '@/lib/listingAdapter';
+import { serverFetch, buildQuery } from '@/lib/serverFetch';
+import type { ApiListing, PaginatedItems } from '@/types/api';
 
-export default function Home() {
-  const featuredListings = [
-    {
-      id: '1',
-      statusLabel: 'Active',
-      imageSrc: 'https://picsum.photos/seed/lucy-clarence/900/700',
-      imageAlt: 'Living room interior with natural light',
-      address: '88 Clarence Street',
-      bedsText: '2 beds',
-      bathsText: '1 baths',
-      priceText: '$629,000',
-      detailsHref: '/listings/1',
-    },
-    {
-      id: '2',
-      statusLabel: 'Active',
-      imageSrc: 'https://picsum.photos/seed/lucy-churchill/900/700',
-      imageAlt: 'Detached home exterior',
-      address: '462 Churchill Avenue North',
-      bedsText: '4 beds',
-      bathsText: '3.5 baths',
-      priceText: '$1,750,000',
-      detailsHref: '/listings/2',
-    },
-    {
-      id: '3',
-      statusLabel: 'Active',
-      imageSrc: 'https://picsum.photos/seed/lucy-tuscany/900/700',
-      imageAlt: 'Modern home with a pool',
-      address: '140 Tuscany Ravine Road NW',
-      bedsText: '4 beds',
-      bathsText: '3.5 baths',
-      priceText: '$995,000',
-      detailsHref: '/listings/3',
-    },
-    {
-      id: '4',
-      statusLabel: 'Active',
-      imageSrc: 'https://picsum.photos/seed/lucy-1320/900/700',
-      imageAlt: 'Bright kitchen interior',
-      address: '1320 1st Street SW',
-      bedsText: '2 beds',
-      bathsText: '2 baths',
-      priceText: '$525,000',
-      detailsHref: '/listings/4',
-    },
-  ] as const;
+// ---------------------------------------------------------------------------
+// Static fallback — shown when the API is unreachable (e.g. local dev cold start)
+// ---------------------------------------------------------------------------
+const FALLBACK_FEATURED: FeaturedListing[] = [
+  {
+    id: '1',
+    statusLabel: 'Active',
+    imageSrc: 'https://picsum.photos/seed/lucy-clarence/900/700',
+    imageAlt: 'Living room interior with natural light',
+    address: '88 Clarence Street',
+    bedsText: '2 beds',
+    bathsText: '1 baths',
+    priceText: '$629,000',
+    detailsHref: '/listings/1',
+  },
+  {
+    id: '2',
+    statusLabel: 'Active',
+    imageSrc: 'https://picsum.photos/seed/lucy-churchill/900/700',
+    imageAlt: 'Detached home exterior',
+    address: '462 Churchill Avenue North',
+    bedsText: '4 beds',
+    bathsText: '3.5 baths',
+    priceText: '$1,750,000',
+    detailsHref: '/listings/2',
+  },
+  {
+    id: '3',
+    statusLabel: 'Active',
+    imageSrc: 'https://picsum.photos/seed/lucy-tuscany/900/700',
+    imageAlt: 'Modern home with a pool',
+    address: '140 Tuscany Ravine Road NW',
+    bedsText: '4 beds',
+    bathsText: '3.5 baths',
+    priceText: '$995,000',
+    detailsHref: '/listings/3',
+  },
+  {
+    id: '4',
+    statusLabel: 'Active',
+    imageSrc: 'https://picsum.photos/seed/lucy-1320/900/700',
+    imageAlt: 'Bright kitchen interior',
+    address: '1320 1st Street SW',
+    bedsText: '2 beds',
+    bathsText: '2 baths',
+    priceText: '$525,000',
+    detailsHref: '/listings/4',
+  },
+];
+
+export default async function Home() {
+  // Fetch the four most recently added active listings from the backend.
+  // Falls back to static data if the API is unavailable.
+  const data = await serverFetch<PaginatedItems<ApiListing>>(
+    `/listings/featured${buildQuery({ size: 4 })}`,
+    { revalidate: 120 },
+  );
+
+  const featuredListings: FeaturedListing[] =
+    data && data.items.length > 0
+      ? data.items.slice(0, 4).map((l) => {
+          const item = apiListingToItem(l);
+          return {
+            id: item.id,
+            statusLabel: item.statusLabel,
+            imageSrc: item.imageSrc,
+            imageAlt: item.imageAlt,
+            address: item.address,
+            bedsText: item.bedsText,
+            bathsText: item.bathsText,
+            priceText: item.priceText,
+            detailsHref: item.detailsHref,
+          };
+        })
+      : FALLBACK_FEATURED;
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
