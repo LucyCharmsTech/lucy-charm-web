@@ -8,8 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { register, login } from '@/services/authService';
+import { fetchCurrentUser } from '@/services/userService';
 import { useAuthStore } from '@/stores/authStore';
 import type { AuthUser } from '@/types/api';
+import { userMeToAuthUser } from '@/types/api';
+import { getPostLoginPath } from '@/lib/postLoginRedirect';
 
 // Password strength helpers
 function scorePassword(pwd: string): number {
@@ -61,15 +64,19 @@ export default function RegisterPage() {
       // 2. Auto-login immediately after registration
       const tokens = await login(email.trim(), password);
 
-      const user: AuthUser = {
+      const provisional: AuthUser = {
         user_id: signupRes.user_id,
         email: signupRes.email,
         first_name: signupRes.first_name,
         last_name: signupRes.last_name,
+        role: 'client',
       };
+      setAuth(tokens.access_token, tokens.refresh_token, provisional);
 
-      setAuth(tokens.access_token, tokens.refresh_token, user);
-      router.push('/');
+      const me = await fetchCurrentUser();
+      setAuth(tokens.access_token, tokens.refresh_token, userMeToAuthUser(me));
+
+      router.push(getPostLoginPath(me.role, null));
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { detail?: string } } })?.response?.data

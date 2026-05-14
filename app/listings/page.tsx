@@ -161,6 +161,7 @@ export default function ListingsPage() {
                 {...listing}
                 detailsHref={listing.detailsHref}
                 view="grid"
+                saveListingId={listing.id}
               />
             ))}
           </div>
@@ -175,6 +176,7 @@ export default function ListingsPage() {
                 {...listing}
                 detailsHref={listing.detailsHref}
                 view="list"
+                saveListingId={listing.id}
               />
             ))}
           </div>

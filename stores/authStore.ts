@@ -24,6 +24,9 @@ interface AuthState {
     user: AuthUser,
   ) => void;
 
+  /** Update persisted user fields (e.g. after GET /users/me on refresh). */
+  updateUser: (user: AuthUser) => void;
+
   /** Wipe everything (called on logout or 401 that can't be refreshed). */
   clearAuth: () => void;
 
@@ -45,6 +48,9 @@ export const useAuthStore = create<AuthState>()(
 
         setAuth: (accessToken, refreshToken, user) =>
           set({ accessToken, refreshToken, user }, false, 'auth/setAuth'),
+
+        updateUser: (user) =>
+          set({ user }, false, 'auth/updateUser'),
 
         clearAuth: () =>
           set(

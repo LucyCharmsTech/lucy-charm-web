@@ -68,6 +68,15 @@ Set this in `.env` (or `.env.local`) before starting the dev server.
 - Accepts `?q=` query param (pre-fills the input — linked from the homepage AI section).
 - Shows typing indicator, suggested prompts, send errors with input restoration.
 
+### Lead capture (Phase 0)
+
+- **`POST /lead_capture/contact_form`** — public; body includes name, email, message, optional `topic`, optional `listing_id`, optional `lead_type` (`buyer` \| `seller` \| `investor`). Optional JWT or `X-Anonymous-Session-Token` for merge. Returns **202** immediately; capture runs in a background task (same pattern as showing-request lead hooks).
+
+---
+
+- **Where in the UI:** `/profile` → **Saved homes** section (`SavedListingsSection`), or directly `/profile#saved-homes`. Guests use the same page; the API keys saves by `X-Anonymous-Session-Token` from `localStorage` (`lib/anonymousSession.ts`).
+- **Nav:** **Saved homes** in the header (guests and signed-in menu) links to `/profile#saved-homes`. Legacy `/saved` redirects there.
+
 ---
 
 ## Graceful degradation

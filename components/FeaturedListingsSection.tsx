@@ -28,7 +28,7 @@ export default function FeaturedListingsSection({
     <section className="mx-auto w-full max-w-6xl px-6 sm:px-10 pb-16 sm:pb-24">
       <div className="mt-10 grid gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
         {listings.slice(0, 4).map((listing) => (
-          <ListingCard key={listing.id} {...listing} />
+          <ListingCard key={listing.id} {...listing} saveListingId={listing.id} />
         ))}
       </div>
 

@@ -3,7 +3,16 @@
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
-import { LogOutIcon, UserIcon, ChevronDownIcon, MenuIcon, XIcon } from 'lucide-react';
+import {
+  LogOutIcon,
+  UserIcon,
+  ChevronDownIcon,
+  MenuIcon,
+  XIcon,
+  LayoutGridIcon,
+  ShieldIcon,
+  HeartIcon,
+} from 'lucide-react';
 
 import { useShallow } from 'zustand/react/shallow';
 import { useAuthStore } from '@/stores/authStore';
@@ -70,6 +79,10 @@ export default function NavBar() {
       ? `${user.first_name} ${user.last_name}`
       : user?.email ?? '';
 
+  if (pathname.startsWith('/agent') || pathname.startsWith('/admin')) {
+    return null;
+  }
+
   return (
     <header className="sticky top-0 z-40 w-full border-b border-zinc-200/70 bg-white/90 backdrop-blur dark:border-zinc-800/70 dark:bg-zinc-950/90">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
@@ -99,6 +112,22 @@ export default function NavBar() {
               {link.label}
             </Link>
           ))}
+          {isAuthenticated && user?.role === 'agent' && (
+            <Link
+              href="/agent"
+              className="text-sm font-medium text-zinc-600 transition hover:text-primarycolor focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:text-zinc-300"
+            >
+              Agent workspace
+            </Link>
+          )}
+          {isAuthenticated && user?.role === 'superadmin' && (
+            <Link
+              href="/admin"
+              className="text-sm font-medium text-zinc-600 transition hover:text-primarycolor focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:text-zinc-300"
+            >
+              Admin console
+            </Link>
+          )}
         </nav>
 
         {/* ── Right side ── */}
@@ -152,6 +181,36 @@ export default function NavBar() {
                     <UserIcon className="size-4 text-zinc-400" aria-hidden="true" />
                     My profile
                   </Link>
+                  <Link
+                    href="/profile#saved-homes"
+                    role="menuitem"
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-zinc-700 transition hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
+                    onClick={() => setDropdownOpen(false)}
+                  >
+                    <HeartIcon className="size-4 text-primarycolor" aria-hidden="true" />
+                    Saved homes
+                  </Link>
+
+                  {user?.role === 'agent' && (
+                    <Link
+                      href="/agent"
+                      role="menuitem"
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-zinc-700 transition hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      Agent workspace
+                    </Link>
+                  )}
+                  {user?.role === 'superadmin' && (
+                    <Link
+                      href="/admin"
+                      role="menuitem"
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-zinc-700 transition hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      Admin console
+                    </Link>
+                  )}
 
                   <button
                     type="button"
@@ -168,6 +227,13 @@ export default function NavBar() {
           ) : (
             /* ── Auth CTAs ── */
             <div className="hidden md:flex items-center gap-2">
+              <Link
+                href="/profile#saved-homes"
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:text-primarycolor focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:text-zinc-300"
+              >
+                <HeartIcon className="size-3.5 text-primarycolor" aria-hidden="true" />
+                Saved homes
+              </Link>
               <Link
                 href="/login"
                 className="rounded-full px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:text-primarycolor focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:text-zinc-300"
@@ -230,6 +296,30 @@ export default function NavBar() {
                 </Link>
               </li>
             ))}
+            {isAuthenticated && user?.role === 'agent' && (
+              <li>
+                <Link
+                  href="/agent"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-primarycolor/5 hover:text-primarycolor dark:text-zinc-200"
+                >
+                  <LayoutGridIcon className="size-4 text-zinc-400" aria-hidden="true" />
+                  Agent workspace
+                </Link>
+              </li>
+            )}
+            {isAuthenticated && user?.role === 'superadmin' && (
+              <li>
+                <Link
+                  href="/admin"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-primarycolor/5 hover:text-primarycolor dark:text-zinc-200"
+                >
+                  <ShieldIcon className="size-4 text-zinc-400" aria-hidden="true" />
+                  Admin console
+                </Link>
+              </li>
+            )}
             <li>
               <Link
                 href="/contact"
@@ -255,6 +345,42 @@ export default function NavBar() {
                     <p className="truncate text-[11px] text-zinc-500">{user?.email}</p>
                   </div>
                 </div>
+                <Link
+                  href="/profile"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-primarycolor/5 hover:text-primarycolor dark:text-zinc-200"
+                >
+                  <UserIcon className="size-4 text-zinc-400" aria-hidden="true" />
+                  My profile
+                </Link>
+                <Link
+                  href="/profile#saved-homes"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-primarycolor/5 hover:text-primarycolor dark:text-zinc-200"
+                >
+                  <HeartIcon className="size-4 text-primarycolor" aria-hidden="true" />
+                  Saved homes
+                </Link>
+                {user?.role === 'agent' && (
+                  <Link
+                    href="/agent"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-primarycolor/5 hover:text-primarycolor dark:text-zinc-200"
+                  >
+                    <LayoutGridIcon className="size-4 text-zinc-400" aria-hidden="true" />
+                    Agent workspace
+                  </Link>
+                )}
+                {user?.role === 'superadmin' && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-primarycolor/5 hover:text-primarycolor dark:text-zinc-200"
+                  >
+                    <ShieldIcon className="size-4 text-zinc-400" aria-hidden="true" />
+                    Admin console
+                  </Link>
+                )}
                 <button
                   type="button"
                   onClick={handleLogout}
@@ -266,6 +392,14 @@ export default function NavBar() {
               </div>
             ) : (
               <div className="flex flex-col gap-2">
+                <Link
+                  href="/profile#saved-homes"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center justify-center gap-2 rounded-xl border border-primarycolor/25 bg-primarycolor/6 px-4 py-2.5 text-center text-sm font-semibold text-primarycolor transition hover:bg-primarycolor/10 dark:border-primarycolor/30 dark:bg-primarycolor/10"
+                >
+                  <HeartIcon className="size-4 shrink-0" aria-hidden="true" />
+                  Saved homes
+                </Link>
                 <Link
                   href="/login"
                   className="block rounded-xl border border-zinc-200/80 px-4 py-2.5 text-center text-sm font-semibold text-zinc-700 transition hover:border-primarycolor/40 hover:bg-primarycolor/5 dark:border-zinc-700 dark:text-zinc-200"

@@ -8,8 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { login } from '@/services/authService';
+import { fetchCurrentUser } from '@/services/userService';
 import { useAuthStore } from '@/stores/authStore';
 import type { AuthUser } from '@/types/api';
+import { userMeToAuthUser } from '@/types/api';
+import { getPostLoginPath } from '@/lib/postLoginRedirect';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,32 +32,22 @@ export default function LoginPage() {
     try {
       const tokens = await login(email.trim(), password);
 
-      // Decode first_name / last_name from JWT payload (base64 middle section)
-      // The backend embeds user_id + stamp, so we use email as display fallback.
-      // A real /users/me call would give us the full profile; for now we store
-      // what we have and let the NavBar show the email initial.
-      const user: AuthUser = {
-        user_id: '',   // filled below
+      // Persist tokens first so the Axios interceptor can call GET /users/me.
+      const provisional: AuthUser = {
+        user_id: '',
         email: email.trim(),
         first_name: '',
         last_name: '',
+        role: 'client',
       };
+      setAuth(tokens.access_token, tokens.refresh_token, provisional);
 
-      // Decode JWT to extract user_id (payload is base64url, middle segment)
-      try {
-        const payload = JSON.parse(
-          atob(tokens.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')),
-        ) as { sub?: string; user_id?: string };
-        user.user_id = payload.sub ?? payload.user_id ?? '';
-      } catch {
-        // Decoding failed — leave user_id blank; not critical for auth
-      }
+      const me = await fetchCurrentUser();
+      const authUser = userMeToAuthUser(me);
+      setAuth(tokens.access_token, tokens.refresh_token, authUser);
 
-      setAuth(tokens.access_token, tokens.refresh_token, user);
-
-      // Redirect to the page that sent the user here, or home
       const params = new URLSearchParams(window.location.search);
-      router.push(params.get('redirect') ?? '/');
+      router.push(getPostLoginPath(me.role, params.get('redirect')));
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { detail?: string } } })?.response?.data

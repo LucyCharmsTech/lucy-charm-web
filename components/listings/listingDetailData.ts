@@ -1,5 +1,13 @@
 import { MOCK_LISTINGS, type ListingItem } from '@/components/listings/data';
 
+/** Mirrors ApiListingAgentSummary — assigned agent on a listing detail view. */
+export type ListingAgentSummary = {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+};
+
 export type ListingDetail = ListingItem & {
   postalCode: string;
   province: string;
@@ -15,6 +23,7 @@ export type ListingDetail = ListingItem & {
   aiSummary: string;
   lat: number;
   lng: number;
+  agent: ListingAgentSummary | null;
 };
 
 const DEFAULT_DETAIL_FIELDS: Omit<ListingDetail, keyof ListingItem> = {
@@ -34,11 +43,18 @@ const DEFAULT_DETAIL_FIELDS: Omit<ListingDetail, keyof ListingItem> = {
     'Compact loft-style condo with strong walkability in the ByWard Market. Best for buyers who want low maintenance and proximity to downtown amenities.',
   lat: 45.42111,
   lng: -75.6903,
+  agent: null,
 };
 
 /** Richer mock copy for listing `1` to match marketing screenshots */
 const OVERRIDES: Partial<Record<string, Partial<ListingDetail>>> = {
   '1': {
+    agent: {
+      id: 'aaaaaaaa-bbbb-bbbb-bbbb-cccccccccccc',
+      name: 'Alex Mercer',
+      phone: '+1 613-555-0100',
+      email: 'alex.mercer@example.com', 
+    },
     postalCode: 'K1N 5P5',
     province: 'ON',
     country: 'Canada',

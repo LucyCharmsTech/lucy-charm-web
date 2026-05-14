@@ -1,5 +1,7 @@
 import './globals.css';
 import HealthIndicator from '../components/HealthIndicator';
+import AuthHydrator from '../components/AuthHydrator';
+import SiteSignupSoftNudge from '@/components/auth/SiteSignupSoftNudge';
 import { Geist } from 'next/font/google';
 import { cn } from '@/lib/utils';
 import NavBar from '@/components/NavBar';
@@ -16,7 +18,9 @@ export default function RootLayout({
       {/* suppressHydrationWarning: extensions (e.g. cz-shortcut-listen on body) mutate the DOM before hydrate */}
       <body className="antialiased" suppressHydrationWarning>
         <HealthIndicator />
+        <AuthHydrator />
         <NavBar />
+        <SiteSignupSoftNudge />
         {children}
       </body>
     </html>

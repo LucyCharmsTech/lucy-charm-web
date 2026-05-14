@@ -1,7 +1,11 @@
+'use client';
+
 import Link from 'next/link';
 import React from 'react';
 
 import { BathIcon, BedDoubleIcon, MapPinIcon, RulerIcon } from 'lucide-react';
+
+import SaveListingButton from '@/components/listings/SaveListingButton';
 
 type ListingCardProps = {
   statusLabel?: string;
@@ -17,7 +21,14 @@ type ListingCardProps = {
   priceText: string;
   currency?: string;
   detailsHref: string;
+  /** Second full-width CTA under View Details (e.g. portal client insights). */
+  insightsHref?: string;
+  insightsLabel?: string;
   view?: 'grid' | 'list';
+  /** Listing UUID — when set, shows save / unsave (works signed-in or anonymously). */
+  saveListingId?: string | null;
+  /** Notified after a successful save or unsave from the card. */
+  onSaveChange?: (next: { saved: boolean; listingId: string }) => void;
 };
 
 export default function ListingCard({
@@ -34,7 +45,11 @@ export default function ListingCard({
   priceText,
   currency = 'CAD',
   detailsHref,
+  insightsHref,
+  insightsLabel,
   view = 'grid',
+  saveListingId,
+  onSaveChange,
 }: ListingCardProps) {
   if (view === 'list') {
     return (
@@ -95,13 +110,29 @@ export default function ListingCard({
             )}
           </div>
         </div>
-        <div className="flex items-center pr-4">
+        <div className="flex flex-col items-stretch justify-center gap-2 pr-4">
+          {saveListingId ? (
+            <SaveListingButton
+              listingId={saveListingId}
+              variant="inline"
+              className="w-full"
+              onChange={onSaveChange}
+            />
+          ) : null}
           <Link
             href={detailsHref}
             className="inline-flex h-9 items-center justify-center rounded-full border border-primarycolor/35 bg-white px-4 text-xs font-semibold text-primarycolor transition hover:bg-primarycolor/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2 dark:bg-zinc-950/10"
           >
             View Details
           </Link>
+          {insightsHref && insightsLabel ? (
+            <Link
+              href={insightsHref}
+              className="inline-flex h-9 items-center justify-center rounded-full border border-zinc-200 bg-white px-4 text-xs font-semibold text-zinc-800 transition hover:border-zinc-300 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2 dark:border-zinc-600 dark:bg-zinc-950/10 dark:text-zinc-100 dark:hover:bg-zinc-800/80"
+            >
+              {insightsLabel}
+            </Link>
+          ) : null}
         </div>
       </article>
     );
@@ -116,7 +147,7 @@ export default function ListingCard({
           loading="lazy"
           className="h-52 w-full object-cover"
         />
-        <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
+        <div className="absolute left-3 top-3 z-[1] flex flex-wrap gap-1.5">
           <span className="inline-flex items-center rounded-full bg-emerald-600/90 px-2.5 py-0.5 text-[11px] font-semibold text-white shadow-sm">
             {statusLabel}
           </span>
@@ -164,13 +195,29 @@ export default function ListingCard({
           </div>
         )}
 
-        <div className="mt-3">
+        <div className="mt-3 flex flex-col gap-2">
+          {saveListingId ? (
+            <SaveListingButton
+              listingId={saveListingId}
+              variant="inline"
+              className="w-full"
+              onChange={onSaveChange}
+            />
+          ) : null}
           <Link
             href={detailsHref}
             className="inline-flex h-9 w-full items-center justify-center rounded-full border border-primarycolor/35 bg-white px-4 text-sm font-semibold text-primarycolor transition hover:border-primarycolor/55 hover:bg-primarycolor/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2 dark:bg-zinc-950/10"
           >
             View Details
           </Link>
+          {insightsHref && insightsLabel ? (
+            <Link
+              href={insightsHref}
+              className="inline-flex h-9 w-full items-center justify-center rounded-full border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 transition hover:border-zinc-300 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2 dark:border-zinc-600 dark:bg-zinc-950/10 dark:text-zinc-100 dark:hover:bg-zinc-800/80"
+            >
+              {insightsLabel}
+            </Link>
+          ) : null}
         </div>
       </div>
     </article>
