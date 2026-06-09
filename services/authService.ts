@@ -62,3 +62,17 @@ export async function refreshAccessToken(
   });
   return res.data;
 }
+
+// ---------------------------------------------------------------------------
+// Google OAuth (ID token flow)
+// ---------------------------------------------------------------------------
+
+/**
+ * Exchange a Google credential (ID token) for a Lucy Charms token pair.
+ * The `idToken` is the `credential` field from Google Identity Services'
+ * CredentialResponse (``google.accounts.id.initialize`` callback).
+ */
+export async function googleLogin(idToken: string): Promise<AuthToken> {
+  const res = await api.post<AuthToken>('/auth/google', { id_token: idToken });
+  return res.data;
+}

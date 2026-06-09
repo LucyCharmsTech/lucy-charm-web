@@ -6,9 +6,17 @@
 import api from '@/lib/axios';
 import type {
   AiSession,
+  ChatRequestHumanResponse,
   ChatSendRequest,
   ChatSendResponse,
 } from '@/types/api';
+
+/**
+ * `/chat/send` may chain: main reply → intent classification → optional rolling
+ * summary (`CHAT_AUTO_SUMMARY_AFTER_TURN` on the API). Slow models can exceed 2 minutes
+ * total; the default axios instance uses 10s, so this timeout must be set per request.
+ */
+export const CHAT_SEND_TIMEOUT_MS = 300_000;
 
 // ---------------------------------------------------------------------------
 // Session management
@@ -49,10 +57,26 @@ export async function createAiSession(options: {
 export async function sendChatMessage(
   payload: ChatSendRequest,
 ): Promise<ChatSendResponse> {
-  // LLM round-trips routinely exceed the default 10s axios timeout; keep this
-  // high enough for slow models / cold starts without blocking the UI forever.
   const res = await api.post<ChatSendResponse>('/chat/send', payload, {
-    timeout: 120_000,
+    timeout: CHAT_SEND_TIMEOUT_MS,
+  });
+  return res.data;
+}
+
+/**
+ * User-initiated request for a human agent from the chat widget.
+ * Creates an ai_escalations row with reason "human_verification" and
+ * triggers the HubSpot lead-capture summary pipeline.
+ */
+export async function requestHumanAgent(options: {
+  sessionId: string;
+  listingId?: string;
+  message?: string;
+}): Promise<ChatRequestHumanResponse> {
+  const res = await api.post<ChatRequestHumanResponse>('/chat/request_human', {
+    session_id: options.sessionId,
+    listing_id: options.listingId ?? null,
+    message: options.message ?? null,
   });
   return res.data;
 }

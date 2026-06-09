@@ -2,7 +2,7 @@
 
 import { BotIcon, UserIcon } from 'lucide-react';
 
-import AssistantResponseMeta from '@/components/chat/AssistantResponseMeta';
+import AssistantTrustLayer from '@/components/chat/AssistantTrustLayer';
 import type { ChatMessage } from '@/types/api';
 
 export default function ListingDetailChatBubble({ msg }: { msg: ChatMessage }) {
@@ -32,8 +32,12 @@ export default function ListingDetailChatBubble({ msg }: { msg: ChatMessage }) {
       >
         <p className="whitespace-pre-wrap">{msg.text}</p>
         {!isUser && (
-          <AssistantResponseMeta
+          <AssistantTrustLayer
             confidence_score={msg.confidence_score ?? null}
+            listing_fields_used={msg.listing_fields_used}
+            model_version={msg.model_version}
+            prompt_version={msg.prompt_version}
+            escalation_flag={msg.escalation_flag}
           />
         )}
       </div>

@@ -182,6 +182,7 @@ export default function ChatPage() {
         const response = await sendChatMessage({
           session_id: sessionId,
           message_text: messageText,
+          page_url: typeof window !== 'undefined' ? window.location.href : undefined,
         });
 
         const assistantMsg: ChatMessage = {
@@ -197,9 +198,22 @@ export default function ChatPage() {
         // Remove the user bubble so they can retry
         setMessages((prev) => prev.filter((m) => m.id !== userMsg.id));
         setInputValue(messageText);
-        const ax = err as { code?: string; message?: string; response?: { status?: number; data?: { detail?: string } } };
-        if (ax.code === 'ECONNABORTED' || ax.message?.toLowerCase().includes('timeout')) {
-          setSendErrorDetail('Lucy took too long to respond. Please try again — the model may be busy.');
+        const ax = err as {
+          code?: string;
+          message?: string;
+          response?: { status?: number; data?: { detail?: string } };
+        };
+        const low = ax.message?.toLowerCase() ?? '';
+        const aborted =
+          ax.code === 'ECONNABORTED' ||
+          ax.code === 'ERR_CANCELED' ||
+          low.includes('timeout') ||
+          low.includes('canceled') ||
+          low.includes('cancelled');
+        if (aborted) {
+          setSendErrorDetail(
+            'Lucy took too long or the request was interrupted before the server finished (replies plus optional session summary can take several minutes on slow models). Please try again.',
+          );
         } else if (ax.response?.data?.detail) {
           setSendErrorDetail(String(ax.response.data.detail));
         } else if (ax.response?.status) {

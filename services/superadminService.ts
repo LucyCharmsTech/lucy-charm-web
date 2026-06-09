@@ -115,3 +115,33 @@ export async function deleteLeadTag(leadId: string, tagId: string): Promise<Lead
   const res = await api.delete<LeadTagRead>(`/superadmin/leads/${leadId}/tags/${tagId}`);
   return res.data;
 }
+
+/**
+ * Trigger a browser CSV download for AI chat messages.
+ * Pass sessionId to scope to one session; omit for a full platform export.
+ * Uses a native fetch so the browser handles the file-save dialog.
+ */
+export async function downloadChatLogsCsv(sessionId?: string): Promise<void> {
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+  const token =
+    typeof window !== 'undefined' ? (await import('@/stores/authStore')).useAuthStore.getState().accessToken : null;
+
+  const url = new URL(`${baseUrl}/ai_messages/export`);
+  if (sessionId) url.searchParams.set('session_id', sessionId);
+
+  const res = await fetch(url.toString(), {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  if (!res.ok) throw new Error(`Export failed: ${res.status}`);
+
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = objectUrl;
+  a.download = sessionId ? `chat-log-${sessionId}.csv` : 'chat-logs.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(objectUrl);
+}

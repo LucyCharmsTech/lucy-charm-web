@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 
 import ListingDetailLocationSection from '@/components/listings/detail/ListingDetailLocationSection';
+import ListingDetailInteractiveShell from '@/components/listings/detail/ListingDetailInteractiveShell';
 import ListingDetailSidebar from '@/components/listings/detail/ListingDetailSidebar';
 import {
   getListingDetailMetrics,
@@ -19,7 +20,6 @@ import {
 } from '@/components/listings/detail/ListingDetailFormat';
 import ListingDetailSpecPill from '@/components/listings/detail/ListingDetailSpecPill';
 import ListingDetailFactCell from '@/components/listings/detail/ListingDetailFactCell';
-import ListingDetailChatWidget from '@/components/listings/detail/ListingDetailChatWidget';
 
 // Data sources
 import { getListingDetail } from '@/components/listings/listingDetailData';
@@ -59,6 +59,10 @@ export default async function ListingDetailPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-[#fef6f9] dark:bg-zinc-950">
+      <ListingDetailInteractiveShell
+        listingId={listing.id}
+        listingTitle={listing.title ?? listing.address}
+      >
       {/* Page shell — light marketing background; inner wrapper centers content and caps width. */}
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
         {/* Back navigation — returns shoppers to the searchable grid. */}
@@ -242,12 +246,7 @@ export default async function ListingDetailPage({ params }: PageProps) {
           <ListingDetailSidebar listing={listing} />
         </div>
       </div>
-
-      {/* AI chat widget — fixed bottom-right; passes listing UUID so Lucy has full context. */}
-      <ListingDetailChatWidget
-        listingId={listing.id}
-        listingTitle={listing.title}
-      />
+      </ListingDetailInteractiveShell>
     </div>
   );
 }

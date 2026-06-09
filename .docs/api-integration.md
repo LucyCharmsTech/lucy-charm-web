@@ -37,7 +37,7 @@ Set this in `.env` (or `.env.local`) before starting the dev server.
 | `lib/listingAdapter.ts` | Converts `ApiListing` → `ListingItem` / `ListingDetail` (the shapes expected by UI components) |
 | `lib/serverFetch.ts` | Server-side fetch helper; `isUuid()` and `buildQuery()` utilities |
 | `services/listingsService.ts` | Client-side listings API: `fetchFeaturedListings`, `searchListings`, `fetchListingById`, `buildSearchParams` |
-| `services/chatService.ts` | Client-side chat API: `createAiSession`, `sendChatMessage`, `streamChatMessage`, `getOrCreateSessionToken` |
+| `services/chatService.ts` | Client-side chat API: `createAiSession`, `sendChatMessage` (uses `CHAT_SEND_TIMEOUT_MS`, currently 5 minutes — `/chat/send` can include reply + intent + server-side rolling summary), `streamChatMessage`, `getOrCreateAnonToken` |
 
 ---
 

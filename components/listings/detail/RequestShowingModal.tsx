@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuthStore } from '@/stores/authStore';
+import { useListingChatSession } from '@/components/listings/detail/ListingChatSessionContext';
 import { submitShowingRequest } from '@/services/showingService';
 import type { ShowingType } from '@/types/api';
 
@@ -35,6 +36,7 @@ const DURATIONS = [
 export default function RequestShowingModal({ open, listingId, listingTitle, onClose }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const { user } = useAuthStore(useShallow((s) => ({ user: s.user })));
+  const { aiSessionId } = useListingChatSession();
 
   // Pre-fill from auth store when signed in
   const [firstName, setFirstName] = useState(user?.first_name ?? '');
@@ -113,6 +115,7 @@ export default function RequestShowingModal({ open, listingId, listingTitle, onC
         lead_type: 'buyer',
         is_pre_approved: isPreApproved,
         financing_notes: financingNotes.trim() || undefined,
+        ai_session_id: aiSessionId ?? undefined,
       });
       setSubmitted(true);
     } catch (err: unknown) {

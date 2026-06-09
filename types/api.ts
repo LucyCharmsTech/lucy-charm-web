@@ -334,6 +334,8 @@ export type ChatSendRequest = {
   session_id: string;
   message_text: string;
   listing_id?: string;
+  /** Browser URL from which the message was sent — stored for the audit log. */
+  page_url?: string;
 };
 
 /** Mirrors ChatSendResponse */
@@ -342,6 +344,15 @@ export type ChatSendResponse = {
   intent: string | null;
   escalation_flag: boolean;
   confidence_score: number | null;
+  /** Listing fields that were injected into the prompt context (trust layer). */
+  listing_fields_used: string[] | null;
+  model_version: string | null;
+  prompt_version: string | null;
+};
+
+export type ChatRequestHumanResponse = {
+  status: string;
+  escalation_id: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -394,6 +405,8 @@ export type ShowingRequestCreate = {
   is_pre_approved?: boolean;
   financing_notes?: string;
   referral_source?: string;
+  /** Optional Lucy chat session — attaches conversation context to HubSpot. */
+  ai_session_id?: string;
 };
 
 /** Mirrors ShowingRequestUpdate body */
@@ -415,4 +428,8 @@ export type ChatMessage = {
   timestamp: Date;
   /** Populated on assistant messages from `ChatSendResponse` */
   confidence_score?: number | null;
+  listing_fields_used?: string[] | null;
+  model_version?: string | null;
+  prompt_version?: string | null;
+  escalation_flag?: boolean;
 };

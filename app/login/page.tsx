@@ -13,6 +13,7 @@ import { useAuthStore } from '@/stores/authStore';
 import type { AuthUser } from '@/types/api';
 import { userMeToAuthUser } from '@/types/api';
 import { getPostLoginPath } from '@/lib/postLoginRedirect';
+import { GoogleLoginButton } from '@/components/auth/GoogleAuthButton';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -83,6 +84,31 @@ export default function LoginPage() {
               {error}
             </div>
           )}
+
+          {/* Google OAuth */}
+          <div className="mb-5">
+            <GoogleLoginButton
+              redirectParam={
+                typeof window !== 'undefined'
+                  ? new URLSearchParams(window.location.search).get('redirect')
+                  : null
+              }
+              onStart={() => setError(null)}
+              onError={(msg) => setError(msg)}
+            />
+          </div>
+
+          {/* Divider */}
+          <div className="relative mb-5">
+            <div className="absolute inset-0 flex items-center" aria-hidden="true">
+              <div className="w-full border-t border-zinc-200 dark:border-zinc-700" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-white px-2 text-zinc-400 dark:bg-zinc-900/60 dark:text-zinc-500">
+                or continue with email
+              </span>
+            </div>
+          </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>

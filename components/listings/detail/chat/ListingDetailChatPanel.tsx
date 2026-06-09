@@ -4,8 +4,10 @@ import type { RefObject } from 'react';
 import {
   AlertCircleIcon,
   BotIcon,
+  CheckCircleIcon,
   LoaderIcon,
   SendIcon,
+  UserRoundCheckIcon,
   XIcon,
 } from 'lucide-react';
 
@@ -29,6 +31,9 @@ export type ListingDetailChatPanelProps = {
   onSend: (text?: string) => void;
   onClose: () => void;
   messagesEndRef: RefObject<HTMLDivElement | null>;
+  onRequestHuman?: () => void;
+  humanRequested?: boolean;
+  humanRequestPending?: boolean;
 };
 
 export default function ListingDetailChatPanel({
@@ -45,6 +50,9 @@ export default function ListingDetailChatPanel({
   onSend,
   onClose,
   messagesEndRef,
+  onRequestHuman,
+  humanRequested = false,
+  humanRequestPending = false,
 }: ListingDetailChatPanelProps) {
   return (
     <div
@@ -83,6 +91,37 @@ export default function ListingDetailChatPanel({
               aria-label="Connecting…"
             />
           )}
+
+          {/* One-click human handoff */}
+          {onRequestHuman && (
+            <button
+              type="button"
+              onClick={onRequestHuman}
+              disabled={!sessionId || humanRequested || humanRequestPending}
+              aria-label={humanRequested ? 'Agent notified' : 'Talk to a human agent'}
+              title={humanRequested ? 'An agent has been notified' : 'Request a human agent'}
+              className={`flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor disabled:cursor-not-allowed ${
+                humanRequested
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : 'text-zinc-500 hover:text-primarycolor dark:text-zinc-400 dark:hover:text-primarycolor'
+              }`}
+            >
+              {humanRequested ? (
+                <>
+                  <CheckCircleIcon className="size-3" aria-hidden="true" />
+                  Notified
+                </>
+              ) : humanRequestPending ? (
+                <LoaderIcon className="size-3 animate-spin" aria-hidden="true" />
+              ) : (
+                <>
+                  <UserRoundCheckIcon className="size-3" aria-hidden="true" />
+                  Human
+                </>
+              )}
+            </button>
+          )}
+
           <button
             type="button"
             onClick={onClose}

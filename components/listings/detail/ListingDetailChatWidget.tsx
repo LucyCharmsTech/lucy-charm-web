@@ -7,12 +7,14 @@ import { useShallow } from 'zustand/react/shallow';
 import {
   createAiSession,
   sendChatMessage,
+  requestHumanAgent,
   getOrCreateAnonToken,
 } from '@/services/chatService';
 import { useAuthStore } from '@/stores/authStore';
 import ListingDetailChatFab from '@/components/listings/detail/chat/ListingDetailChatFab';
 import ListingDetailChatLoginGate from '@/components/listings/detail/chat/ListingDetailChatLoginGate';
 import ListingDetailChatPanel from '@/components/listings/detail/chat/ListingDetailChatPanel';
+import { useListingChatSession } from '@/components/listings/detail/ListingChatSessionContext';
 import type { ChatMessage } from '@/types/api';
 
 type ListingDetailChatWidgetProps = {
@@ -35,6 +37,7 @@ export default function ListingDetailChatWidget({
   );
   const isAuthenticated = Boolean(accessToken);
 
+  const { setAiSessionId } = useListingChatSession();
   const [open, setOpen] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionError, setSessionError] = useState(false);
@@ -43,6 +46,8 @@ export default function ListingDetailChatWidget({
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState(false);
   const [sendErrorDetail, setSendErrorDetail] = useState<string | null>(null);
+  const [humanRequested, setHumanRequested] = useState(false);
+  const [humanRequestPending, setHumanRequestPending] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -60,12 +65,13 @@ export default function ListingDetailChatWidget({
           session = await createAiSession({ sessionToken: token });
         }
         setSessionId(session.id);
+        setAiSessionId(session.id);
       } catch {
         setSessionError(true);
       }
     }
     init();
-  }, [open, sessionId, sessionError, isAuthenticated, userId, listingId]);
+  }, [open, sessionId, sessionError, isAuthenticated, userId, listingId, setAiSessionId]);
 
   useEffect(() => {
     if (open) {
@@ -96,6 +102,7 @@ export default function ListingDetailChatWidget({
           session_id: sessionId,
           message_text: messageText,
           listing_id: listingId,
+          page_url: typeof window !== 'undefined' ? window.location.href : undefined,
         });
 
         const assistantMsg: ChatMessage = {
@@ -104,6 +111,10 @@ export default function ListingDetailChatWidget({
           text: response.reply_text,
           timestamp: new Date(),
           confidence_score: response.confidence_score,
+          listing_fields_used: response.listing_fields_used,
+          model_version: response.model_version,
+          prompt_version: response.prompt_version,
+          escalation_flag: response.escalation_flag,
         };
         setMessages((prev) => [...prev, assistantMsg]);
       } catch (err: unknown) {
@@ -115,9 +126,16 @@ export default function ListingDetailChatWidget({
           message?: string;
           response?: { status?: number; data?: { detail?: string } };
         };
-        if (ax.code === 'ECONNABORTED' || ax.message?.toLowerCase().includes('timeout')) {
+        const low = ax.message?.toLowerCase() ?? '';
+        const aborted =
+          ax.code === 'ECONNABORTED' ||
+          ax.code === 'ERR_CANCELED' ||
+          low.includes('timeout') ||
+          low.includes('canceled') ||
+          low.includes('cancelled');
+        if (aborted) {
           setSendErrorDetail(
-            'Lucy took too long to respond. Please try again — the model may be busy.',
+            'Lucy took too long or the request was interrupted before the server finished (replies plus optional session summary can take several minutes on slow models). Please try again.',
           );
         } else if (ax.response?.data?.detail) {
           setSendErrorDetail(String(ax.response.data.detail));
@@ -134,6 +152,22 @@ export default function ListingDetailChatWidget({
     },
     [inputValue, sessionId, sending, listingId],
   );
+
+  const handleRequestHuman = useCallback(async () => {
+    if (!sessionId || humanRequestPending || humanRequested) return;
+    setHumanRequestPending(true);
+    try {
+      await requestHumanAgent({
+        sessionId,
+        listingId: listingId,
+      });
+      setHumanRequested(true);
+    } catch {
+      // best-effort — silently ignore; user can retry
+    } finally {
+      setHumanRequestPending(false);
+    }
+  }, [sessionId, listingId, humanRequestPending, humanRequested]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -166,6 +200,9 @@ export default function ListingDetailChatWidget({
           onSend={handleSend}
           onClose={() => setOpen(false)}
           messagesEndRef={messagesEndRef}
+          onRequestHuman={handleRequestHuman}
+          humanRequested={humanRequested}
+          humanRequestPending={humanRequestPending}
         />
       )}
 
