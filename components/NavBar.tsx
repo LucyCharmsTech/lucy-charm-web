@@ -21,7 +21,6 @@ import { logout } from '@/services/authService';
 const NAV_LINKS = [
   { label: 'Home', href: '/' },
   { label: 'Buy', href: '/listings' },
-  { label: 'Sell', href: '/sell' },
 ];
 
 export default function NavBar() {
@@ -248,14 +247,6 @@ export default function NavBar() {
               </Link>
             </div>
           )}
-
-          {/* Contact Us — always visible on desktop */}
-          <Link
-            href="/contact"
-            className="hidden md:inline-flex rounded-full border border-primarycolor/30 px-4 py-2 text-sm font-semibold text-primarycolor transition hover:bg-primarycolor/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
-          >
-            Contact Us
-          </Link>
 
           {/* ── Mobile hamburger ── */}
           <button
