@@ -1,11 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import ListingCard from '@/components/ListingCard';
 import { MOCK_LISTINGS, type ListingItem } from '@/components/listings/data';
 import FilterPanel from '@/components/listings/FilterPanel';
 import ListingsToolbar from '@/components/listings/ListingsToolbar';
+import { COUNTRY_OPTIONS } from '@/components/listings/constants';
 import { apiListingToItem } from '@/lib/listingAdapter';
 import {
   buildSearchParams,
@@ -16,12 +18,6 @@ import type { ApiListing } from '@/types/api';
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/** Returns MOCK_LISTINGS converted to the same ListingItem shape so the
- *  card grid works identically whether data comes from the API or mock. */
-function getMockItems(): ListingItem[] {
-  return MOCK_LISTINGS;
-}
 
 /** Applies multi-type client-side filtering when more than one property type
  *  is selected (the API only accepts a single property_type at a time). */
@@ -36,31 +32,88 @@ function applyClientFilters(
   );
 }
 
+/** Offline mock fallback — static cards are all Canadian (Ottawa, ON). */
+function applyMockLocationFilters(
+  items: ListingItem[],
+  country: string,
+  city: string,
+): ListingItem[] {
+  let filtered = items;
+
+  if (country === 'us') {
+    filtered = [];
+  }
+
+  const cityQuery = city.trim().toLowerCase();
+  if (cityQuery) {
+    filtered = filtered.filter(
+      (item) =>
+        item.locationText.toLowerCase().includes(cityQuery) ||
+        item.address.toLowerCase().includes(cityQuery) ||
+        item.title.toLowerCase().includes(cityQuery),
+    );
+  }
+
+  return filtered;
+}
+
+function countryLabel(code: string): string {
+  return (
+    COUNTRY_OPTIONS.find((option) => option.value === code)?.label ?? code.toUpperCase()
+  );
+}
+
+function ListingsPageFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-6">
+      <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading listings…</p>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
-export default function ListingsPage() {
-  // Filter state
+function ListingsPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const country = searchParams.get('country')?.trim().toLowerCase() ?? '';
+  const city = searchParams.get('city')?.trim() ?? '';
+
+  const updateSearchParam = useCallback(
+    (key: 'country' | 'city', value: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      const cleaned = value.trim();
+      if (key === 'country') {
+        const normalised = cleaned.toLowerCase();
+        if (normalised) params.set('country', normalised);
+        else params.delete('country');
+      } else if (cleaned) {
+        params.set('city', cleaned);
+      } else {
+        params.delete('city');
+      }
+
+      const qs = params.toString();
+      router.replace(qs ? `/listings?${qs}` : '/listings', { scroll: false });
+    },
+    [router, searchParams],
+  );
+
+  // Filter state (local UI — country/city live in the URL)
   const [status, setStatus] = useState<string>('Active');
-  const [country, setCountry] = useState('');
   const [propertyTypes, setPropertyTypes] = useState<string[]>([]);
   const [beds, setBeds] = useState('');
   const [baths, setBaths] = useState('');
   const [sortBy, setSortBy] = useState<string>('Newest');
   const [view, setView] = useState<'grid' | 'list'>('grid');
 
-  // Data state
-  const [listings, setListings] = useState<ListingItem[]>(getMockItems());
-  const [loading, setLoading] = useState(false);
+  // Data state — start empty; never show stale mock data while filters apply
+  const [listings, setListings] = useState<ListingItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState(false);
-
-  // Initialise country from ?country=ca|us in the URL (e.g. deep links).
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const urlCountry = params.get('country')?.trim().toLowerCase();
-    if (urlCountry) setCountry(urlCountry);
-  }, []);
 
   // ---------------------------------------------------------------------------
   // Fetch from API whenever filters change
@@ -77,31 +130,33 @@ export default function ListingsPage() {
         baths,
         sortBy,
         country,
+        city,
       );
       const data = await searchListings(params);
 
-      if (data.items.length === 0) {
-        // API returned no results — keep current list, show empty state below
-        setListings([]);
-      } else {
-        const items: ListingItem[] = data.items.map((l: ApiListing) =>
-          apiListingToItem(l),
-        );
-        // Client-side multi-type filter (API only supports one type at a time)
-        setListings(applyClientFilters(items, propertyTypes));
-      }
+      const items: ListingItem[] = data.items.map((l: ApiListing) =>
+        apiListingToItem(l),
+      );
+      setListings(applyClientFilters(items, propertyTypes));
     } catch {
-      // Network or API error — fall back to mock data so the page never breaks
       setApiError(true);
-      setListings(applyClientFilters(getMockItems(), propertyTypes));
+      setListings(
+        applyMockLocationFilters(
+          applyClientFilters(MOCK_LISTINGS, propertyTypes),
+          country,
+          city,
+        ),
+      );
     } finally {
       setLoading(false);
     }
-  }, [status, country, propertyTypes, beds, baths, sortBy]);
+  }, [status, country, city, propertyTypes, beds, baths, sortBy]);
 
   useEffect(() => {
     fetchListings();
   }, [fetchListings]);
+
+  const activeCountryLabel = country ? countryLabel(country) : null;
 
   // ---------------------------------------------------------------------------
   // Render
@@ -114,7 +169,9 @@ export default function ListingsPage() {
           status={status}
           setStatus={setStatus}
           country={country}
-          setCountry={setCountry}
+          setCountry={(value) => updateSearchParam('country', value)}
+          city={city}
+          setCity={(value) => updateSearchParam('city', value)}
           propertyTypes={propertyTypes}
           setPropertyTypes={setPropertyTypes}
           beds={beds}
@@ -134,10 +191,38 @@ export default function ListingsPage() {
           setView={setView}
         />
 
+        {/* Active location filters */}
+        {(activeCountryLabel || city) && (
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+              Location
+            </span>
+            {activeCountryLabel && (
+              <button
+                type="button"
+                onClick={() => updateSearchParam('country', '')}
+                className="inline-flex items-center rounded-full border border-primarycolor/30 bg-primarycolor/10 px-3 py-1 text-xs font-semibold text-primarycolor transition hover:bg-primarycolor/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+              >
+                {activeCountryLabel} ×
+              </button>
+            )}
+            {city && (
+              <button
+                type="button"
+                onClick={() => updateSearchParam('city', '')}
+                className="inline-flex items-center rounded-full border border-primarycolor/30 bg-primarycolor/10 px-3 py-1 text-xs font-semibold text-primarycolor transition hover:bg-primarycolor/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+              >
+                {city} ×
+              </button>
+            )}
+          </div>
+        )}
+
         {/* API error banner */}
         {apiError && (
           <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-700 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-400">
-            Could not reach the listings API — showing cached data.
+            Could not reach the listings API — showing offline sample data with your
+            location filters applied.
           </p>
         )}
 
@@ -158,7 +243,9 @@ export default function ListingsPage() {
           <div className="flex flex-col items-center justify-center py-20 text-center text-zinc-500 dark:text-zinc-400">
             <p className="text-lg font-semibold">No listings found</p>
             <p className="mt-1 text-sm">
-              Try adjusting your filters or check back later.
+              {country === 'us'
+                ? 'There are no US listings yet. Try Canada or clear the country filter.'
+                : 'Try adjusting your filters or check back later.'}
             </p>
           </div>
         )}
@@ -194,5 +281,13 @@ export default function ListingsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ListingsPage() {
+  return (
+    <Suspense fallback={<ListingsPageFallback />}>
+      <ListingsPageContent />
+    </Suspense>
   );
 }

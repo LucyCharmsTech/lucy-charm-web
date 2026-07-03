@@ -77,6 +77,7 @@ export function buildSearchParams(
   baths: string,
   sortBy: string,
   country = '',
+  city = '',
 ): ListingSearchParams {
   const { sort_by, sort_order } = sortLabelToParams(sortBy);
 
@@ -89,10 +90,10 @@ export function buildSearchParams(
       ? propertyTypes[0].toLowerCase()
       : undefined;
   const countryCode = country.trim().toLowerCase() || undefined;
+  const cityQuery = city.trim() || undefined;
 
-  return {
+  const params: ListingSearchParams = {
     status: status.toLowerCase(),
-    country: countryCode,
     property_type: propertyType,
     beds_min: bedsMin,
     baths_min: bathsMin,
@@ -100,4 +101,9 @@ export function buildSearchParams(
     sort_order,
     size: 50, // fetch enough to cover multi-type client filtering
   };
+
+  if (countryCode) params.country = countryCode;
+  if (cityQuery) params.city = cityQuery;
+
+  return params;
 }

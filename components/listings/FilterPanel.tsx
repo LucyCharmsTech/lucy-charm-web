@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { SlidersHorizontalIcon } from 'lucide-react';
 
@@ -18,6 +18,8 @@ type FilterPanelProps = {
   setStatus: (v: string) => void;
   country: string;
   setCountry: (v: string) => void;
+  city: string;
+  setCity: (v: string) => void;
   propertyTypes: string[];
   setPropertyTypes: (v: string[]) => void;
   beds: string;
@@ -35,6 +37,8 @@ export default function FilterPanel({
   setStatus,
   country,
   setCountry,
+  city,
+  setCity,
   propertyTypes,
   setPropertyTypes,
   beds,
@@ -43,6 +47,18 @@ export default function FilterPanel({
   setBaths,
 }: FilterPanelProps) {
   const [open, setOpen] = useState(true);
+  const [cityDraft, setCityDraft] = useState(city);
+
+  useEffect(() => {
+    setCityDraft(city);
+  }, [city]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      if (cityDraft !== city) setCity(cityDraft);
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [cityDraft, city, setCity]);
 
   return (
     <div className="m-4 rounded-2xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-800/80 dark:bg-zinc-950/30">
@@ -113,6 +129,25 @@ export default function FilterPanel({
                 </FilterChip>
               ))}
             </div>
+          </div>
+
+          <hr className="border-zinc-100 dark:border-zinc-800" />
+
+          <div className="space-y-2">
+            <Label htmlFor="listings-city-filter" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+              City
+            </Label>
+            <Input
+              id="listings-city-filter"
+              value={cityDraft}
+              onChange={(e) => setCityDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') setCity(cityDraft);
+              }}
+              placeholder="Toronto, Vancouver, Ottawa…"
+              className="h-9 rounded-full text-xs"
+              autoComplete="address-level2"
+            />
           </div>
 
           <hr className="border-zinc-100 dark:border-zinc-800" />
