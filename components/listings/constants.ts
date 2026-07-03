@@ -1,4 +1,9 @@
 export const STATUSES = ['Active', 'Pending', 'Sold', 'Expired'] as const;
+export const COUNTRY_OPTIONS = [
+  { label: 'All countries', value: '' },
+  { label: 'Canada', value: 'ca' },
+  { label: 'United States', value: 'us' },
+] as const;
 export const PROPERTY_TYPES = [
   'Detached',
   'Condo',

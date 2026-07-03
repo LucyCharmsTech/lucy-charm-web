@@ -76,6 +76,7 @@ export function buildSearchParams(
   beds: string,
   baths: string,
   sortBy: string,
+  country = '',
 ): ListingSearchParams {
   const { sort_by, sort_order } = sortLabelToParams(sortBy);
 
@@ -87,9 +88,11 @@ export function buildSearchParams(
     propertyTypes.length === 1
       ? propertyTypes[0].toLowerCase()
       : undefined;
+  const countryCode = country.trim().toLowerCase() || undefined;
 
   return {
     status: status.toLowerCase(),
+    country: countryCode,
     property_type: propertyType,
     beds_min: bedsMin,
     baths_min: bathsMin,

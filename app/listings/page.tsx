@@ -43,6 +43,7 @@ function applyClientFilters(
 export default function ListingsPage() {
   // Filter state
   const [status, setStatus] = useState<string>('Active');
+  const [country, setCountry] = useState('');
   const [propertyTypes, setPropertyTypes] = useState<string[]>([]);
   const [beds, setBeds] = useState('');
   const [baths, setBaths] = useState('');
@@ -53,6 +54,13 @@ export default function ListingsPage() {
   const [listings, setListings] = useState<ListingItem[]>(getMockItems());
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState(false);
+
+  // Initialise country from ?country=ca|us in the URL (e.g. deep links).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlCountry = params.get('country')?.trim().toLowerCase();
+    if (urlCountry) setCountry(urlCountry);
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Fetch from API whenever filters change
@@ -68,6 +76,7 @@ export default function ListingsPage() {
         beds,
         baths,
         sortBy,
+        country,
       );
       const data = await searchListings(params);
 
@@ -88,7 +97,7 @@ export default function ListingsPage() {
     } finally {
       setLoading(false);
     }
-  }, [status, propertyTypes, beds, baths, sortBy]);
+  }, [status, country, propertyTypes, beds, baths, sortBy]);
 
   useEffect(() => {
     fetchListings();
@@ -104,6 +113,8 @@ export default function ListingsPage() {
         <FilterPanel
           status={status}
           setStatus={setStatus}
+          country={country}
+          setCountry={setCountry}
           propertyTypes={propertyTypes}
           setPropertyTypes={setPropertyTypes}
           beds={beds}

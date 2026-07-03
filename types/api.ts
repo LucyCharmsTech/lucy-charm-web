@@ -72,6 +72,8 @@ export type ApiListing = {
 export type ListingSearchParams = {
   city?: string;
   province_state?: string;
+  country?: string;
+  market?: string;
   property_type?: string;
   status?: string;
   price_min?: number;

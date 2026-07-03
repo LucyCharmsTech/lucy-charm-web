@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import {
   BATHROOMS,
   BEDROOMS,
+  COUNTRY_OPTIONS,
   PROPERTY_TYPES,
   STATUSES,
 } from '@/components/listings/constants';
@@ -15,6 +16,8 @@ import FilterChip from '@/components/listings/FilterChip';
 type FilterPanelProps = {
   status: string;
   setStatus: (v: string) => void;
+  country: string;
+  setCountry: (v: string) => void;
   propertyTypes: string[];
   setPropertyTypes: (v: string[]) => void;
   beds: string;
@@ -30,6 +33,8 @@ function toggleItem<T>(value: T, arr: T[]): T[] {
 export default function FilterPanel({
   status,
   setStatus,
+  country,
+  setCountry,
   propertyTypes,
   setPropertyTypes,
   beds,
@@ -86,6 +91,25 @@ export default function FilterPanel({
                   onClick={() => setStatus(s)}
                 >
                   {s}
+                </FilterChip>
+              ))}
+            </div>
+          </div>
+
+          <hr className="border-zinc-100 dark:border-zinc-800" />
+
+          <div className="space-y-2">
+            <Label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+              Country
+            </Label>
+            <div className="flex flex-wrap gap-1.5">
+              {COUNTRY_OPTIONS.map((option) => (
+                <FilterChip
+                  key={option.label}
+                  active={country === option.value}
+                  onClick={() => setCountry(option.value)}
+                >
+                  {option.label}
                 </FilterChip>
               ))}
             </div>
