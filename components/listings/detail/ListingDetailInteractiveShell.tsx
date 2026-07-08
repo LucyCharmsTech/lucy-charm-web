@@ -4,6 +4,7 @@ import React from 'react';
 
 import ListingDetailChatWidget from '@/components/listings/detail/ListingDetailChatWidget';
 import { ListingChatSessionProvider } from '@/components/listings/detail/ListingChatSessionContext';
+import { ShowingRequestModalProvider } from '@/components/listings/detail/ShowingRequestModalContext';
 
 type Props = {
   listingId: string;
@@ -18,8 +19,10 @@ export default function ListingDetailInteractiveShell({
 }: Props) {
   return (
     <ListingChatSessionProvider>
-      {children}
-      <ListingDetailChatWidget listingId={listingId} listingTitle={listingTitle} />
+      <ShowingRequestModalProvider>
+        {children}
+        <ListingDetailChatWidget listingId={listingId} listingTitle={listingTitle} />
+      </ShowingRequestModalProvider>
     </ListingChatSessionProvider>
   );
 }

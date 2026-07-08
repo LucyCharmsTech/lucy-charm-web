@@ -5,7 +5,9 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000,
+  // 10s was causing client-side aborts (often shown as "Canceled" in DevTools)
+  // on slower dev machines / cold-start API. Keep this generous for a better UX.
+  timeout: 30000,
 });
 
 // Request interceptor — attach Bearer token from the auth store when present.

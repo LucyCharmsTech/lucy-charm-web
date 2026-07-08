@@ -51,7 +51,10 @@ Set this in `.env` (or `.env.local`) before starting the dev server.
 ### `/listings`
 - Client component (`app/listings/page.tsx`).
 - Calls `GET /listings/search` on mount and whenever filters change.
-- Filter state (`status`, `propertyTypes`, `beds`, `baths`, `sortBy`) is mapped to API params via `buildSearchParams` in `services/listingsService.ts`.
+- Filter state (`status`, `country`, `city`, `propertyTypes`, `beds`, `baths`, `sortBy`) is mapped to API params via `buildSearchParams` in `services/listingsService.ts`.
+- **Country** and **city** are stored in the URL (`/listings?country=ca&city=Toronto`) so filters survive refresh and deep links from the homepage city search work.
+- **Country** filter sends `country=ca` or `country=us` to `GET /listings/search` (ISO codes, lowercased). Omit or choose “All countries” to search every market.
+- When the API is unreachable, offline mock cards still respect country/city filters (mock data is Canadian-only).
 - When multiple property types are selected the API is queried without a type filter and results are narrowed client-side.
 - Shows a loading skeleton while fetching, an empty state when no results are found, and an amber banner + mock data fallback on network error.
 

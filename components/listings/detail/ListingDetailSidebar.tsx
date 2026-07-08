@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { CalendarIcon } from 'lucide-react';
 
 import type { ListingDetail } from '@/components/listings/listingDetailData';
@@ -9,13 +9,14 @@ import RequestShowingModal from '@/components/listings/detail/RequestShowingModa
 import ListingDetailAgentCard from '@/components/listings/detail/ListingDetailAgentCard';
 import SaveListingButton from '@/components/listings/SaveListingButton';
 import { isUuid } from '@/lib/serverFetch';
+import { useShowingRequestModal } from '@/components/listings/detail/ShowingRequestModalContext';
 
 type ListingDetailSidebarProps = {
   listing: ListingDetail;
 };
 
 export default function ListingDetailSidebar({ listing }: ListingDetailSidebarProps) {
-  const [showModal, setShowModal] = useState(false);
+  const { open, openModal, closeModal } = useShowingRequestModal();
 
   return (
     <>
@@ -60,7 +61,7 @@ export default function ListingDetailSidebar({ listing }: ListingDetailSidebarPr
         {/* Book a showing CTA */}
         <Button
           type="button"
-          onClick={() => setShowModal(true)}
+          onClick={openModal}
           className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primarycolor text-sm font-semibold text-white shadow-md transition hover:bg-primarycolor/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
         >
           <CalendarIcon className="size-4" aria-hidden="true" />
@@ -69,10 +70,10 @@ export default function ListingDetailSidebar({ listing }: ListingDetailSidebarPr
       </aside>
 
       <RequestShowingModal
-        open={showModal}
+        open={open}
         listingId={listing.id}
         listingTitle={listing.title ?? listing.address}
-        onClose={() => setShowModal(false)}
+        onClose={closeModal}
       />
     </>
   );

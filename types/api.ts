@@ -350,6 +350,8 @@ export type ChatSendResponse = {
   listing_fields_used: string[] | null;
   model_version: string | null;
   prompt_version: string | null;
+  /** Optional UI actions requested by the server (safe, whitelisted strings). */
+  ui_actions?: string[] | null;
 };
 
 export type ChatRequestHumanResponse = {

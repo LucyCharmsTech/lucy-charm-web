@@ -15,6 +15,7 @@ import ListingDetailChatFab from '@/components/listings/detail/chat/ListingDetai
 import ListingDetailChatLoginGate from '@/components/listings/detail/chat/ListingDetailChatLoginGate';
 import ListingDetailChatPanel from '@/components/listings/detail/chat/ListingDetailChatPanel';
 import { useListingChatSession } from '@/components/listings/detail/ListingChatSessionContext';
+import { useShowingRequestModal } from '@/components/listings/detail/ShowingRequestModalContext';
 import type { ChatMessage } from '@/types/api';
 
 type ListingDetailChatWidgetProps = {
@@ -38,6 +39,7 @@ export default function ListingDetailChatWidget({
   const isAuthenticated = Boolean(accessToken);
 
   const { setAiSessionId } = useListingChatSession();
+  const { openModal: openShowingModal } = useShowingRequestModal();
   const [open, setOpen] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionError, setSessionError] = useState(false);
@@ -117,6 +119,11 @@ export default function ListingDetailChatWidget({
           escalation_flag: response.escalation_flag,
         };
         setMessages((prev) => [...prev, assistantMsg]);
+
+        // Server-driven UI actions (whitelisted).
+        if (response.ui_actions?.includes('open_showing_modal')) {
+          openShowingModal();
+        }
       } catch (err: unknown) {
         setSendError(true);
         setMessages((prev) => prev.filter((m) => m.id !== userMsg.id));
@@ -150,7 +157,7 @@ export default function ListingDetailChatWidget({
         setSending(false);
       }
     },
-    [inputValue, sessionId, sending, listingId],
+    [inputValue, sessionId, sending, listingId, openShowingModal],
   );
 
   const handleRequestHuman = useCallback(async () => {

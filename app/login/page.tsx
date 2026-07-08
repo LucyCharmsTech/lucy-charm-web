@@ -27,6 +27,7 @@ export default function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return; // hard guard against double-submit edge cases
     setError(null);
     setLoading(true);
 
@@ -50,9 +51,19 @@ export default function LoginPage() {
       const params = new URLSearchParams(window.location.search);
       router.push(getPostLoginPath(me.role, params.get('redirect')));
     } catch (err: unknown) {
+      const anyErr = err as {
+        code?: string;
+        message?: string;
+        response?: { data?: { detail?: string } };
+      };
       const msg =
-        (err as { response?: { data?: { detail?: string } } })?.response?.data
-          ?.detail ?? 'Incorrect email or password.';
+        anyErr.response?.data?.detail ??
+        // Axios timeout often shows as client-side cancel in DevTools.
+        (anyErr.code === 'ECONNABORTED' ? 'Login timed out. Please try again.' : null) ??
+        (anyErr.message?.toLowerCase().includes('canceled')
+          ? 'Login request was cancelled. Please try again.'
+          : null) ??
+        'Incorrect email or password.';
       setError(msg);
     } finally {
       setLoading(false);
