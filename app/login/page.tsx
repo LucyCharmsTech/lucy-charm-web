@@ -49,7 +49,7 @@ export default function LoginPage() {
       setAuth(tokens.access_token, tokens.refresh_token, authUser);
 
       const params = new URLSearchParams(window.location.search);
-      router.push(getPostLoginPath(me.role, params.get('redirect')));
+      router.push(getPostLoginPath(me.role, params.get('redirect'), me.onboarding_completed));
     } catch (err: unknown) {
       const anyErr = err as {
         code?: string;
