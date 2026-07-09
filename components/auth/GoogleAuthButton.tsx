@@ -68,7 +68,7 @@ export function GoogleLoginButton({
       const me = await fetchCurrentUser();
       setAuth(tokens.access_token, tokens.refresh_token, userMeToAuthUser(me));
 
-      router.push(getPostLoginPath(me.role, redirectParam ?? null));
+      router.push(getPostLoginPath(me.role, redirectParam ?? null, me.onboarding_completed));
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { detail?: string } } })?.response?.data
