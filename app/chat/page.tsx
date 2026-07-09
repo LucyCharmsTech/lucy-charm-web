@@ -25,7 +25,8 @@ import {
   getOrCreateAnonToken,
 } from '@/services/chatService';
 import { useAuthStore } from '@/stores/authStore';
-import AssistantResponseMeta from '@/components/chat/AssistantResponseMeta';
+import AssistantTrustLayer from '@/components/chat/AssistantTrustLayer';
+import ChatPlaceCards from '@/components/chat/ChatPlaceCards';
 import type { ChatMessage } from '@/types/api';
 
 // Stable anonymous token key for the global /chat page (no listing context)
@@ -54,7 +55,7 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
     >
       {/* Avatar */}
       <div
-        className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+        className={`flex size-7 shrink-0 items-center justify-center self-start rounded-full text-xs font-bold ${
           isUser
             ? 'bg-primarycolor text-white'
             : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-200'
@@ -64,19 +65,33 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
         {isUser ? <UserIcon className="size-3.5" /> : <BotIcon className="size-3.5" />}
       </div>
 
-      {/* Bubble */}
-      <div
-        className={`max-w-[78%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-          isUser
-            ? 'rounded-br-sm bg-primarycolor text-white'
-            : 'rounded-bl-sm bg-white text-zinc-800 shadow-sm ring-1 ring-zinc-200/70 dark:bg-zinc-900 dark:text-zinc-100 dark:ring-zinc-800'
-        }`}
-      >
-        <p className="whitespace-pre-wrap">{msg.text}</p>
-        {!isUser && (
-          <AssistantResponseMeta
-            confidence_score={msg.confidence_score ?? null}
-          />
+      {/* Content column: bubble + cards below */}
+      <div className={`flex min-w-0 flex-col gap-2 ${isUser ? 'items-end' : 'items-start'} flex-1`}>
+        {/* Bubble */}
+        <div
+          className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+            isUser
+              ? 'max-w-[85%] rounded-br-sm bg-primarycolor text-white'
+              : 'w-full rounded-bl-sm bg-white text-zinc-800 shadow-sm ring-1 ring-zinc-200/70 dark:bg-zinc-900 dark:text-zinc-100 dark:ring-zinc-800'
+          }`}
+        >
+          <p className="whitespace-pre-wrap">{msg.text}</p>
+          {!isUser && (
+            <AssistantTrustLayer
+              confidence_score={msg.confidence_score ?? null}
+              listing_fields_used={msg.listing_fields_used}
+              model_version={msg.model_version}
+              prompt_version={msg.prompt_version}
+              escalation_flag={msg.escalation_flag}
+            />
+          )}
+        </div>
+
+        {/* Listing cards — rendered outside the text bubble for full-width display */}
+        {!isUser && msg.place_cards && msg.place_cards.length > 0 && (
+          <div className="w-full">
+            <ChatPlaceCards cards={msg.place_cards} />
+          </div>
         )}
       </div>
     </div>
@@ -216,6 +231,11 @@ function ChatPageContent() {
           text: response.reply_text,
           timestamp: new Date(),
           confidence_score: response.confidence_score,
+          listing_fields_used: response.listing_fields_used ?? null,
+          model_version: response.model_version ?? null,
+          prompt_version: response.prompt_version ?? null,
+          escalation_flag: response.escalation_flag,
+          place_cards: response.place_cards ?? null,
         };
         setMessages((prev) => [...prev, assistantMsg]);
       } catch (err: unknown) {
