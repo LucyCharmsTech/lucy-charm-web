@@ -3,6 +3,7 @@
 import { BotIcon, UserIcon } from 'lucide-react';
 
 import AssistantTrustLayer from '@/components/chat/AssistantTrustLayer';
+import ChatPlaceCards from '@/components/chat/ChatPlaceCards';
 import type { ChatMessage } from '@/types/api';
 
 export default function ListingDetailChatBubble({ msg }: { msg: ChatMessage }) {
@@ -31,6 +32,9 @@ export default function ListingDetailChatBubble({ msg }: { msg: ChatMessage }) {
         }`}
       >
         <p className="whitespace-pre-wrap">{msg.text}</p>
+        {!isUser && msg.place_cards && msg.place_cards.length > 0 && (
+          <ChatPlaceCards cards={msg.place_cards} />
+        )}
         {!isUser && (
           <AssistantTrustLayer
             confidence_score={msg.confidence_score ?? null}

@@ -113,6 +113,7 @@ export default function ListingDetailChatWidget({
           text: response.reply_text,
           timestamp: new Date(),
           confidence_score: response.confidence_score,
+          place_cards: response.place_cards ?? null,
           listing_fields_used: response.listing_fields_used,
           model_version: response.model_version,
           prompt_version: response.prompt_version,
