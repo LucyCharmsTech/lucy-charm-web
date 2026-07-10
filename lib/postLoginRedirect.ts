@@ -8,8 +8,12 @@ import type { UserRole } from '@/types/api';
 export function getPostLoginPath(
   role: UserRole | undefined,
   redirectParam: string | null | undefined,
+  onboardingCompleted?: boolean,
 ): string {
   const effective: UserRole = role ?? 'client';
+  if (effective === 'client' && onboardingCompleted === false) {
+    return '/onboarding';
+  }
   if (redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//')) {
     // Only honour same-origin style paths; role-specific dashboards still win for internal roles
     if (effective === 'agent' && redirectParam.startsWith('/agent')) return redirectParam;
