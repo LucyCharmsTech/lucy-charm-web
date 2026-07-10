@@ -3,7 +3,7 @@
  */
 
 import api from '@/lib/axios';
-import type { UserMe } from '@/types/api';
+import type { UserMe, UserOnboardingRead, UserOnboardingSubmitRequest } from '@/types/api';
 
 export async function fetchCurrentUser(): Promise<UserMe> {
   const res = await api.get<UserMe>('/users/me');
@@ -18,5 +18,19 @@ export type UserProfilePatch = {
 /** PATCH /users/me — requires Bearer token. */
 export async function updateCurrentUser(payload: UserProfilePatch): Promise<UserMe> {
   const res = await api.patch<UserMe>('/users/me', payload);
+  return res.data;
+}
+
+/** GET /users/me/onboarding — requires Bearer token. */
+export async function fetchCurrentUserOnboarding(): Promise<UserOnboardingRead> {
+  const res = await api.get<UserOnboardingRead>('/users/me/onboarding');
+  return res.data;
+}
+
+/** PUT /users/me/onboarding — write-once onboarding profile. */
+export async function submitCurrentUserOnboarding(
+  payload: UserOnboardingSubmitRequest,
+): Promise<UserOnboardingRead> {
+  const res = await api.put<UserOnboardingRead>('/users/me/onboarding', payload);
   return res.data;
 }

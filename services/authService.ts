@@ -1,44 +1,30 @@
 /**
  * Auth service — wraps the /auth endpoints.
- *
- * LOGIN uses OAuth2PasswordRequestForm, which means the body must be
- * application/x-www-form-urlencoded with fields `username` and `password`
- * (FastAPI maps `username` → email internally).
  */
 
 import api from '@/lib/axios';
 import type {
   AuthToken,
-  SignupRequest,
-  SignupResponse,
+  MagicLinkRequestBody,
+  MagicLinkRequestResponse,
+  MagicLinkVerifyBody,
 } from '@/types/api';
 
 // ---------------------------------------------------------------------------
-// Login (form-data, NOT JSON)
+// Magic link (email-only passwordless auth)
 // ---------------------------------------------------------------------------
 
-export async function login(
-  email: string,
-  password: string,
-): Promise<AuthToken> {
-  const body = new URLSearchParams();
-  body.set('username', email); // FastAPI OAuth2PasswordRequestForm uses `username`
-  body.set('password', password);
-
-  const res = await api.post<AuthToken>('/auth/login', body, {
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-  });
+export async function requestMagicLink(
+  payload: MagicLinkRequestBody,
+): Promise<MagicLinkRequestResponse> {
+  const res = await api.post<MagicLinkRequestResponse>('/auth/magic-link/request', payload);
   return res.data;
 }
 
-// ---------------------------------------------------------------------------
-// Register (JSON)
-// ---------------------------------------------------------------------------
-
-export async function register(
-  payload: SignupRequest,
-): Promise<SignupResponse> {
-  const res = await api.post<SignupResponse>('/auth/signup', payload);
+export async function verifyMagicLink(
+  payload: MagicLinkVerifyBody,
+): Promise<AuthToken> {
+  const res = await api.post<AuthToken>('/auth/magic-link/verify', payload);
   return res.data;
 }
 
