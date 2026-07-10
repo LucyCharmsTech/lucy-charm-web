@@ -135,6 +135,19 @@ export type SignupResponse = {
   last_name: string;
 };
 
+export type MagicLinkRequestBody = {
+  email: string;
+  redirect_path?: string;
+};
+
+export type MagicLinkRequestResponse = {
+  detail: string;
+};
+
+export type MagicLinkVerifyBody = {
+  token: string;
+};
+
 /** Mirrors `users.role` in lucy-charm-api */
 export type UserRole = 'client' | 'agent' | 'superadmin';
 
@@ -151,6 +164,8 @@ export type UserMe = {
   last_active_at: string;
   session_token: string;
   role: UserRole;
+  onboarding_completed: boolean;
+  onboarding_completed_at: string | null;
 };
 
 /** Stored user info (persisted in localStorage alongside tokens) */
@@ -173,6 +188,31 @@ export function userMeToAuthUser(me: UserMe): AuthUser {
     role: me.role,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Signup onboarding
+// ---------------------------------------------------------------------------
+
+export type OnboardingPrimaryIntent = 'buyer' | 'seller' | 'investor' | 'exploring';
+export type OnboardingTimeline = 'asap' | '1_3_months' | '3_6_months' | '6_plus_months';
+export type OnboardingPropertyType = 'house' | 'condo' | 'townhome' | 'multi_family' | 'other';
+export type OnboardingFinancingStatus = 'pre_approved' | 'not_yet' | 'cash' | 'prefer_not_to_say';
+
+export type UserOnboardingSubmitRequest = {
+  primary_intent: OnboardingPrimaryIntent;
+  timeline: OnboardingTimeline;
+  preferred_country: string;
+  preferred_city: string;
+  property_types: OnboardingPropertyType[];
+  financing_status?: OnboardingFinancingStatus;
+  wants_listing_alerts: boolean;
+};
+
+export type UserOnboardingRead = {
+  completed: boolean;
+  completed_at: string | null;
+  responses: Record<string, unknown> | null;
+};
 
 // ---------------------------------------------------------------------------
 // Agent portal
@@ -341,9 +381,25 @@ export type ChatSendRequest = {
 };
 
 /** Mirrors ChatSendResponse */
+export type ChatPlaceCard = {
+  listing_id: string;
+  title: string;
+  city: string;
+  state: string;
+  price: number;
+  currency: string;
+  beds: number | null;
+  baths: number | null;
+  sqft: number | null;
+  property_type: string | null;
+  primary_image_url: string | null;
+  display_address: string | null;
+};
+
 export type ChatSendResponse = {
   reply_text: string;
   intent: string | null;
+  query_route?: string | null;
   escalation_flag: boolean;
   confidence_score: number | null;
   /** Listing fields that were injected into the prompt context (trust layer). */
@@ -352,6 +408,8 @@ export type ChatSendResponse = {
   prompt_version: string | null;
   /** Optional UI actions requested by the server (safe, whitelisted strings). */
   ui_actions?: string[] | null;
+  /** Optional listing cards for search-like responses. */
+  place_cards?: ChatPlaceCard[] | null;
 };
 
 export type ChatRequestHumanResponse = {
@@ -436,4 +494,5 @@ export type ChatMessage = {
   model_version?: string | null;
   prompt_version?: string | null;
   escalation_flag?: boolean;
+  place_cards?: ChatPlaceCard[] | null;
 };
