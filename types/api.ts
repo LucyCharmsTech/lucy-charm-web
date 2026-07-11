@@ -197,14 +197,27 @@ export type OnboardingPrimaryIntent = 'buyer' | 'seller' | 'investor' | 'explori
 export type OnboardingTimeline = 'asap' | '1_3_months' | '3_6_months' | '6_plus_months';
 export type OnboardingPropertyType = 'house' | 'condo' | 'townhome' | 'multi_family' | 'other';
 export type OnboardingFinancingStatus = 'pre_approved' | 'not_yet' | 'cash' | 'prefer_not_to_say';
+export type OnboardingMainPriority =
+  | 'price'
+  | 'location'
+  | 'size'
+  | 'schools'
+  | 'investment'
+  | 'lifestyle';
 
 export type UserOnboardingSubmitRequest = {
-  primary_intent: OnboardingPrimaryIntent;
+  primary_intent?: OnboardingPrimaryIntent;
   timeline: OnboardingTimeline;
   preferred_country: string;
   preferred_city: string;
   property_types: OnboardingPropertyType[];
+  budget_min?: number;
+  budget_max?: number;
+  min_bedrooms?: number;
+  min_bathrooms?: number;
+  parking_required?: boolean;
   financing_status?: OnboardingFinancingStatus;
+  main_priorities?: OnboardingMainPriority[];
   wants_listing_alerts: boolean;
 };
 
