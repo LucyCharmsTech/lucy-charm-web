@@ -9,8 +9,8 @@ Keep the buyer experience testable before PROPTX is connected by running listing
 ## Toggle
 
 - Env var: `NEXT_PUBLIC_PROPTX_LIVE`
-- Default behavior: mock mode (`false` / unset)
-- Live mode: set `NEXT_PUBLIC_PROPTX_LIVE=true`
+- Default behavior: live mode (`true` / unset)
+- Mock mode: set `NEXT_PUBLIC_PROPTX_LIVE=false`
 
 ---
 

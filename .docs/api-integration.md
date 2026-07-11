@@ -11,7 +11,7 @@ The frontend connects to the **lucy-charm-api** FastAPI backend (`http://localho
 | Variable | Default | Used in |
 |---|---|---|
 | `NEXT_PUBLIC_API_URL` | `http://localhost:8000/api/v1` | `lib/axios.ts`, `lib/serverFetch.ts`, `services/chatService.ts` |
-| `NEXT_PUBLIC_PROPTX_LIVE` | `false` (mock mode) | `lib/proptxMode.ts`, listings + saved homes flows |
+| `NEXT_PUBLIC_PROPTX_LIVE` | `true` (live mode) | `lib/proptxMode.ts`, listings + saved homes flows |
 
 Set this in `.env` (or `.env.local`) before starting the dev server.
 
