@@ -6,7 +6,9 @@ import FeaturedListingsSection, {
 } from '@/components/FeaturedListingsSection';
 import Footer from '@/components/Footer';
 import Link from 'next/link';
+import { MOCK_LISTINGS } from '@/components/listings/data';
 import { apiListingToItem } from '@/lib/listingAdapter';
+import { isProptxLive } from '@/lib/proptxMode';
 import { serverFetch, buildQuery } from '@/lib/serverFetch';
 import type { ApiListing, PaginatedItems } from '@/types/api';
 
@@ -61,6 +63,80 @@ const FALLBACK_FEATURED: FeaturedListing[] = [
 ];
 
 export default async function Home() {
+  const mockFeatured: FeaturedListing[] = MOCK_LISTINGS.slice(0, 4).map((item) => ({
+    id: item.id,
+    statusLabel: item.statusLabel,
+    imageSrc: item.imageSrc,
+    imageAlt: item.imageAlt,
+    address: item.address,
+    bedsText: item.bedsText,
+    bathsText: item.bathsText,
+    priceText: item.priceText,
+    detailsHref: item.detailsHref,
+  }));
+
+  if (!isProptxLive()) {
+    return (
+      <div className="flex min-h-screen flex-col bg-background">
+        <main className="flex-1">
+          <section className="relative overflow-hidden">
+            {/* Background */}
+            <div
+              className="absolute inset-0 bg-[radial-gradient(1200px_500px_at_20%_30%,rgba(255,1,192,0.18),transparent_55%),radial-gradient(900px_400px_at_75%_40%,rgba(236,72,153,0.14),transparent_60%),linear-gradient(to_bottom,rgba(255,255,255,0.92),rgba(255,255,255,0.92))] dark:bg-[radial-gradient(1200px_500px_at_20%_30%,rgba(255,1,192,0.22),transparent_55%),radial-gradient(900px_400px_at_75%_40%,rgba(236,72,153,0.18),transparent_60%),linear-gradient(to_bottom,rgba(9,9,11,0.82),rgba(9,9,11,0.82))]"
+              aria-hidden="true"
+            />
+            <div
+              className="absolute inset-0 opacity-[0.18] [background:linear-gradient(to_right,rgba(0,0,0,0.10)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,0,0,0.10)_1px,transparent_1px)] bg-size-[32px_32px] dark:opacity-[0.12]"
+              aria-hidden="true"
+            />
+
+            <div className="relative mx-auto max-w-6xl px-6 sm:px-10 py-14 sm:py-20">
+              <div className="mb-4 rounded-xl border border-primarycolor/20 bg-primarycolor/10 px-4 py-2 text-xs text-primarycolor dark:border-primarycolor/30 dark:bg-primarycolor/15">
+                PROPTX preview mode is enabled. Homepage featured cards use mock data.
+              </div>
+              <div className="grid items-center gap-10 lg:grid-cols-2">
+                <div className="text-left">
+                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
+                    Real estate <span className="text-primarycolor">without the</span>
+                    <br />
+                    pressure.
+                  </h1>
+                  <p className="mt-4 max-w-xl text-base sm:text-lg leading-relaxed text-zinc-600 dark:text-zinc-300">
+                    AI-first support, human backup when it matters.
+                  </p>
+
+                  <div className="mt-7 flex flex-col sm:flex-row gap-3 sm:items-center">
+                    <Link
+                      href="/chat"
+                      className="inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold text-white shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primarycolor bg-[linear-gradient(135deg,#ff01c0_0%,#e91e8c_55%,#9d174d_110%)] hover:brightness-105 active:brightness-95"
+                    >
+                      Ask the AI
+                    </Link>
+                    <Link
+                      href="/sell"
+                      className="inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold text-zinc-900 dark:text-zinc-50 border border-zinc-200/90 dark:border-zinc-700/80 bg-white/70 dark:bg-zinc-900/40 backdrop-blur-sm transition hover:bg-white/90 dark:hover:bg-zinc-900/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primarycolor"
+                    >
+                      Request Home Value
+                    </Link>
+                  </div>
+                </div>
+
+                <div className="flex justify-center lg:justify-end">
+                  <BlimpIllustration />
+                </div>
+              </div>
+            </div>
+          </section>
+          <CitySearchSection />
+          <FeaturedListingsSection listings={mockFeatured} />
+          <AiPoweredSection />
+        </main>
+
+        <Footer />
+      </div>
+    );
+  }
+
   // Fetch the four most recently added active listings from the backend.
   // Falls back to static data if the API is unavailable.
   const data = await serverFetch<PaginatedItems<ApiListing>>(
