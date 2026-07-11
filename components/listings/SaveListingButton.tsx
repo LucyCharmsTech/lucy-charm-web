@@ -7,6 +7,12 @@ import { Button } from '@/components/ui/button';
 import { isUuid } from '@/lib/serverFetch';
 import { bumpEngagement } from '@/lib/siteEngagement';
 import { cn } from '@/lib/utils';
+import { isProptxLive } from '@/lib/proptxMode';
+import {
+  isMockListingSaved,
+  saveMockListing,
+  unsaveMockListing,
+} from '@/services/mockSavedListingsService';
 import {
   checkListingSaved,
   saveListing,
@@ -38,13 +44,22 @@ export default function SaveListingButton({
     setHydrated(true);
   }, []);
 
-  const canUseApi = isUuid(listingId);
+  const canUseApi = isProptxLive() && isUuid(listingId);
+  const canUseMock = !isProptxLive();
 
   useEffect(() => {
-    if (!hydrated || !canUseApi) return;
+    if (!hydrated) return;
     let cancelled = false;
     (async () => {
       try {
+        if (canUseMock) {
+          const mockSaved = await isMockListingSaved(listingId);
+          if (cancelled) return;
+          setSaved(mockSaved);
+          setSavedRowId(null);
+          return;
+        }
+        if (!canUseApi) return;
         const r = await checkListingSaved(listingId);
         if (cancelled) return;
         setSaved(r.saved);
@@ -59,13 +74,29 @@ export default function SaveListingButton({
     return () => {
       cancelled = true;
     };
-  }, [hydrated, canUseApi, listingId, authed]);
+  }, [hydrated, canUseApi, canUseMock, listingId, authed]);
 
   const toggle = useCallback(async () => {
-    if (!canUseApi || loading) return;
+    if ((!canUseApi && !canUseMock) || loading) return;
     setLoading(true);
     let didAttemptSave = false;
     try {
+      if (canUseMock) {
+        if (saved) {
+          await unsaveMockListing(listingId);
+        } else {
+          didAttemptSave = true;
+          await saveMockListing(listingId);
+        }
+        const nextSaved = await isMockListingSaved(listingId);
+        setSaved(nextSaved);
+        setSavedRowId(null);
+        if (didAttemptSave && nextSaved) {
+          bumpEngagement(5);
+        }
+        onChange?.({ saved: nextSaved, listingId });
+        return;
+      }
       if (saved) {
         let rowId = savedRowId;
         if (!rowId) {
@@ -95,9 +126,9 @@ export default function SaveListingButton({
     } finally {
       setLoading(false);
     }
-  }, [canUseApi, loading, saved, savedRowId, listingId, onChange]);
+  }, [canUseApi, canUseMock, loading, saved, savedRowId, listingId, onChange]);
 
-  if (!canUseApi) return null;
+  if (!canUseApi && !canUseMock) return null;
 
   const label = saved ? 'Remove from saved homes' : 'Save this home';
 

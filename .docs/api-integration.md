@@ -11,6 +11,7 @@ The frontend connects to the **lucy-charm-api** FastAPI backend (`http://localho
 | Variable | Default | Used in |
 |---|---|---|
 | `NEXT_PUBLIC_API_URL` | `http://localhost:8000/api/v1` | `lib/axios.ts`, `lib/serverFetch.ts`, `services/chatService.ts` |
+| `NEXT_PUBLIC_PROPTX_LIVE` | `false` (mock mode) | `lib/proptxMode.ts`, listings + saved homes flows |
 
 Set this in `.env` (or `.env.local`) before starting the dev server.
 
@@ -57,6 +58,7 @@ Set this in `.env` (or `.env.local`) before starting the dev server.
 - When the API is unreachable, offline mock cards still respect country/city filters (mock data is Canadian-only).
 - When multiple property types are selected the API is queried without a type filter and results are narrowed client-side.
 - Shows a loading skeleton while fetching, an empty state when no results are found, and an amber banner + mock data fallback on network error.
+- While `NEXT_PUBLIC_PROPTX_LIVE` is disabled, listings use mock cards with preference-based ranking from onboarding responses.
 
 ### `/listings/[id]`
 - Server component (`app/listings/[id]/page.tsx`).
@@ -79,6 +81,7 @@ Set this in `.env` (or `.env.local`) before starting the dev server.
 
 - **Where in the UI:** `/profile` → **Saved homes** section (`SavedListingsSection`), or directly `/profile#saved-homes`. Guests use the same page; the API keys saves by `X-Anonymous-Session-Token` from `localStorage` (`lib/anonymousSession.ts`).
 - **Nav:** **Saved homes** in the header (guests and signed-in menu) links to `/profile#saved-homes`. Legacy `/saved` redirects there.
+- **Mock mode behavior:** saves are stored in localStorage (`lucy_mock_saved_listing_ids_v1`) for testing non-UUID mock listings before PROPTX is live.
 
 ---
 
