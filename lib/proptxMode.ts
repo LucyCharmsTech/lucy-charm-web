@@ -1,10 +1,11 @@
 /**
  * PROPTX rollout guard.
  *
- * - Default: mock mode enabled for UI/integration testing.
- * - Set NEXT_PUBLIC_PROPTX_LIVE=true to use live listings + saved APIs.
+ * - Default: live mode enabled (uses API/DB listings).
+ * - Set NEXT_PUBLIC_PROPTX_LIVE=false to force mock listings for preview/testing.
  */
-export const PROPTX_LIVE = process.env.NEXT_PUBLIC_PROPTX_LIVE === 'true';
+const rawProptxMode = process.env.NEXT_PUBLIC_PROPTX_LIVE?.trim().toLowerCase();
+export const PROPTX_LIVE = rawProptxMode !== 'false';
 
 export function isProptxLive(): boolean {
   return PROPTX_LIVE;
