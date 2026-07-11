@@ -8,7 +8,10 @@ import { MOCK_LISTINGS, type ListingItem } from '@/components/listings/data';
 import FilterPanel from '@/components/listings/FilterPanel';
 import ListingsToolbar from '@/components/listings/ListingsToolbar';
 import { COUNTRY_OPTIONS } from '@/components/listings/constants';
+import { matchListingsToPreferences } from '@/lib/listingMatching';
 import { apiListingToItem } from '@/lib/listingAdapter';
+import { isProptxLive } from '@/lib/proptxMode';
+import { fetchStoredUserPreferences } from '@/services/userPreferencesService';
 import {
   buildSearchParams,
   searchListings,
@@ -123,6 +126,21 @@ function ListingsPageContent() {
     setApiError(false);
 
     try {
+      if (!isProptxLive()) {
+        const preferences = await fetchStoredUserPreferences().catch(() => null);
+        const effectiveCountry =
+          country || (preferences?.preferredCountry.toLowerCase() === 'canada' ? 'ca' : '');
+        const effectiveCity = city || preferences?.preferredCity || '';
+
+        const mockItems = applyMockLocationFilters(
+          applyClientFilters(MOCK_LISTINGS, propertyTypes),
+          effectiveCountry,
+          effectiveCity,
+        );
+        setListings(matchListingsToPreferences(mockItems, preferences));
+        return;
+      }
+
       const params = buildSearchParams(
         status,
         propertyTypes,
@@ -190,6 +208,12 @@ function ListingsPageContent() {
           view={view}
           setView={setView}
         />
+
+        {!isProptxLive() && (
+          <p className="mb-4 rounded-xl border border-primarycolor/20 bg-primarycolor/10 px-4 py-2 text-xs text-primarycolor dark:border-primarycolor/30 dark:bg-primarycolor/15">
+            PROPTX preview mode is enabled. Listing cards and matching currently use mock data.
+          </p>
+        )}
 
         {/* Active location filters */}
         {(activeCountryLabel || city) && (

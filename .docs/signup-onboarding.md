@@ -57,6 +57,7 @@ Step 3:
 - `services/userService.ts` adds:
   - `fetchCurrentUserOnboarding()`
   - `submitCurrentUserOnboarding()`
+- `services/userPreferencesService.ts` reads onboarding responses and normalizes them for matching/ranking logic.
 - `lib/postLoginRedirect.ts` now routes incomplete client profiles to `/onboarding`.
 
 ---

@@ -4,9 +4,13 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 
 import ListingCard from '@/components/ListingCard';
+import { MOCK_LISTINGS, type ListingItem } from '@/components/listings/data';
+import { matchListingsToPreferences } from '@/lib/listingMatching';
+import { isProptxLive } from '@/lib/proptxMode';
 import { Button } from '@/components/ui/button';
-import type { ListingItem } from '@/components/listings/data';
 import { apiListingToItem } from '@/lib/listingAdapter';
+import { listMockSavedListingIds, unsaveMockListing } from '@/services/mockSavedListingsService';
+import { fetchStoredUserPreferences } from '@/services/userPreferencesService';
 import { fetchListingById } from '@/services/listingsService';
 import {
   listMySavedListings,
@@ -32,6 +36,21 @@ export default function SavedListingsSection() {
     setLoading(true);
     setError(null);
     try {
+      if (!isProptxLive()) {
+        const [savedIds, preferences] = await Promise.all([
+          listMockSavedListingIds(),
+          fetchStoredUserPreferences().catch(() => null),
+        ]);
+        const mockById = new Map(MOCK_LISTINGS.map((item) => [item.id, item]));
+        const savedItems = savedIds
+          .map((id) => mockById.get(id))
+          .filter((item): item is ListingItem => Boolean(item));
+        const rankedItems = matchListingsToPreferences(savedItems, preferences);
+        setCards(rankedItems.map((item) => ({ savedRowId: item.id, item })));
+        setOrphanSaves([]);
+        return;
+      }
+
       const saved = await listMySavedListings();
       const results = await Promise.all(
         saved.map(async (row) => {
@@ -78,6 +97,11 @@ export default function SavedListingsSection() {
   const removeOrphan = useCallback(async (savedRowId: string) => {
     setError(null);
     try {
+      if (!isProptxLive()) {
+        await unsaveMockListing(savedRowId);
+        setCards((prev) => prev.filter((card) => card.savedRowId !== savedRowId));
+        return;
+      }
       await unsaveListing(savedRowId);
       setOrphanSaves((prev) => prev.filter((r) => r.id !== savedRowId));
     } catch {
@@ -93,6 +117,11 @@ export default function SavedListingsSection() {
           Listings you have saved. When you are not signed in, they stay on this device until you
           clear site data.
         </p>
+        {!isProptxLive() && (
+          <p className="mt-2 text-xs font-medium text-primarycolor">
+            PROPTX preview mode: saved homes use mock listing data for testing.
+          </p>
+        )}
       </div>
 
       {loading && (
@@ -131,7 +160,7 @@ export default function SavedListingsSection() {
         </div>
       )}
 
-      {orphanSaves.length > 0 && (
+      {isProptxLive() && orphanSaves.length > 0 && (
         <ul className="space-y-3" aria-label="Unavailable saved listings">
           {orphanSaves.map((row) => (
             <li
