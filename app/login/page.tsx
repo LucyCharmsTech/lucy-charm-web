@@ -1,13 +1,17 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { Suspense, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { AlertCircleIcon } from 'lucide-react';
 import { GoogleLoginButton } from '@/components/auth/GoogleAuthButton';
 import { MagicLinkAuthForm } from '@/components/auth/MagicLinkAuthForm';
 
-export default function LoginPage() {
+function LoginPageFallback() {
+  return <div className="min-h-[calc(100vh-80px)] bg-[#fef6f9] dark:bg-zinc-950" />;
+}
+
+function LoginPageContent() {
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const redirectParam = useMemo(() => searchParams.get('redirect'), [searchParams]);
@@ -74,5 +78,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginPageFallback />}>
+      <LoginPageContent />
+    </Suspense>
   );
 }
