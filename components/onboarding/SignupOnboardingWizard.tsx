@@ -5,24 +5,16 @@ import { useRouter } from 'next/navigation';
 import { LoaderIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { fetchCurrentUserOnboarding, submitCurrentUserOnboarding } from '@/services/userService';
 import { useAuthStore } from '@/stores/authStore';
 import type {
   OnboardingFinancingStatus,
-  OnboardingPrimaryIntent,
+  OnboardingMainPriority,
   OnboardingPropertyType,
   OnboardingTimeline,
 } from '@/types/api';
 
 const TOTAL_STEPS = 3;
-
-const intentOptions: Array<{ value: OnboardingPrimaryIntent; label: string }> = [
-  { value: 'buyer', label: 'Buy a home' },
-  { value: 'seller', label: 'Sell a home' },
-  { value: 'investor', label: 'Invest in property' },
-  { value: 'exploring', label: 'Just exploring' },
-];
 
 const timelineOptions: Array<{ value: OnboardingTimeline; label: string }> = [
   { value: 'asap', label: 'ASAP' },
@@ -46,6 +38,15 @@ const financingOptions: Array<{ value: OnboardingFinancingStatus; label: string 
   { value: 'prefer_not_to_say', label: 'Prefer not to say' },
 ];
 
+const priorityOptions: Array<{ value: OnboardingMainPriority; label: string }> = [
+  { value: 'price', label: 'Price and affordability' },
+  { value: 'location', label: 'Location and commute' },
+  { value: 'size', label: 'Layout and home size' },
+  { value: 'schools', label: 'School district quality' },
+  { value: 'investment', label: 'Long-term value' },
+  { value: 'lifestyle', label: 'Lifestyle and amenities' },
+];
+
 export default function SignupOnboardingWizard() {
   const router = useRouter();
   const accessToken = useAuthStore((s) => s.accessToken);
@@ -55,12 +56,17 @@ export default function SignupOnboardingWizard() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [primaryIntent, setPrimaryIntent] = useState<OnboardingPrimaryIntent | ''>('');
   const [timeline, setTimeline] = useState<OnboardingTimeline | ''>('');
   const [preferredCountry, setPreferredCountry] = useState('');
   const [preferredCity, setPreferredCity] = useState('');
+  const [budgetMin, setBudgetMin] = useState('');
+  const [budgetMax, setBudgetMax] = useState('');
   const [propertyTypes, setPropertyTypes] = useState<OnboardingPropertyType[]>([]);
+  const [minBedrooms, setMinBedrooms] = useState('');
+  const [minBathrooms, setMinBathrooms] = useState('');
+  const [parkingPreference, setParkingPreference] = useState<'yes' | 'no' | 'either' | ''>('');
   const [financingStatus, setFinancingStatus] = useState<OnboardingFinancingStatus | ''>('');
+  const [mainPriorities, setMainPriorities] = useState<OnboardingMainPriority[]>([]);
   const [wantsListingAlerts, setWantsListingAlerts] = useState(true);
 
   useEffect(() => {
@@ -95,14 +101,46 @@ export default function SignupOnboardingWizard() {
   }, [accessToken, router]);
 
   const canContinue = useMemo(() => {
+    const parsedBudgetMin = Number.parseInt(budgetMin, 10);
+    const parsedBudgetMax = Number.parseInt(budgetMax, 10);
+
     if (step === 1) {
-      return Boolean(primaryIntent) && Boolean(timeline);
+      return (
+        Boolean(timeline) &&
+        preferredCountry.trim().length >= 2 &&
+        preferredCity.trim().length >= 1 &&
+        Number.isFinite(parsedBudgetMin) &&
+        Number.isFinite(parsedBudgetMax) &&
+        parsedBudgetMin >= 0 &&
+        parsedBudgetMax >= parsedBudgetMin
+      );
     }
     if (step === 2) {
-      return preferredCountry.trim().length >= 2 && preferredCity.trim().length >= 1 && propertyTypes.length >= 1;
+      return (
+        propertyTypes.length >= 1 &&
+        parkingPreference !== '' &&
+        (minBedrooms === '' || Number.parseInt(minBedrooms, 10) >= 0) &&
+        (minBathrooms === '' || Number.parseInt(minBathrooms, 10) >= 0)
+      );
+    }
+    if (step === 3) {
+      return Boolean(financingStatus) && mainPriorities.length >= 1;
     }
     return true;
-  }, [preferredCity, preferredCountry, primaryIntent, propertyTypes.length, step, timeline]);
+  }, [
+    budgetMax,
+    budgetMin,
+    financingStatus,
+    mainPriorities.length,
+    minBathrooms,
+    minBedrooms,
+    parkingPreference,
+    preferredCity,
+    preferredCountry,
+    propertyTypes.length,
+    step,
+    timeline,
+  ]);
 
   function togglePropertyType(value: OnboardingPropertyType) {
     setPropertyTypes((prev) => {
@@ -116,22 +154,47 @@ export default function SignupOnboardingWizard() {
     });
   }
 
+  function togglePriority(value: OnboardingMainPriority) {
+    setMainPriorities((prev) => {
+      if (prev.includes(value)) {
+        return prev.filter((entry) => entry !== value);
+      }
+      if (prev.length >= 4) {
+        return prev;
+      }
+      return [...prev, value];
+    });
+  }
+
   async function handleSubmit() {
-    if (!primaryIntent || !timeline || propertyTypes.length === 0) {
+    if (!canContinue || !timeline || propertyTypes.length === 0 || !financingStatus) {
       setError('Please complete the required questions before finishing.');
       return;
     }
+
+    const parsedBudgetMin = Number.parseInt(budgetMin, 10);
+    const parsedBudgetMax = Number.parseInt(budgetMax, 10);
+    const parsedMinBedrooms = minBedrooms === '' ? undefined : Number.parseInt(minBedrooms, 10);
+    const parsedMinBathrooms = minBathrooms === '' ? undefined : Number.parseInt(minBathrooms, 10);
+    const parkingRequired =
+      parkingPreference === 'either' ? undefined : parkingPreference === 'yes' ? true : false;
 
     setSubmitting(true);
     setError(null);
     try {
       await submitCurrentUserOnboarding({
-        primary_intent: primaryIntent,
+        primary_intent: 'exploring',
         timeline,
         preferred_country: preferredCountry.trim(),
         preferred_city: preferredCity.trim(),
         property_types: propertyTypes,
-        financing_status: financingStatus || undefined,
+        budget_min: parsedBudgetMin,
+        budget_max: parsedBudgetMax,
+        min_bedrooms: parsedMinBedrooms,
+        min_bathrooms: parsedMinBathrooms,
+        parking_required: parkingRequired,
+        financing_status: financingStatus,
+        main_priorities: mainPriorities,
         wants_listing_alerts: wantsListingAlerts,
       });
       router.replace('/');
@@ -185,33 +248,65 @@ export default function SignupOnboardingWizard() {
 
         {step === 1 && (
           <div className="space-y-6">
-            <fieldset className="space-y-3">
-              <legend className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-                What brings you to Lucy Charm today?
-              </legend>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {intentOptions.map((option) => (
-                  <label
-                    key={option.value}
-                    className="flex cursor-pointer items-center gap-2 rounded-xl border border-zinc-200 px-3 py-2 text-sm hover:border-primarycolor dark:border-zinc-700 dark:hover:border-primarycolor"
-                  >
-                    <input
-                      type="radio"
-                      name="primary-intent"
-                      value={option.value}
-                      checked={primaryIntent === option.value}
-                      onChange={() => setPrimaryIntent(option.value)}
-                      className="size-4 accent-primarycolor"
-                    />
-                    {option.label}
-                  </label>
-                ))}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label htmlFor="preferred-country" className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                  Preferred country
+                </label>
+                <Input
+                  id="preferred-country"
+                  value={preferredCountry}
+                  onChange={(event) => setPreferredCountry(event.target.value)}
+                  placeholder="Canada"
+                  className="h-11 rounded-xl"
+                />
               </div>
-            </fieldset>
+              <div className="space-y-1.5">
+                <label htmlFor="preferred-city" className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                  Preferred city
+                </label>
+                <Input
+                  id="preferred-city"
+                  value={preferredCity}
+                  onChange={(event) => setPreferredCity(event.target.value)}
+                  placeholder="Toronto"
+                  className="h-11 rounded-xl"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label htmlFor="budget-min" className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                  Budget minimum
+                </label>
+                <Input
+                  id="budget-min"
+                  inputMode="numeric"
+                  value={budgetMin}
+                  onChange={(event) => setBudgetMin(event.target.value)}
+                  placeholder="500000"
+                  className="h-11 rounded-xl"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="budget-max" className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                  Budget maximum
+                </label>
+                <Input
+                  id="budget-max"
+                  inputMode="numeric"
+                  value={budgetMax}
+                  onChange={(event) => setBudgetMax(event.target.value)}
+                  placeholder="900000"
+                  className="h-11 rounded-xl"
+                />
+              </div>
+            </div>
 
             <fieldset className="space-y-3">
               <legend className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-                How soon are you planning to move forward?
+                Buying timeline
               </legend>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {timelineOptions.map((option) => (
@@ -237,33 +332,6 @@ export default function SignupOnboardingWizard() {
 
         {step === 2 && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="preferred-country" className="text-sm font-semibold">
-                  Preferred country
-                </Label>
-                <Input
-                  id="preferred-country"
-                  value={preferredCountry}
-                  onChange={(event) => setPreferredCountry(event.target.value)}
-                  placeholder="Canada"
-                  className="h-11 rounded-xl"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="preferred-city" className="text-sm font-semibold">
-                  Preferred city
-                </Label>
-                <Input
-                  id="preferred-city"
-                  value={preferredCity}
-                  onChange={(event) => setPreferredCity(event.target.value)}
-                  placeholder="Toronto"
-                  className="h-11 rounded-xl"
-                />
-              </div>
-            </div>
-
             <fieldset className="space-y-3">
               <legend className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
                 Property types (choose up to 3)
@@ -286,6 +354,74 @@ export default function SignupOnboardingWizard() {
                 ))}
               </div>
             </fieldset>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label htmlFor="min-bedrooms" className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                  Minimum bedrooms (optional)
+                </label>
+                <Input
+                  id="min-bedrooms"
+                  inputMode="numeric"
+                  value={minBedrooms}
+                  onChange={(event) => setMinBedrooms(event.target.value)}
+                  placeholder="3"
+                  className="h-11 rounded-xl"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="min-bathrooms" className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                  Minimum bathrooms (optional)
+                </label>
+                <Input
+                  id="min-bathrooms"
+                  inputMode="numeric"
+                  value={minBathrooms}
+                  onChange={(event) => setMinBathrooms(event.target.value)}
+                  placeholder="2"
+                  className="h-11 rounded-xl"
+                />
+              </div>
+            </div>
+
+            <fieldset className="space-y-3">
+              <legend className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Parking preference</legend>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-zinc-200 px-3 py-2 text-sm hover:border-primarycolor dark:border-zinc-700 dark:hover:border-primarycolor">
+                  <input
+                    type="radio"
+                    name="parking-preference"
+                    value="yes"
+                    checked={parkingPreference === 'yes'}
+                    onChange={() => setParkingPreference('yes')}
+                    className="size-4 accent-primarycolor"
+                  />
+                  Required
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-zinc-200 px-3 py-2 text-sm hover:border-primarycolor dark:border-zinc-700 dark:hover:border-primarycolor">
+                  <input
+                    type="radio"
+                    name="parking-preference"
+                    value="no"
+                    checked={parkingPreference === 'no'}
+                    onChange={() => setParkingPreference('no')}
+                    className="size-4 accent-primarycolor"
+                  />
+                  Not needed
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-zinc-200 px-3 py-2 text-sm hover:border-primarycolor dark:border-zinc-700 dark:hover:border-primarycolor">
+                  <input
+                    type="radio"
+                    name="parking-preference"
+                    value="either"
+                    checked={parkingPreference === 'either'}
+                    onChange={() => setParkingPreference('either')}
+                    className="size-4 accent-primarycolor"
+                  />
+                  Flexible
+                </label>
+              </div>
+            </fieldset>
           </div>
         )}
 
@@ -293,7 +429,7 @@ export default function SignupOnboardingWizard() {
           <div className="space-y-6">
             <fieldset className="space-y-3">
               <legend className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-                Financing status (optional)
+                Pre-approval status
               </legend>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {financingOptions.map((option) => (
@@ -307,6 +443,29 @@ export default function SignupOnboardingWizard() {
                       value={option.value}
                       checked={financingStatus === option.value}
                       onChange={() => setFinancingStatus(option.value)}
+                      className="size-4 accent-primarycolor"
+                    />
+                    {option.label}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+
+            <fieldset className="space-y-3">
+              <legend className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                Main priorities (choose up to 4)
+              </legend>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {priorityOptions.map((option) => (
+                  <label
+                    key={option.value}
+                    className="flex cursor-pointer items-center gap-2 rounded-xl border border-zinc-200 px-3 py-2 text-sm hover:border-primarycolor dark:border-zinc-700 dark:hover:border-primarycolor"
+                  >
+                    <input
+                      type="checkbox"
+                      value={option.value}
+                      checked={mainPriorities.includes(option.value)}
+                      onChange={() => togglePriority(option.value)}
                       className="size-4 accent-primarycolor"
                     />
                     {option.label}
@@ -361,10 +520,10 @@ export default function SignupOnboardingWizard() {
               {submitting ? (
                 <span className="inline-flex items-center gap-2">
                   <LoaderIcon className="size-4 animate-spin" aria-hidden="true" />
-                  Saving...
+                  Saving preferences...
                 </span>
               ) : (
-                'Finish'
+                'Save and finish'
               )}
             </Button>
           )}
