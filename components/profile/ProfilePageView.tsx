@@ -4,6 +4,11 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import ProfileAccountForm from '@/components/profile/ProfileAccountForm';
+import ClientChatHistorySection from '@/components/profile/ClientChatHistorySection';
+import ClientDocumentsSection from '@/components/profile/ClientDocumentsSection';
+import ClientNextStepsChecklistSection from '@/components/profile/ClientNextStepsChecklistSection';
+import ClientSavedSearchesSection from '@/components/profile/ClientSavedSearchesSection';
+import ClientShowingScheduleSection from '@/components/profile/ClientShowingScheduleSection';
 import SavedListingsSection from '@/components/saved/SavedListingsSection';
 import { Button } from '@/components/ui/button';
 import { fetchCurrentUser } from '@/services/userService';
@@ -133,6 +138,21 @@ export default function ProfilePageView() {
               </div>
             )}
           </section>
+        )}
+
+        {accessToken && (
+          <div className="mb-10 grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <ClientSavedSearchesSection />
+            <ClientNextStepsChecklistSection />
+            <ClientDocumentsSection />
+            <ClientShowingScheduleSection />
+          </div>
+        )}
+
+        {accessToken && (
+          <div className="mb-10">
+            <ClientChatHistorySection userId={me?.id ?? null} />
+          </div>
         )}
 
         <section
