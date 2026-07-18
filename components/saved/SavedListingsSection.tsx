@@ -112,7 +112,7 @@ export default function SavedListingsSection() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">Saved homes</h2>
+        <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">Favorites (saved homes)</h2>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
           Listings you have saved. When you are not signed in, they stay on this device until you
           clear site data.
