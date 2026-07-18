@@ -60,6 +60,46 @@ export async function fetchListingById(id: string): Promise<ApiListing> {
   return res.data;
 }
 
+export type ListingFacetOptions = {
+  cities: string[];
+  propertyTypes: string[];
+};
+
+/**
+ * Fetches distinct city and property-type options from live listings.
+ * Used by client-portal saved-search dropdown filters.
+ */
+export async function fetchListingFacetOptions(): Promise<ListingFacetOptions> {
+  const citySet = new Set<string>();
+  const typeSet = new Set<string>();
+
+  const firstPage = await searchListings({ page: 1, size: 100 });
+  for (const item of firstPage.items) {
+    if (item.city?.trim()) citySet.add(item.city.trim());
+    if (item.property_type?.trim()) typeSet.add(item.property_type.trim().toLowerCase());
+  }
+
+  const totalPages = Math.max(1, firstPage.pages);
+  if (totalPages > 1) {
+    const pageRequests: Promise<PaginatedItems<ApiListing>>[] = [];
+    for (let page = 2; page <= totalPages; page += 1) {
+      pageRequests.push(searchListings({ page, size: 100 }));
+    }
+    const remaining = await Promise.all(pageRequests);
+    for (const page of remaining) {
+      for (const item of page.items) {
+        if (item.city?.trim()) citySet.add(item.city.trim());
+        if (item.property_type?.trim()) typeSet.add(item.property_type.trim().toLowerCase());
+      }
+    }
+  }
+
+  return {
+    cities: Array.from(citySet).sort((a, b) => a.localeCompare(b)),
+    propertyTypes: Array.from(typeSet).sort((a, b) => a.localeCompare(b)),
+  };
+}
+
 /**
  * Convenience function that maps the filter-panel state to the API search
  * params expected by `searchListings`.
