@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
+import ShowingFeedbackDialog from '@/components/profile/ShowingFeedbackDialog';
 import { fetchListingById } from '@/services/listingsService';
 import { fetchMyShowingRequests } from '@/services/showingService';
 import type { ShowingRequest } from '@/types/api';
@@ -22,6 +23,8 @@ function visitBadge(status: ShowingRequest['status']): string {
 export default function ClientShowingScheduleSection() {
   const [items, setItems] = useState<ShowingRequest[]>([]);
   const [listingTitlesById, setListingTitlesById] = useState<Record<string, string>>({});
+  const [activeFeedbackRequest, setActiveFeedbackRequest] = useState<ShowingRequest | null>(null);
+  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,6 +67,22 @@ export default function ClientShowingScheduleSection() {
     };
   }, []);
 
+  function canLeaveFeedback(item: ShowingRequest): boolean {
+    if (item.feedback_submitted_at) return false;
+    if (item.status !== 'confirmed' && item.status !== 'completed') return false;
+    return new Date(item.preferred_date).getTime() <= Date.now();
+  }
+
+  function handleFeedbackClick(item: ShowingRequest) {
+    setActiveFeedbackRequest(item);
+    setFeedbackDialogOpen(true);
+  }
+
+  function handleFeedbackSubmitted(updated: ShowingRequest) {
+    setItems((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+    setActiveFeedbackRequest(updated);
+  }
+
   return (
     <section className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/40">
       <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">Showing schedule</h2>
@@ -100,14 +119,52 @@ export default function ClientShowingScheduleSection() {
                 <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
                   {new Date(item.preferred_date).toLocaleString()} · {item.showing_type.replace('_', ' ')}
                 </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <span
+                  className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                    item.id_verification_status === 'verified'
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
+                      : item.id_verification_status === 'pending'
+                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+                        : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
+                  }`}
+                >
+                  ID {item.id_verification_status === 'not_requested' ? 'not requested' : item.id_verification_status}
+                </span>
+                {item.feedback_submitted_at && (
+                  <span className="inline-flex items-center rounded-full bg-violet-100 px-2.5 py-1 text-[11px] font-semibold text-violet-800 dark:bg-violet-900/30 dark:text-violet-300">
+                    Feedback saved
+                  </span>
+                )}
+              </div>
                 {item.message && (
                   <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{item.message}</p>
                 )}
+              {canLeaveFeedback(item) && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleFeedbackClick(item);
+                  }}
+                  className="mt-2 inline-flex h-8 items-center rounded-full bg-primarycolor px-3 text-xs font-semibold text-white transition hover:bg-primarycolor/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                >
+                  Leave showing feedback
+                </button>
+              )}
               </Link>
             ))
           )}
         </div>
       )}
+
+      <ShowingFeedbackDialog
+        request={activeFeedbackRequest}
+        open={feedbackDialogOpen}
+        onClose={() => setFeedbackDialogOpen(false)}
+        onSubmitted={handleFeedbackSubmitted}
+      />
     </section>
   );
 }

@@ -436,6 +436,9 @@ export type ChatRequestHumanResponse = {
 
 export type ShowingRequestStatus = 'pending' | 'confirmed' | 'rescheduled' | 'cancelled' | 'completed';
 export type ShowingType = 'in_person' | 'virtual' | 'open_house';
+export type ShowingIdVerificationStatus = 'not_requested' | 'pending' | 'verified';
+export type ShowingFeedbackInterestLevel = 'low' | 'medium' | 'high';
+export type ShowingFeedbackPriceFit = 'below_budget' | 'on_target' | 'above_budget';
 
 /** Mirrors ShowingRequestRead from the API */
 export type ShowingRequest = {
@@ -456,10 +459,20 @@ export type ShowingRequest = {
   is_pre_approved: boolean;
   financing_notes: string | null;
   referral_source: string | null;
+  id_verification_requested: boolean;
+  id_verification_status: ShowingIdVerificationStatus;
+  id_verification_notes: string | null;
   status: ShowingRequestStatus;
   confirmed_at: string | null;
   agent_notes: string | null;
   crm_synced: boolean;
+  feedback_submitted_at: string | null;
+  feedback_rating: number | null;
+  feedback_interest_level: ShowingFeedbackInterestLevel | null;
+  feedback_price_fit: ShowingFeedbackPriceFit | null;
+  feedback_comment: string | null;
+  feedback_would_offer: boolean | null;
+  feedback_ai_profile_consent: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -480,6 +493,7 @@ export type ShowingRequestCreate = {
   is_pre_approved?: boolean;
   financing_notes?: string;
   referral_source?: string;
+  id_verification_requested?: boolean;
   /** Optional Lucy chat session — attaches conversation context to HubSpot. */
   ai_session_id?: string;
 };
@@ -491,6 +505,18 @@ export type ShowingRequestUpdate = {
   agent_notes?: string;
   alternate_date?: string;
   crm_synced?: boolean;
+  id_verification_status?: ShowingIdVerificationStatus;
+  id_verification_notes?: string;
+};
+
+/** Mirrors ShowingRequestFeedbackSubmit body */
+export type ShowingRequestFeedbackSubmit = {
+  feedback_rating: number;
+  feedback_interest_level: ShowingFeedbackInterestLevel;
+  feedback_price_fit: ShowingFeedbackPriceFit;
+  feedback_comment?: string;
+  feedback_would_offer?: boolean;
+  feedback_ai_profile_consent?: boolean;
 };
 
 // Roles used in the local chat message list

@@ -8,6 +8,7 @@ import api from '@/lib/axios';
 import type {
   ShowingRequest,
   ShowingRequestCreate,
+  ShowingRequestFeedbackSubmit,
   ShowingRequestUpdate,
   ApiPaginated,
 } from '@/types/api';
@@ -49,5 +50,14 @@ export async function updateShowingRequest(
   payload: ShowingRequestUpdate,
 ): Promise<ShowingRequest> {
   const res = await api.patch<ShowingRequest>(`/showing_requests/${id}`, payload);
+  return res.data;
+}
+
+/** Logged-in client: submit post-showing feedback. */
+export async function submitShowingFeedback(
+  id: string,
+  payload: ShowingRequestFeedbackSubmit,
+): Promise<ShowingRequest> {
+  const res = await api.patch<ShowingRequest>(`/showing_requests/${id}/feedback`, payload);
   return res.data;
 }

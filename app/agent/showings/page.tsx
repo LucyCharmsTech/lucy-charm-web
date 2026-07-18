@@ -10,7 +10,12 @@ import {
 } from 'lucide-react';
 import { fetchMyAgentProfile } from '@/services/portalService';
 import { fetchShowingRequestsByAgent, updateShowingRequest } from '@/services/showingService';
-import type { AgentProfile, ShowingRequest, ShowingRequestStatus } from '@/types/api';
+import type {
+  AgentProfile,
+  ShowingIdVerificationStatus,
+  ShowingRequest,
+  ShowingRequestStatus,
+} from '@/types/api';
 
 const STATUS_STYLES: Record<ShowingRequestStatus, string> = {
   pending: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
@@ -68,12 +73,29 @@ export default function AgentShowingsPage() {
   useEffect(() => { load(); }, [load]);
 
   async function changeStatus(id: string, status: ShowingRequestStatus) {
+    await patchShowingRequest(id, {
+      status,
+      confirmed_at: status === 'confirmed' ? new Date().toISOString() : undefined,
+    });
+  }
+
+  async function changeVerification(id: string, idStatus: ShowingIdVerificationStatus) {
+    await patchShowingRequest(id, {
+      id_verification_status: idStatus,
+      id_verification_notes:
+        idStatus === 'verified'
+          ? `Verified by agent on ${new Date().toISOString()}`
+          : undefined,
+    });
+  }
+
+  async function patchShowingRequest(
+    id: string,
+    payload: Parameters<typeof updateShowingRequest>[1],
+  ) {
     setUpdating(id);
     try {
-      const updated = await updateShowingRequest(id, {
-        status,
-        confirmed_at: status === 'confirmed' ? new Date().toISOString() : undefined,
-      });
+      const updated = await updateShowingRequest(id, payload);
       setRequests((prev) => prev.map((r) => (r.id === id ? updated : r)));
     } catch {
       /* surface error inline if needed */
@@ -116,7 +138,13 @@ export default function AgentShowingsPage() {
           <h2 id="pending-heading" className="mb-3 text-base font-bold text-amber-700 dark:text-amber-400">
             Needs action ({pending.length})
           </h2>
-          <ShowingTable rows={pending} updating={updating} onChangeStatus={changeStatus} agentId={agent?.id} />
+          <ShowingTable
+            rows={pending}
+            updating={updating}
+            onChangeStatus={changeStatus}
+            onChangeVerification={changeVerification}
+            agentId={agent?.id}
+          />
         </section>
       )}
 
@@ -125,7 +153,13 @@ export default function AgentShowingsPage() {
           <h2 id="all-heading" className="mb-3 text-base font-bold text-zinc-700 dark:text-zinc-300">
             All other requests
           </h2>
-          <ShowingTable rows={rest} updating={updating} onChangeStatus={changeStatus} agentId={agent?.id} />
+          <ShowingTable
+            rows={rest}
+            updating={updating}
+            onChangeStatus={changeStatus}
+            onChangeVerification={changeVerification}
+            agentId={agent?.id}
+          />
         </section>
       )}
     </div>
@@ -136,10 +170,12 @@ function ShowingTable({
   rows,
   updating,
   onChangeStatus,
+  onChangeVerification,
 }: {
   rows: ShowingRequest[];
   updating: string | null;
   onChangeStatus: (id: string, status: ShowingRequestStatus) => void;
+  onChangeVerification: (id: string, status: ShowingIdVerificationStatus) => void;
   agentId?: string;
 }) {
   return (
@@ -152,7 +188,9 @@ function ShowingTable({
             <th scope="col" className="px-4 py-3">Preferred date</th>
             <th scope="col" className="px-4 py-3">Duration</th>
             <th scope="col" className="px-4 py-3">Status</th>
+            <th scope="col" className="px-4 py-3">ID verification</th>
             <th scope="col" className="px-4 py-3">Pre-approved</th>
+            <th scope="col" className="px-4 py-3">Feedback</th>
             <th scope="col" className="px-4 py-3">Actions</th>
           </tr>
         </thead>
@@ -187,9 +225,25 @@ function ShowingTable({
                 <StatusBadge status={r.status} />
               </td>
               <td className="px-4 py-3">
+                <span
+                  className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                    r.id_verification_status === 'verified'
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
+                      : r.id_verification_status === 'pending'
+                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+                        : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
+                  }`}
+                >
+                  {r.id_verification_status.replace('_', ' ')}
+                </span>
+              </td>
+              <td className="px-4 py-3">
                 <span className={`text-xs font-semibold ${r.is_pre_approved ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-400'}`}>
                   {r.is_pre_approved ? 'Yes' : 'No'}
                 </span>
+              </td>
+              <td className="px-4 py-3 text-xs text-zinc-600 dark:text-zinc-300">
+                {r.feedback_rating ? `${r.feedback_rating}/5` : '—'}
               </td>
               <td className="px-4 py-3">
                 <div className="flex flex-wrap gap-1.5">
@@ -221,6 +275,14 @@ function ShowingTable({
                       busy={updating === r.id}
                       onClick={() => onChangeStatus(r.id, 'completed')}
                       className="bg-violet-600 text-white hover:bg-violet-700"
+                    />
+                  )}
+                  {r.id_verification_status === 'pending' && (
+                    <ActionButton
+                      label="Mark ID verified"
+                      busy={updating === r.id}
+                      onClick={() => onChangeVerification(r.id, 'verified')}
+                      className="bg-emerald-600 text-white hover:bg-emerald-700"
                     />
                   )}
                 </div>

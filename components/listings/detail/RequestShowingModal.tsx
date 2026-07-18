@@ -52,6 +52,7 @@ export default function RequestShowingModal({ open, listingId, listingTitle, onC
   const [message, setMessage] = useState('');
   const [isPreApproved, setIsPreApproved] = useState(false);
   const [financingNotes, setFinancingNotes] = useState('');
+  const [idVerificationRequested, setIdVerificationRequested] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -115,6 +116,7 @@ export default function RequestShowingModal({ open, listingId, listingTitle, onC
         lead_type: 'buyer',
         is_pre_approved: isPreApproved,
         financing_notes: financingNotes.trim() || undefined,
+        id_verification_requested: idVerificationRequested,
         ai_session_id: aiSessionId ?? undefined,
       });
       setSubmitted(true);
@@ -360,6 +362,28 @@ export default function RequestShowingModal({ open, listingId, listingTitle, onC
                     />
                   </div>
                 )}
+              </fieldset>
+
+              {/* Optional verification */}
+              <fieldset className="space-y-2 rounded-xl border border-zinc-100 p-4 dark:border-zinc-800">
+                <legend className="px-1 text-xs font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                  Optional ID verification
+                </legend>
+                <label className="flex cursor-pointer items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={idVerificationRequested}
+                    onChange={(e) => setIdVerificationRequested(e.target.checked)}
+                    className="mt-0.5 size-4 accent-primarycolor"
+                  />
+                  <span className="text-sm text-zinc-700 dark:text-zinc-200">
+                    I want to complete ID verification to strengthen this showing request.
+                  </span>
+                </label>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Verification is optional and status-only. We do not store raw ID uploads in this
+                  form.
+                </p>
               </fieldset>
 
               {/* Message */}

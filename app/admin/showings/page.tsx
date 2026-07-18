@@ -79,6 +79,25 @@ export default function AdminShowingsPage() {
     }
   }
 
+  async function changeVerification(id: string) {
+    setUpdating(id);
+    try {
+      const updated = await updateShowingRequest(id, {
+        id_verification_status: 'verified',
+        id_verification_notes: `Verified by admin on ${new Date().toISOString()}`,
+      });
+      setData((prev) =>
+        prev
+          ? { ...prev, items: prev.items.map((r) => (r.id === id ? updated : r)) }
+          : prev,
+      );
+    } catch {
+      /* noop */
+    } finally {
+      setUpdating(null);
+    }
+  }
+
   if (loading) return <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>;
   if (error) {
     return (
@@ -120,7 +139,9 @@ export default function AdminShowingsPage() {
                 <th scope="col" className="px-4 py-3">Type</th>
                 <th scope="col" className="px-4 py-3">Preferred date</th>
                 <th scope="col" className="px-4 py-3">Status</th>
+                <th scope="col" className="px-4 py-3">ID verification</th>
                 <th scope="col" className="px-4 py-3">Pre-approved</th>
+                <th scope="col" className="px-4 py-3">Feedback</th>
                 <th scope="col" className="px-4 py-3">Submitted</th>
                 <th scope="col" className="px-4 py-3">Actions</th>
               </tr>
@@ -151,9 +172,25 @@ export default function AdminShowingsPage() {
                     <StatusBadge status={r.status} />
                   </td>
                   <td className="px-4 py-3">
+                    <span
+                      className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                        r.id_verification_status === 'verified'
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
+                          : r.id_verification_status === 'pending'
+                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+                            : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
+                      }`}
+                    >
+                      {r.id_verification_status.replace('_', ' ')}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
                     <span className={`text-xs font-semibold ${r.is_pre_approved ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-400'}`}>
                       {r.is_pre_approved ? 'Yes' : 'No'}
                     </span>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-zinc-600 dark:text-zinc-300">
+                    {r.feedback_rating ? `${r.feedback_rating}/5` : '—'}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-xs text-zinc-500 dark:text-zinc-400">
                     {new Date(r.created_at).toLocaleDateString()}
@@ -178,6 +215,16 @@ export default function AdminShowingsPage() {
                           >
                             Cancel
                           </button>
+                          {r.id_verification_status === 'pending' && (
+                            <button
+                              type="button"
+                              disabled={updating === r.id}
+                              onClick={() => changeVerification(r.id)}
+                              className="inline-flex h-7 items-center rounded-full bg-emerald-600 px-3 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                            >
+                              Verify ID
+                            </button>
+                          )}
                         </>
                       )}
                       {r.message && (

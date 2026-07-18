@@ -31,6 +31,10 @@ Client-facing portal features are implemented on `/profile` for authenticated us
 - **Showing schedule** (`ClientShowingScheduleSection`)
   - Loads client showings from `/showing_requests/me`.
   - Displays status and preferred date/time.
+  - Shows optional ID-verification state (`not requested`, `pending`, `verified`).
+  - Allows post-showing feedback submission from completed/confirmed past showings.
+  - Feedback endpoint: `PATCH /showing_requests/{id}/feedback`.
+  - When the client opts in, feedback signals are used to update their AI profile memory.
   - Each showing card links to the listing detail page and indicates visit-booked state.
 
 - **Next steps checklist** (`ClientNextStepsChecklistSection`)
