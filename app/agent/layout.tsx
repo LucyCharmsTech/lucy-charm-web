@@ -10,6 +10,8 @@ const NAV_LINKS = [
   { href: '/agent/showings', label: 'Showings' },
 ];
 
+
+
 export default function AgentLayout({ children }: { children: React.ReactNode }) {
   return (
     <RoleGate allowed="agent">
@@ -23,3 +25,5 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
     </RoleGate>
   );
 }
+
+
