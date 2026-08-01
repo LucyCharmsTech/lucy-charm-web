@@ -6,33 +6,30 @@ import { fetchCurrentUser } from '@/services/userService';
 import { userMeToAuthUser } from '@/types/api';
 
 /**
- * On first load, if we have a token but the persisted user predates `role`
- * (or is missing it), refresh profile from GET /users/me.
+ * On app load, refresh the persisted user from GET /users/me so the navbar
+ * and other client UI reflect the latest profile (name, role, onboarding, etc.).
  */
 export default function AuthHydrator() {
   const accessToken = useAuthStore((s) => s.accessToken);
-  const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
   const clearAuth = useAuthStore((s) => s.clearAuth);
-  const ran = useRef(false);
+  const hydratedForToken = useRef<string | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!accessToken) {
-      ran.current = false;
+      hydratedForToken.current = null;
       return;
     }
-    if (!user) return;
-    if (user.role) return;
-    if (ran.current) return;
-    ran.current = true;
+    if (hydratedForToken.current === accessToken) return;
+    hydratedForToken.current = accessToken;
 
     fetchCurrentUser()
       .then((me) => updateUser(userMeToAuthUser(me)))
       .catch(() => {
         clearAuth();
       });
-  }, [accessToken, user?.user_id, user?.role, updateUser, clearAuth]);
+  }, [accessToken, updateUser, clearAuth]);
 
   return null;
 }

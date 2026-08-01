@@ -11,7 +11,7 @@ Internal users with roles **agent** and **superadmin** get **separate route tree
    - **agent** → `/agent`
    - **superadmin** → `/admin`
    - **client** (default) → `/` or a safe `redirect` query when allowed
-3. **`AuthHydrator`** (mounted in `app/layout.tsx`) refetches `/users/me` when a refresh token exists but `user.role` is missing (e.g. older persisted session).
+3. **`AuthHydrator`** (mounted in `app/layout.tsx`) refetches `/users/me` on every app load when an access token is present, keeping navbar name/role in sync with the server.
 
 ## Route map
 

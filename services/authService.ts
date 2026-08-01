@@ -39,7 +39,7 @@ export async function logout(refreshToken: string): Promise<void> {
 
 // ---------------------------------------------------------------------------
 // Token refresh
-// ---------------------------------------------------------------------------yes
+// ---------------------------------------------------------------------------
 
 export async function refreshAccessToken(
   refreshToken: string,

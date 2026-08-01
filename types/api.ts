@@ -138,6 +138,8 @@ export type SignupResponse = {
 export type MagicLinkRequestBody = {
   email: string;
   redirect_path?: string;
+  /** Signup only — required on /register, omitted on /login. */
+  full_name?: string;
 };
 
 export type MagicLinkRequestResponse = {

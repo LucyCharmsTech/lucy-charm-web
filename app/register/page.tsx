@@ -63,7 +63,7 @@ function RegisterPageContent() {
             </div>
           </div>
 
-          <MagicLinkAuthForm redirectPath={redirectParam} />
+          <MagicLinkAuthForm redirectPath={redirectParam} mode="signup" />
 
           {/* Footer */}
           <p className="mt-6 text-center text-sm text-zinc-500 dark:text-zinc-400">

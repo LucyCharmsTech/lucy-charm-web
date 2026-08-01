@@ -15,6 +15,11 @@ import {
 } from 'lucide-react';
 
 import { useShallow } from 'zustand/react/shallow';
+import {
+  formatUserDisplayName,
+  formatUserInitials,
+  formatUserShortLabel,
+} from '@/lib/userDisplayName';
 import { useAuthStore } from '@/stores/authStore';
 import { logout } from '@/services/authService';
 
@@ -67,16 +72,9 @@ export default function NavBar() {
     router.push('/');
   }
 
-  // Derive initials for the avatar
-  const initials = user
-    ? `${user.first_name?.charAt(0) ?? ''}${user.last_name?.charAt(0) ?? ''}`.toUpperCase() ||
-      user.email.charAt(0).toUpperCase()
-    : '';
-
-  const displayName =
-    user?.first_name && user?.last_name
-      ? `${user.first_name} ${user.last_name}`
-      : user?.email ?? '';
+  const initials = formatUserInitials(user);
+  const displayName = formatUserDisplayName(user);
+  const shortLabel = formatUserShortLabel(user);
 
   if (pathname.startsWith('/agent') || pathname.startsWith('/admin')) {
     return null;
@@ -147,7 +145,7 @@ export default function NavBar() {
                   {initials}
                 </span>
                 <span className="hidden max-w-[120px] truncate sm:block">
-                  {user?.first_name || user?.email}
+                  {shortLabel}
                 </span>
                 <ChevronDownIcon
                   className={`size-3.5 text-zinc-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`}

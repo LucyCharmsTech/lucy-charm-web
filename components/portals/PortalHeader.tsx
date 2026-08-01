@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { LogOutIcon } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
+import { formatUserDisplayName } from '@/lib/userDisplayName';
 import { useAuthStore } from '@/stores/authStore';
 import { logout } from '@/services/authService';
 import { Button } from '@/components/ui/button';
@@ -45,9 +46,7 @@ export default function PortalHeader({ title }: { title: string }) {
         </div>
         <div className="flex items-center gap-3">
           <p className="hidden max-w-[200px] truncate text-sm text-zinc-600 dark:text-zinc-300 sm:block">
-            {user?.first_name && user?.last_name
-              ? `${user.first_name} ${user.last_name}`
-              : user?.email}
+            {formatUserDisplayName(user)}
           </p>
           <Button
             type="button"

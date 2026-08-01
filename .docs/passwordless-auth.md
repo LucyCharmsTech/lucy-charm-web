@@ -13,9 +13,19 @@ Email/password UI has been removed from `/login` and `/register`.
 
 ## Routes
 
-- `/login` → Google + magic link form
-- `/register` → Google + magic link form (same auth methods as login)
+- `/login` → Google + magic link form (email only)
+- `/register` → Google + magic link form with required **Full name** field on signup
 - `/auth/magic-link` → callback verifier that exchanges token for app tokens
+
+---
+
+## Account linking
+
+Google OAuth and magic link share one user per email:
+
+- Google sign-in links to an existing magic-link account when `google_id` is unset.
+- Magic link sign-in finds the same row created by Google (or prior signup).
+- The navbar shows `first_name` / `last_name` from the profile when available (including Google-provided names).
 
 ---
 
@@ -31,7 +41,7 @@ Email/password UI has been removed from `/login` and `/register`.
 
 `services/authService.ts` includes:
 
-- `requestMagicLink({ email, redirect_path? })`
+- `requestMagicLink({ email, full_name?, redirect_path? })` — `full_name` required on `/register`, omitted on `/login`
 - `verifyMagicLink({ token })`
 - `googleLogin(idToken)`
 - `refreshAccessToken(refreshToken)` — used by the Axios 401 interceptor
