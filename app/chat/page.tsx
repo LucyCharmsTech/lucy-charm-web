@@ -27,6 +27,7 @@ import {
 } from '@/services/chatService';
 import { useAuthStore } from '@/stores/authStore';
 import AssistantTrustLayer from '@/components/chat/AssistantTrustLayer';
+import ChatMarkdown from '@/components/chat/ChatMarkdown';
 import ChatPlaceCards from '@/components/chat/ChatPlaceCards';
 import type { ChatMessage } from '@/types/api';
 
@@ -76,7 +77,11 @@ function ChatBubble({ msg, onRequestHuman, humanRequested, humanRequestPending }
               : 'w-full rounded-bl-sm bg-white text-zinc-800 shadow-sm ring-1 ring-zinc-200/70 dark:bg-zinc-900 dark:text-zinc-100 dark:ring-zinc-800'
           }`}
         >
-          <p className="whitespace-pre-wrap">{msg.text}</p>
+          {isUser ? (
+            <p className="whitespace-pre-wrap">{msg.text}</p>
+          ) : (
+            <ChatMarkdown text={msg.text} />
+          )}
           {!isUser && (
             <AssistantTrustLayer
               confidence_score={msg.confidence_score ?? null}

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { BedDoubleIcon, BathIcon, RulerIcon } from 'lucide-react';
 
 import type { ChatPlaceCard } from '@/types/api';
 
@@ -27,23 +28,30 @@ export default function ChatPlaceCards({ cards }: ChatPlaceCardsProps) {
   return (
     <section
       aria-label={`${cards.length} suggested listing${cards.length === 1 ? '' : 's'}`}
-      className="mt-1 grid gap-2 sm:grid-cols-2"
+      className="mt-1 grid grid-cols-1 gap-2"
     >
       {cards.map((card) => {
         const location = card.display_address || `${card.city}, ${card.state}`;
         const specs = [
-          card.beds != null ? `${card.beds} bed${card.beds !== 1 ? 's' : ''}` : null,
-          card.baths != null ? `${card.baths} bath${card.baths !== 1 ? 's' : ''}` : null,
-          card.sqft != null ? `${card.sqft.toLocaleString()} sqft` : null,
-        ]
-          .filter(Boolean)
-          .join(', ');
+          card.beds != null
+            ? { label: `${card.beds} bed${card.beds !== 1 ? 's' : ''}`, Icon: BedDoubleIcon }
+            : null,
+          card.baths != null
+            ? { label: `${card.baths} bath${card.baths !== 1 ? 's' : ''}`, Icon: BathIcon }
+            : null,
+          card.sqft != null
+            ? { label: `${card.sqft.toLocaleString()} sqft`, Icon: RulerIcon }
+            : null,
+        ].filter(Boolean) as Array<{
+          label: string;
+          Icon: typeof BedDoubleIcon;
+        }>;
 
         const ariaLabel = [
           card.title,
           location,
           formatPrice(card.price, card.currency),
-          specs,
+          specs.map((s) => s.label).join(', '),
           card.property_type ?? '',
         ]
           .filter(Boolean)
@@ -54,12 +62,11 @@ export default function ChatPlaceCards({ cards }: ChatPlaceCardsProps) {
             key={card.listing_id}
             href={`/listings/${card.listing_id}`}
             aria-label={ariaLabel}
-            className="group rounded-xl border border-zinc-200/80 bg-white p-2.5 transition hover:border-primarycolor/40 hover:bg-primarycolor/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:border-zinc-700 dark:bg-zinc-900/70 dark:hover:bg-zinc-900"
+            className="group block overflow-hidden rounded-xl border border-zinc-200/80 bg-white transition hover:border-primarycolor/40 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:border-zinc-700 dark:bg-zinc-900/70"
           >
-            <div className="flex items-start gap-3">
-              {/* Thumbnail */}
+            <div className="flex gap-3 p-2.5">
               <div
-                className="size-14 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800"
+                className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800"
                 aria-hidden="true"
               >
                 {card.primary_image_url ? (
@@ -67,7 +74,7 @@ export default function ChatPlaceCards({ cards }: ChatPlaceCardsProps) {
                   <img
                     src={card.primary_image_url}
                     alt=""
-                    className="size-full object-cover"
+                    className="size-full object-cover transition group-hover:scale-[1.03]"
                   />
                 ) : (
                   <div className="flex size-full items-center justify-center text-zinc-400 dark:text-zinc-600">
@@ -90,21 +97,28 @@ export default function ChatPlaceCards({ cards }: ChatPlaceCardsProps) {
                 )}
               </div>
 
-              {/* Details */}
               <div className="min-w-0 flex-1" aria-hidden="true">
-                <p className="truncate text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                <p className="line-clamp-2 text-sm font-semibold leading-snug text-zinc-900 dark:text-zinc-100">
                   {card.title}
                 </p>
-                <p className="truncate text-[11px] text-zinc-500 dark:text-zinc-400">
+                <p className="mt-0.5 line-clamp-1 text-xs text-zinc-500 dark:text-zinc-400">
                   {location}
                 </p>
-                <p className="mt-1 text-xs font-semibold text-primarycolor">
+                <p className="mt-1.5 text-sm font-bold text-primarycolor">
                   {formatPrice(card.price, card.currency)}
                 </p>
-                {specs && (
-                  <p className="mt-0.5 text-[11px] text-zinc-600 dark:text-zinc-300">
-                    {specs}
-                  </p>
+                {specs.length > 0 && (
+                  <ul className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-zinc-600 dark:text-zinc-300">
+                    {specs.map(({ label, Icon }) => (
+                      <li
+                        key={label}
+                        className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-zinc-100 px-2 py-0.5 dark:bg-zinc-800"
+                      >
+                        <Icon className="size-3 shrink-0 opacity-70" aria-hidden="true" />
+                        {label}
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </div>
             </div>
