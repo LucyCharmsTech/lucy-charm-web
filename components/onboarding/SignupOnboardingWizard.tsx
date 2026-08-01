@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { LoaderIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { getApiErrorMessage } from '@/lib/apiErrorMessage';
 import { fetchCurrentUserOnboarding, submitCurrentUserOnboarding } from '@/services/userService';
 import { useAuthStore } from '@/stores/authStore';
 import type {
@@ -15,6 +16,7 @@ import type {
 } from '@/types/api';
 
 const TOTAL_STEPS = 3;
+const MAX_ROOM_COUNT = 20;
 
 const timelineOptions: Array<{ value: OnboardingTimeline; label: string }> = [
   { value: 'asap', label: 'ASAP' },
@@ -116,11 +118,20 @@ export default function SignupOnboardingWizard() {
       );
     }
     if (step === 2) {
+      const parsedMinBedrooms = minBedrooms === '' ? null : Number.parseInt(minBedrooms, 10);
+      const parsedMinBathrooms = minBathrooms === '' ? null : Number.parseInt(minBathrooms, 10);
+
       return (
         propertyTypes.length >= 1 &&
         parkingPreference !== '' &&
-        (minBedrooms === '' || Number.parseInt(minBedrooms, 10) >= 0) &&
-        (minBathrooms === '' || Number.parseInt(minBathrooms, 10) >= 0)
+        (parsedMinBedrooms === null ||
+          (Number.isFinite(parsedMinBedrooms) &&
+            parsedMinBedrooms >= 0 &&
+            parsedMinBedrooms <= MAX_ROOM_COUNT)) &&
+        (parsedMinBathrooms === null ||
+          (Number.isFinite(parsedMinBathrooms) &&
+            parsedMinBathrooms >= 0 &&
+            parsedMinBathrooms <= MAX_ROOM_COUNT))
       );
     }
     if (step === 3) {
@@ -199,10 +210,9 @@ export default function SignupOnboardingWizard() {
       });
       router.replace('/');
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
-        'Could not save your onboarding profile. Please try again.';
-      setError(msg);
+      setError(
+        getApiErrorMessage(err, 'Could not save your onboarding profile. Please try again.'),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -363,11 +373,14 @@ export default function SignupOnboardingWizard() {
                 <Input
                   id="min-bedrooms"
                   inputMode="numeric"
+                  min={0}
+                  max={MAX_ROOM_COUNT}
                   value={minBedrooms}
                   onChange={(event) => setMinBedrooms(event.target.value)}
                   placeholder="3"
                   className="h-11 rounded-xl"
                 />
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">Enter 0–{MAX_ROOM_COUNT}.</p>
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="min-bathrooms" className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
@@ -376,11 +389,14 @@ export default function SignupOnboardingWizard() {
                 <Input
                   id="min-bathrooms"
                   inputMode="numeric"
+                  min={0}
+                  max={MAX_ROOM_COUNT}
                   value={minBathrooms}
                   onChange={(event) => setMinBathrooms(event.target.value)}
                   placeholder="2"
                   className="h-11 rounded-xl"
                 />
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">Enter 0–{MAX_ROOM_COUNT}.</p>
               </div>
             </div>
 
