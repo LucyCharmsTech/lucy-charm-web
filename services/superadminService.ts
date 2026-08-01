@@ -54,9 +54,10 @@ export async function fetchAiSessionsAdmin(
 export async function fetchAiMessagesAdmin(
   page = 1,
   size = 40,
+  query?: string,
 ): Promise<ApiPaginated<AiMessageRecord>> {
   const res = await api.get<ApiPaginated<AiMessageRecord>>('/ai_messages/', {
-    params: { page, size },
+    params: { page, size, query: query || undefined },
     timeout: LONG_READ_MS,
   });
   return res.data;

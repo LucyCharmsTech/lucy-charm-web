@@ -75,6 +75,7 @@ export default function AdminChatLogsPage() {
   const [thread, setThread] = useState<AiMessageRecord[] | null>(null);
   const [flatMessages, setFlatMessages] = useState<ApiPaginated<AiMessageRecord> | null>(null);
   const [flatPage, setFlatPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [loadingThread, setLoadingThread] = useState(false);
@@ -100,7 +101,7 @@ export default function AdminChatLogsPage() {
   const loadFlat = useCallback(async (p: number) => {
     setLoadingFlat(true);
     try {
-      const res = await fetchAiMessagesAdmin(p, MESSAGE_PAGE_SIZE);
+      const res = await fetchAiMessagesAdmin(p, MESSAGE_PAGE_SIZE, searchQuery);
       setFlatMessages(res);
       setError(null);
     } catch (e: unknown) {
@@ -111,7 +112,7 @@ export default function AdminChatLogsPage() {
     } finally {
       setLoadingFlat(false);
     }
-  }, []);
+  }, [searchQuery]);
 
   useEffect(() => { loadSessions(sessionPage); }, [loadSessions, sessionPage]);
   useEffect(() => { loadFlat(flatPage); }, [loadFlat, flatPage]);
@@ -360,11 +361,22 @@ export default function AdminChatLogsPage() {
           <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>
         ) : (
           <>
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-zinc-600 dark:text-zinc-400">
                 {flatMessages?.total ?? 0} messages
               </p>
               <div className="flex items-center gap-2">
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => {
+                    setSearchQuery(event.target.value);
+                    setFlatPage(1);
+                  }}
+                  placeholder="Search message text"
+                  aria-label="Search chat logs"
+                  className="h-8 w-48 rounded-xl border border-zinc-200 bg-white px-3 text-xs text-zinc-800 placeholder:text-zinc-400 focus:border-primarycolor focus:outline-none focus:ring-2 focus:ring-primarycolor/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 sm:w-56"
+                />
                 <button
                   type="button"
                   disabled={flatPage <= 1}
