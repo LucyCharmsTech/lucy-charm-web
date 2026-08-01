@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-import { fetchChatMessagesBySession, fetchChatSessionsByUser } from '@/services/clientPortalService';
+import { fetchChatMessagesBySession, fetchMyChatSessions } from '@/services/clientPortalService';
 import type { AiMessageRecord, AiSession } from '@/types/api';
 import { Button } from '@/components/ui/button';
 
@@ -12,7 +12,7 @@ type SessionPreview = {
   messageCount: number;
 };
 
-export default function ClientChatHistorySection({ userId }: { userId: string | null }) {
+export default function ClientChatHistorySection() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<SessionPreview[]>([]);
@@ -22,14 +22,10 @@ export default function ClientChatHistorySection({ userId }: { userId: string | 
   useEffect(() => {
     let active = true;
     void (async () => {
-      if (!userId) {
-        if (active) setLoading(false);
-        return;
-      }
       setLoading(true);
       setError(null);
       try {
-        const sessions = await fetchChatSessionsByUser(userId);
+        const sessions = await fetchMyChatSessions();
         const sorted = [...sessions].sort(
           (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
         );
@@ -59,7 +55,7 @@ export default function ClientChatHistorySection({ userId }: { userId: string | 
     return () => {
       active = false;
     };
-  }, [userId]);
+  }, []);
 
   async function toggleSession(sessionId: string) {
     if (expandedSessionId === sessionId) {

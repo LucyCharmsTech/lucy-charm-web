@@ -159,16 +159,26 @@ export type UserMe = {
   email: string;
   first_name: string;
   last_name: string;
-  security_stamp: string;
   created_at: string;
   updated_at: string;
   is_anonymous: boolean;
   last_active_at: string;
-  session_token: string;
   role: UserRole;
   onboarding_completed: boolean;
   onboarding_completed_at: string | null;
+  deactivated_at: string | null;
+  marketing_emails_enabled: boolean;
+  listing_alerts_enabled: boolean;
+  product_updates_enabled: boolean;
 };
+
+export type UserPrivacyPreferences = {
+  marketing_emails_enabled: boolean;
+  listing_alerts_enabled: boolean;
+  product_updates_enabled: boolean;
+};
+
+export type UserDataRequestType = 'access' | 'correction' | 'deletion' | 'portability';
 
 /** Stored user info (persisted in localStorage alongside tokens) */
 export type AuthUser = {

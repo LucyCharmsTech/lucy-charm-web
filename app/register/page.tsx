@@ -3,9 +3,10 @@
 import React, { Suspense, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { AlertCircleIcon } from 'lucide-react';
+import { AlertCircleIcon, LoaderIcon } from 'lucide-react';
 import { GoogleLoginButton } from '@/components/auth/GoogleAuthButton';
 import { MagicLinkAuthForm } from '@/components/auth/MagicLinkAuthForm';
+import { useRedirectIfAuthenticated } from '@/lib/useRedirectIfAuthenticated';
 
 function RegisterPageFallback() {
   return <div className="min-h-[calc(100vh-80px)] bg-[#fef6f9] dark:bg-zinc-950" />;
@@ -15,6 +16,18 @@ function RegisterPageContent() {
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const redirectParam = useMemo(() => searchParams.get('redirect'), [searchParams]);
+  const isRedirecting = useRedirectIfAuthenticated();
+
+  if (isRedirecting) {
+    return (
+      <div className="flex min-h-[calc(100vh-80px)] items-center justify-center bg-[#fef6f9] px-4 py-10 dark:bg-zinc-950">
+        <div className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
+          <LoaderIcon className="size-4 animate-spin" aria-hidden="true" />
+          You&apos;re already signed in. Redirecting…
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-[calc(100vh-80px)] items-center justify-center bg-[#fef6f9] px-4 py-10 dark:bg-zinc-950">

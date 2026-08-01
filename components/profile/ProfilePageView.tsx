@@ -3,7 +3,9 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import AccountDataSection from '@/components/profile/AccountDataSection';
 import ProfileAccountForm from '@/components/profile/ProfileAccountForm';
+import PrivacyPreferencesSection from '@/components/profile/PrivacyPreferencesSection';
 import ClientChatHistorySection from '@/components/profile/ClientChatHistorySection';
 import ClientDocumentsSection from '@/components/profile/ClientDocumentsSection';
 import ClientNextStepsChecklistSection from '@/components/profile/ClientNextStepsChecklistSection';
@@ -141,6 +143,13 @@ export default function ProfilePageView() {
         )}
 
         {accessToken && (
+          <div className="mb-10 grid grid-cols-1 gap-6">
+            <PrivacyPreferencesSection />
+            <AccountDataSection />
+          </div>
+        )}
+
+        {accessToken && (
           <div className="mb-10 grid grid-cols-1 gap-6 lg:grid-cols-2">
             <ClientSavedSearchesSection />
             <ClientNextStepsChecklistSection />
@@ -151,7 +160,7 @@ export default function ProfilePageView() {
 
         {accessToken && (
           <div className="mb-10">
-            <ClientChatHistorySection userId={me?.id ?? null} />
+            <ClientChatHistorySection />
           </div>
         )}
 

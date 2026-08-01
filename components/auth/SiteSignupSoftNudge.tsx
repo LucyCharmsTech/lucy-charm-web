@@ -21,6 +21,10 @@ export default function SiteSignupSoftNudge() {
       setOpen(false);
       return;
     }
+    if (pathname === '/login' || pathname === '/register') {
+      setOpen(false);
+      return;
+    }
     if (pathname === '/listings') {
       const today = new Date().toDateString();
       if (typeof window !== 'undefined' && localStorage.getItem(LISTINGS_BUMP_KEY) !== today) {

@@ -2,6 +2,12 @@ import api from '@/lib/axios';
 import type { AiMessageRecord, AiSession } from '@/types/api';
 
 /** Client-scoped chat sessions for the current account user. */
+export async function fetchMyChatSessions(): Promise<AiSession[]> {
+  const res = await api.get<AiSession[]>('/ai_sessions/me');
+  return res.data;
+}
+
+/** @deprecated Prefer fetchMyChatSessions — kept for backward compatibility. */
 export async function fetchChatSessionsByUser(userId: string): Promise<AiSession[]> {
   const res = await api.get<AiSession[]>(`/ai_sessions/user/${userId}`);
   return res.data;
