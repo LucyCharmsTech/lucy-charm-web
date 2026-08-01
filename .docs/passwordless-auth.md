@@ -34,6 +34,19 @@ Email/password UI has been removed from `/login` and `/register`.
 - `requestMagicLink({ email, redirect_path? })`
 - `verifyMagicLink({ token })`
 - `googleLogin(idToken)`
+- `refreshAccessToken(refreshToken)` — used by the Axios 401 interceptor
+- `logout(refreshToken)`
+
+---
+
+## Session / token lifetime
+
+| Token | Lifetime | Notes |
+|---|---|---|
+| Access JWT | **8 hours** (API) | Stored in `authStore` / `lucy-auth` localStorage |
+| Refresh token | **15 days** (API) | Rotated on each `/auth/refresh` |
+
+When an access JWT expires, the next API call gets 401 → interceptor refreshes → original request retries. Session ends only when the refresh token is invalid/expired/revoked.
 
 ---
 

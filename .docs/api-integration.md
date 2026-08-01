@@ -28,6 +28,14 @@ Set this in `.env` (or `.env.local`) before starting the dev server.
 - Use **`lib/axios.ts`** — shared Axios instance with auth-token interceptors.
 - Service wrappers in `services/` provide typed, named functions.
 
+### Auth token refresh
+- Request interceptor attaches `Authorization: Bearer <accessToken>` from `authStore`.
+- On **401**, `lib/axiosAuthRefresh.ts` calls `POST /auth/refresh` via the bare client in `lib/tokenRefresh.ts` (no interceptor recursion).
+- Concurrent 401s share a single in-flight refresh; queued requests retry with the new access token.
+- On successful refresh, `authStore.setTokens` persists the rotated pair (`lucy-auth` localStorage).
+- If refresh fails or no refresh token exists, auth is cleared (user must sign in again).
+- Public auth paths (`/auth/login`, `/auth/magic-link`, `/auth/google`, `/auth/mfa`, `/auth/refresh`) are skipped so failed sign-in does not trigger refresh.
+
 ---
 
 ## New files

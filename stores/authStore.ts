@@ -24,6 +24,9 @@ interface AuthState {
     user: AuthUser,
   ) => void;
 
+  /** Replace the token pair after a successful /auth/refresh (user unchanged). */
+  setTokens: (accessToken: string, refreshToken: string) => void;
+
   /** Update persisted user fields (e.g. after GET /users/me on refresh). */
   updateUser: (user: AuthUser) => void;
 
@@ -48,6 +51,9 @@ export const useAuthStore = create<AuthState>()(
 
         setAuth: (accessToken, refreshToken, user) =>
           set({ accessToken, refreshToken, user }, false, 'auth/setAuth'),
+
+        setTokens: (accessToken, refreshToken) =>
+          set({ accessToken, refreshToken }, false, 'auth/setTokens'),
 
         updateUser: (user) =>
           set({ user }, false, 'auth/updateUser'),

@@ -3,6 +3,7 @@
  */
 
 import api from '@/lib/axios';
+import { requestTokenRefresh } from '@/lib/tokenRefresh';
 import type {
   AuthToken,
   MagicLinkRequestBody,
@@ -38,15 +39,13 @@ export async function logout(refreshToken: string): Promise<void> {
 
 // ---------------------------------------------------------------------------
 // Token refresh
-// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------yes
 
 export async function refreshAccessToken(
   refreshToken: string,
 ): Promise<AuthToken> {
-  const res = await api.post<AuthToken>('/auth/refresh', {
-    refresh_token: refreshToken,
-  });
-  return res.data;
+  // Bare client — avoids the shared Axios 401 interceptor recursing on itself.
+  return requestTokenRefresh(refreshToken);
 }
 
 // ---------------------------------------------------------------------------

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { attachAuthRefreshInterceptor } from '@/lib/axiosAuthRefresh';
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1',
@@ -28,17 +29,7 @@ api.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
-// Response interceptor — on 401 clear auth so the app redirects to login.
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401 && typeof window !== 'undefined') {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { useAuthStore } = require('@/stores/authStore');
-      useAuthStore.getState().clearAuth();
-    }
-    return Promise.reject(error);
-  },
-);
+// On 401: attempt refresh + retry; clear auth only when refresh is impossible.
+attachAuthRefreshInterceptor(api);
 
 export default api;
