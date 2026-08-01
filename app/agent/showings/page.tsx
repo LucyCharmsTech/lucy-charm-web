@@ -8,14 +8,19 @@ import {
   XCircleIcon,
   RefreshCcwIcon,
 } from 'lucide-react';
+import ShowingIdentityReviewDialog from '@/components/agent/ShowingIdentityReviewDialog';
+import ShowingRescheduleDialog from '@/components/agent/ShowingRescheduleDialog';
 import { fetchMyAgentProfile } from '@/services/portalService';
 import { fetchShowingRequestsByAgent, updateShowingRequest } from '@/services/showingService';
 import type {
   AgentProfile,
-  ShowingIdVerificationStatus,
   ShowingRequest,
   ShowingRequestStatus,
 } from '@/types/api';
+
+function isActiveBookedStatus(status: ShowingRequestStatus): boolean {
+  return status === 'confirmed' || status === 'rescheduled';
+}
 
 const STATUS_STYLES: Record<ShowingRequestStatus, string> = {
   pending: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
@@ -50,6 +55,9 @@ export default function AgentShowingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [rescheduleRequest, setRescheduleRequest] = useState<ShowingRequest | null>(null);
+  const [rescheduleValue, setRescheduleValue] = useState('');
+  const [reviewRequest, setReviewRequest] = useState<ShowingRequest | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -79,14 +87,18 @@ export default function AgentShowingsPage() {
     });
   }
 
-  async function changeVerification(id: string, idStatus: ShowingIdVerificationStatus) {
-    await patchShowingRequest(id, {
-      id_verification_status: idStatus,
-      id_verification_notes:
-        idStatus === 'verified'
-          ? `Verified by agent on ${new Date().toISOString()}`
-          : undefined,
+  function openReschedule(request: ShowingRequest) {
+    const date = new Date(request.scheduled_at ?? request.preferred_date);
+    setRescheduleValue(new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16));
+    setRescheduleRequest(request);
+  }
+
+  async function submitReschedule() {
+    if (!rescheduleRequest || !rescheduleValue) return;
+    await patchShowingRequest(rescheduleRequest.id, {
+      scheduled_at: new Date(rescheduleValue).toISOString(),
     });
+    setRescheduleRequest(null);
   }
 
   async function patchShowingRequest(
@@ -142,7 +154,8 @@ export default function AgentShowingsPage() {
             rows={pending}
             updating={updating}
             onChangeStatus={changeStatus}
-            onChangeVerification={changeVerification}
+            onReschedule={openReschedule}
+            onReviewDocuments={setReviewRequest}
             agentId={agent?.id}
           />
         </section>
@@ -157,11 +170,26 @@ export default function AgentShowingsPage() {
             rows={rest}
             updating={updating}
             onChangeStatus={changeStatus}
-            onChangeVerification={changeVerification}
+            onReschedule={openReschedule}
+            onReviewDocuments={setReviewRequest}
             agentId={agent?.id}
           />
         </section>
       )}
+      <ShowingRescheduleDialog
+        open={Boolean(rescheduleRequest)}
+        value={rescheduleValue}
+        busy={Boolean(rescheduleRequest && updating === rescheduleRequest.id)}
+        onChange={setRescheduleValue}
+        onCancel={() => setRescheduleRequest(null)}
+        onSave={() => void submitReschedule()}
+      />
+      <ShowingIdentityReviewDialog
+        open={Boolean(reviewRequest)}
+        request={reviewRequest}
+        onClose={() => setReviewRequest(null)}
+        onReviewed={() => void load()}
+      />
     </div>
   );
 }
@@ -170,12 +198,14 @@ function ShowingTable({
   rows,
   updating,
   onChangeStatus,
-  onChangeVerification,
+  onReschedule,
+  onReviewDocuments,
 }: {
   rows: ShowingRequest[];
   updating: string | null;
   onChangeStatus: (id: string, status: ShowingRequestStatus) => void;
-  onChangeVerification: (id: string, status: ShowingIdVerificationStatus) => void;
+  onReschedule: (request: ShowingRequest) => void;
+  onReviewDocuments: (request: ShowingRequest) => void;
   agentId?: string;
 }) {
   return (
@@ -210,11 +240,11 @@ function ShowingTable({
               <td className="whitespace-nowrap px-4 py-3 text-zinc-700 dark:text-zinc-300">
                 <span className="flex items-center gap-1.5">
                   <CalendarIcon className="size-3.5 shrink-0 text-zinc-400" aria-hidden="true" />
-                  {new Date(r.preferred_date).toLocaleString()}
+                  {new Date(r.scheduled_at ?? r.preferred_date).toLocaleString()}
                 </span>
-                {r.alternate_date && (
+                {r.rescheduled_at && (
                   <span className="mt-0.5 block text-xs text-zinc-400">
-                    Alt: {new Date(r.alternate_date).toLocaleString()}
+                    Originally requested: {new Date(r.preferred_date).toLocaleString()}
                   </span>
                 )}
               </td>
@@ -258,7 +288,7 @@ function ShowingTable({
                       <ActionButton
                         label="Reschedule"
                         busy={updating === r.id}
-                        onClick={() => onChangeStatus(r.id, 'rescheduled')}
+                        onClick={() => onReschedule(r)}
                         className="bg-blue-600 text-white hover:bg-blue-700"
                       />
                       <ActionButton
@@ -269,21 +299,40 @@ function ShowingTable({
                       />
                     </>
                   )}
-                  {r.status === 'confirmed' && (
-                    <ActionButton
-                      label="Mark complete"
-                      busy={updating === r.id}
-                      onClick={() => onChangeStatus(r.id, 'completed')}
-                      className="bg-violet-600 text-white hover:bg-violet-700"
-                    />
+                  {isActiveBookedStatus(r.status) && (
+                    <>
+                      <ActionButton
+                        label="Reschedule"
+                        busy={updating === r.id}
+                        onClick={() => onReschedule(r)}
+                        className="bg-blue-600 text-white hover:bg-blue-700"
+                      />
+                      <ActionButton
+                        label="Mark complete"
+                        busy={updating === r.id}
+                        onClick={() => onChangeStatus(r.id, 'completed')}
+                        className="bg-violet-600 text-white hover:bg-violet-700"
+                      />
+                      <ActionButton
+                        label="Cancel"
+                        busy={updating === r.id}
+                        onClick={() => onChangeStatus(r.id, 'cancelled')}
+                        className="bg-zinc-200 text-zinc-800 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-100"
+                      />
+                    </>
                   )}
-                  {r.id_verification_status === 'pending' && (
+                  {r.id_verification_status === 'pending' && r.identity_document_uploaded && (
                     <ActionButton
-                      label="Mark ID verified"
+                      label="Review ID"
                       busy={updating === r.id}
-                      onClick={() => onChangeVerification(r.id, 'verified')}
+                      onClick={() => onReviewDocuments(r)}
                       className="bg-emerald-600 text-white hover:bg-emerald-700"
                     />
+                  )}
+                  {r.id_verification_status === 'pending' && !r.identity_document_uploaded && (
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Waiting for buyer ID upload
+                    </span>
                   )}
                 </div>
                 {r.message && (

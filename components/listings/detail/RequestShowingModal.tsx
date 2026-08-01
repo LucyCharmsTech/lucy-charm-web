@@ -1,16 +1,17 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { CalendarIcon, CheckCircleIcon, XIcon } from 'lucide-react';
+import { CalendarIcon, XIcon } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuthStore } from '@/stores/authStore';
+import RequestShowingIdUploadStep from '@/components/listings/detail/RequestShowingIdUploadStep';
 import { useListingChatSession } from '@/components/listings/detail/ListingChatSessionContext';
 import { submitShowingRequest } from '@/services/showingService';
-import type { ShowingType } from '@/types/api';
+import type { ShowingRequest, ShowingType } from '@/types/api';
 
 type Props = {
   open: boolean;
@@ -54,7 +55,7 @@ export default function RequestShowingModal({ open, listingId, listingTitle, onC
   const [financingNotes, setFinancingNotes] = useState('');
   const [idVerificationRequested, setIdVerificationRequested] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [submittedRequest, setSubmittedRequest] = useState<ShowingRequest | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Sync dialog open state
@@ -102,7 +103,7 @@ export default function RequestShowingModal({ open, listingId, listingTitle, onC
 
     setSubmitting(true);
     try {
-      await submitShowingRequest({
+      const created = await submitShowingRequest({
         listing_id: listingId,
         first_name: firstName.trim(),
         last_name: lastName.trim(),
@@ -119,7 +120,7 @@ export default function RequestShowingModal({ open, listingId, listingTitle, onC
         id_verification_requested: idVerificationRequested,
         ai_session_id: aiSessionId ?? undefined,
       });
-      setSubmitted(true);
+      setSubmittedRequest(created);
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
@@ -166,23 +167,12 @@ export default function RequestShowingModal({ open, listingId, listingTitle, onC
 
         {/* Body */}
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
-          {submitted ? (
-            <div className="flex flex-col items-center gap-4 py-8 text-center">
-              <CheckCircleIcon className="size-12 text-emerald-500" aria-hidden="true" />
-              <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">Request sent!</h3>
-              <p className="max-w-xs text-sm text-zinc-600 dark:text-zinc-300">
-                Your showing request has been submitted. The agent will be in touch to confirm a
-                date and time.
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => dialogRef.current?.close()}
-                className="mt-2 rounded-full"
-              >
-                Close
-              </Button>
-            </div>
+          {submittedRequest ? (
+            <RequestShowingIdUploadStep
+              request={submittedRequest}
+              isAuthenticated={Boolean(user)}
+              onClose={() => dialogRef.current?.close()}
+            />
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5" noValidate>
               {/* Contact */}
@@ -381,8 +371,8 @@ export default function RequestShowingModal({ open, listingId, listingTitle, onC
                   </span>
                 </label>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  Verification is optional and status-only. We do not store raw ID uploads in this
-                  form.
+                  Optional. After you submit, you can upload a photo or PDF of your ID for the agent
+                  to review.
                 </p>
               </fieldset>
 

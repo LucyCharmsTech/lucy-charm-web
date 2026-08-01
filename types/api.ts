@@ -484,8 +484,12 @@ export type ShowingRequest = {
   id_verification_requested: boolean;
   id_verification_status: ShowingIdVerificationStatus;
   id_verification_notes: string | null;
+  /** True when an uploaded/verified ID file exists for this request. */
+  identity_document_uploaded: boolean;
   status: ShowingRequestStatus;
   confirmed_at: string | null;
+  scheduled_at: string | null;
+  rescheduled_at: string | null;
   agent_notes: string | null;
   crm_synced: boolean;
   feedback_submitted_at: string | null;
@@ -524,6 +528,7 @@ export type ShowingRequestCreate = {
 export type ShowingRequestUpdate = {
   status?: ShowingRequestStatus;
   confirmed_at?: string;
+  scheduled_at?: string;
   agent_notes?: string;
   alternate_date?: string;
   crm_synced?: boolean;
@@ -539,6 +544,19 @@ export type ShowingRequestFeedbackSubmit = {
   feedback_comment?: string;
   feedback_would_offer?: boolean;
   feedback_ai_profile_consent?: boolean;
+};
+
+export type ShowingVerificationDocument = {
+  id: string;
+  showing_request_id: string;
+  original_filename: string;
+  content_type: string;
+  size_bytes: number;
+  status: 'uploaded' | 'verified' | 'rejected';
+  reviewed_at: string | null;
+  review_note: string | null;
+  viewed_at: string | null;
+  created_at: string;
 };
 
 // Roles used in the local chat message list

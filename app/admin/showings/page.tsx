@@ -8,6 +8,7 @@ import {
   XCircleIcon,
   RefreshCcwIcon,
 } from 'lucide-react';
+import ShowingIdentityReviewDialog from '@/components/agent/ShowingIdentityReviewDialog';
 import { fetchAllShowingRequestsAdmin, updateShowingRequest } from '@/services/showingService';
 import type { ApiPaginated, ShowingRequest, ShowingRequestStatus } from '@/types/api';
 
@@ -43,6 +44,7 @@ export default function AdminShowingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [reviewRequest, setReviewRequest] = useState<ShowingRequest | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -66,25 +68,6 @@ export default function AdminShowingsPage() {
       const updated = await updateShowingRequest(id, {
         status,
         confirmed_at: status === 'confirmed' ? new Date().toISOString() : undefined,
-      });
-      setData((prev) =>
-        prev
-          ? { ...prev, items: prev.items.map((r) => (r.id === id ? updated : r)) }
-          : prev,
-      );
-    } catch {
-      /* noop */
-    } finally {
-      setUpdating(null);
-    }
-  }
-
-  async function changeVerification(id: string) {
-    setUpdating(id);
-    try {
-      const updated = await updateShowingRequest(id, {
-        id_verification_status: 'verified',
-        id_verification_notes: `Verified by admin on ${new Date().toISOString()}`,
       });
       setData((prev) =>
         prev
@@ -215,17 +198,22 @@ export default function AdminShowingsPage() {
                           >
                             Cancel
                           </button>
-                          {r.id_verification_status === 'pending' && (
-                            <button
-                              type="button"
-                              disabled={updating === r.id}
-                              onClick={() => changeVerification(r.id)}
-                              className="inline-flex h-7 items-center rounded-full bg-emerald-600 px-3 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
-                            >
-                              Verify ID
-                            </button>
-                          )}
                         </>
+                      )}
+                      {r.id_verification_status === 'pending' && r.identity_document_uploaded && (
+                        <button
+                          type="button"
+                          disabled={updating === r.id}
+                          onClick={() => setReviewRequest(r)}
+                          className="inline-flex h-7 items-center rounded-full bg-emerald-600 px-3 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                        >
+                          Review ID
+                        </button>
+                      )}
+                      {r.id_verification_status === 'pending' && !r.identity_document_uploaded && (
+                        <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                          Waiting for buyer ID upload
+                        </span>
                       )}
                       {r.message && (
                         <p className="mt-1 max-w-[180px] truncate text-xs text-zinc-400" title={r.message}>
@@ -240,6 +228,12 @@ export default function AdminShowingsPage() {
           </table>
         </div>
       )}
+      <ShowingIdentityReviewDialog
+        open={Boolean(reviewRequest)}
+        request={reviewRequest}
+        onClose={() => setReviewRequest(null)}
+        onReviewed={() => void load()}
+      />
     </div>
   );
 }
