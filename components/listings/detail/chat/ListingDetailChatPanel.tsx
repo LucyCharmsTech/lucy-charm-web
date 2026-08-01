@@ -170,7 +170,7 @@ export default function ListingDetailChatPanel({
         )}
 
         {messages.map((msg) => (
-          <ListingDetailChatBubble key={msg.id} msg={msg} />
+          <ListingDetailChatBubble key={msg.id} msg={msg} onRequestHuman={onRequestHuman} humanRequested={humanRequested} humanRequestPending={humanRequestPending} />
         ))}
 
         {sending && <ListingDetailChatTypingIndicator />}
@@ -217,6 +217,9 @@ export default function ListingDetailChatPanel({
             )}
           </Button>
         </div>
+        <p className="mt-1.5 text-center text-[9px] text-zinc-400 dark:text-zinc-500">
+          AI-generated general information only, not professional advice. Verify important details with a human.
+        </p>
       </div>
     </div>
   );

@@ -12,7 +12,8 @@
  */
 
 import { useState } from 'react';
-import { ChevronDownIcon, ChevronUpIcon, InfoIcon } from 'lucide-react';
+import { ChevronDownIcon, ChevronUpIcon, InfoIcon, UserRoundCheckIcon } from 'lucide-react';
+import type { ChatResponseSource, ChatSendResponse } from '@/types/api';
 
 export type AssistantTrustLayerProps = {
   confidence_score: number | null;
@@ -20,6 +21,12 @@ export type AssistantTrustLayerProps = {
   model_version?: string | null;
   prompt_version?: string | null;
   escalation_flag?: boolean;
+  response_type?: ChatSendResponse['response_type'];
+  assumptions?: string[];
+  sources?: ChatResponseSource[];
+  onRequestHuman?: () => void;
+  humanRequested?: boolean;
+  humanRequestPending?: boolean;
 };
 
 function ConfidenceBadge({ score }: { score: number }) {
@@ -53,13 +60,22 @@ export default function AssistantTrustLayer({
   model_version,
   prompt_version,
   escalation_flag,
+  response_type,
+  assumptions,
+  sources,
+  onRequestHuman,
+  humanRequested,
+  humanRequestPending,
 }: AssistantTrustLayerProps) {
   const [open, setOpen] = useState(false);
 
   const hasDetail =
     (listing_fields_used && listing_fields_used.length > 0) ||
     model_version ||
-    prompt_version;
+    prompt_version ||
+    response_type ||
+    (assumptions && assumptions.length > 0) ||
+    (sources && sources.length > 0);
 
   if (confidence_score == null && !hasDetail) return null;
 
@@ -74,6 +90,11 @@ export default function AssistantTrustLayer({
           {escalation_flag && (
             <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
               ⚠ Escalated
+            </span>
+          )}
+          {response_type && (
+            <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+              {response_type === 'professional_advice' ? 'Professional review needed' : response_type.replace(/_/g, ' ')}
             </span>
           )}
         </div>
@@ -124,6 +145,29 @@ export default function AssistantTrustLayer({
               {model_version && prompt_version && <span> · </span>}
               {prompt_version && <span>prompt v{prompt_version}</span>}
             </p>
+          )}
+          {assumptions && assumptions.length > 0 && (
+            <div>
+              <p className="font-semibold text-zinc-600 dark:text-zinc-300">Assumptions and limits</p>
+              {assumptions.map((assumption) => <p key={assumption} className="text-zinc-500 dark:text-zinc-400">{assumption}</p>)}
+            </div>
+          )}
+          {sources && sources.length > 0 && (
+            <div>
+              <p className="font-semibold text-zinc-600 dark:text-zinc-300">Sources</p>
+              {sources.map((source) => (
+                <p key={`${source.source_type}-${source.label}`} className="text-zinc-500 dark:text-zinc-400">
+                  {source.verification_url ? <a href={source.verification_url} className="underline hover:text-primarycolor">{source.label}</a> : source.label}
+                  {source.as_of && `, accessed ${new Date(source.as_of).toLocaleDateString()}`}
+                </p>
+              ))}
+            </div>
+          )}
+          {onRequestHuman && (
+            <button type="button" onClick={onRequestHuman} disabled={humanRequested || humanRequestPending} className="flex items-center gap-1 font-semibold text-primarycolor disabled:text-zinc-400">
+              <UserRoundCheckIcon className="size-3" aria-hidden="true" />
+              {humanRequested ? 'Human verification requested' : humanRequestPending ? 'Requesting verification...' : 'Verify with a human'}
+            </button>
           )}
         </div>
       )}

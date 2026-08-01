@@ -118,6 +118,9 @@ export default function ListingDetailChatWidget({
           model_version: response.model_version,
           prompt_version: response.prompt_version,
           escalation_flag: response.escalation_flag,
+          response_type: response.response_type,
+          assumptions: response.assumptions,
+          sources: response.sources,
         };
         setMessages((prev) => [...prev, assistantMsg]);
 

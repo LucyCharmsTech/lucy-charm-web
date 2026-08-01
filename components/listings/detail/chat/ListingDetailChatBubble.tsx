@@ -6,7 +6,7 @@ import AssistantTrustLayer from '@/components/chat/AssistantTrustLayer';
 import ChatPlaceCards from '@/components/chat/ChatPlaceCards';
 import type { ChatMessage } from '@/types/api';
 
-export default function ListingDetailChatBubble({ msg }: { msg: ChatMessage }) {
+export default function ListingDetailChatBubble({ msg, onRequestHuman, humanRequested, humanRequestPending }: { msg: ChatMessage; onRequestHuman?: () => void; humanRequested?: boolean; humanRequestPending?: boolean }) {
   const isUser = msg.role === 'user';
   return (
     <div className={`flex items-end gap-2 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -42,6 +42,12 @@ export default function ListingDetailChatBubble({ msg }: { msg: ChatMessage }) {
             model_version={msg.model_version}
             prompt_version={msg.prompt_version}
             escalation_flag={msg.escalation_flag}
+            response_type={msg.response_type}
+            assumptions={msg.assumptions}
+            sources={msg.sources}
+            onRequestHuman={onRequestHuman}
+            humanRequested={humanRequested}
+            humanRequestPending={humanRequestPending}
           />
         )}
       </div>

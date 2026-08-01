@@ -435,6 +435,16 @@ export type ChatSendResponse = {
   ui_actions?: string[] | null;
   /** Optional listing cards for search-like responses. */
   place_cards?: ChatPlaceCard[] | null;
+  response_type: 'general_information' | 'professional_advice' | 'clarification' | 'data_unavailable';
+  assumptions: string[];
+  sources: ChatResponseSource[];
+};
+
+export type ChatResponseSource = {
+  source_type: string;
+  label: string;
+  as_of: string | null;
+  verification_url: string | null;
 };
 
 export type ChatRequestHumanResponse = {
@@ -546,4 +556,7 @@ export type ChatMessage = {
   prompt_version?: string | null;
   escalation_flag?: boolean;
   place_cards?: ChatPlaceCard[] | null;
+  response_type?: ChatSendResponse['response_type'];
+  assumptions?: string[];
+  sources?: ChatResponseSource[];
 };

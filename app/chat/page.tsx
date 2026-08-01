@@ -22,6 +22,7 @@ import { useShallow } from 'zustand/react/shallow';
 import {
   createAiSession,
   sendChatMessage,
+  requestHumanAgent,
   getOrCreateAnonToken,
 } from '@/services/chatService';
 import { useAuthStore } from '@/stores/authStore';
@@ -46,7 +47,7 @@ const SUGGESTED_PROMPTS = [
 // Sub-components
 // ---------------------------------------------------------------------------
 
-function ChatBubble({ msg }: { msg: ChatMessage }) {
+function ChatBubble({ msg, onRequestHuman, humanRequested, humanRequestPending }: { msg: ChatMessage; onRequestHuman: () => void; humanRequested: boolean; humanRequestPending: boolean }) {
   const isUser = msg.role === 'user';
 
   return (
@@ -83,6 +84,12 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
               model_version={msg.model_version}
               prompt_version={msg.prompt_version}
               escalation_flag={msg.escalation_flag}
+              response_type={msg.response_type}
+              assumptions={msg.assumptions}
+              sources={msg.sources}
+              onRequestHuman={onRequestHuman}
+              humanRequested={humanRequested}
+              humanRequestPending={humanRequestPending}
             />
           )}
         </div>
@@ -159,6 +166,8 @@ function ChatPageContent() {
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState(false);
   const [sendErrorDetail, setSendErrorDetail] = useState<string | null>(null);
+  const [humanRequested, setHumanRequested] = useState(false);
+  const [humanRequestPending, setHumanRequestPending] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -236,6 +245,9 @@ function ChatPageContent() {
           prompt_version: response.prompt_version ?? null,
           escalation_flag: response.escalation_flag,
           place_cards: response.place_cards ?? null,
+          response_type: response.response_type,
+          assumptions: response.assumptions,
+          sources: response.sources,
         };
         setMessages((prev) => [...prev, assistantMsg]);
       } catch (err: unknown) {
@@ -272,6 +284,17 @@ function ChatPageContent() {
     },
     [inputValue, sessionId, sending],
   );
+
+  const handleRequestHuman = useCallback(async () => {
+    if (!sessionId || humanRequested || humanRequestPending) return;
+    setHumanRequestPending(true);
+    try {
+      await requestHumanAgent({ sessionId });
+      setHumanRequested(true);
+    } finally {
+      setHumanRequestPending(false);
+    }
+  }, [sessionId, humanRequested, humanRequestPending]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -386,7 +409,7 @@ function ChatPageContent() {
 
         {/* Conversation */}
         {messages.map((msg) => (
-          <ChatBubble key={msg.id} msg={msg} />
+          <ChatBubble key={msg.id} msg={msg} onRequestHuman={handleRequestHuman} humanRequested={humanRequested} humanRequestPending={humanRequestPending} />
         ))}
 
         {/* Typing indicator while waiting for response */}
@@ -443,8 +466,7 @@ function ChatPageContent() {
             </InputGroupAddon>
           </InputGroup>
           <p className="mt-1.5 text-center text-[11px] text-zinc-400 dark:text-zinc-600">
-            Lucy may make mistakes. Always verify listings with an agent before
-            making decisions.
+            AI-generated general information only, not professional advice. Verify important details with a qualified human.
           </p>
         </div>
       </div>
