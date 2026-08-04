@@ -15,12 +15,14 @@ import {
 } from 'lucide-react';
 
 import { useShallow } from 'zustand/react/shallow';
+import NotificationBell from '@/components/notifications/NotificationBell';
 import {
   formatUserDisplayName,
   formatUserInitials,
   formatUserShortLabel,
 } from '@/lib/userDisplayName';
 import { useAuthStore } from '@/stores/authStore';
+import { useNotificationStore } from '@/stores/notificationStore';
 import { logout } from '@/services/authService';
 
 const NAV_LINKS = [
@@ -40,6 +42,7 @@ export default function NavBar() {
       refreshToken: s.refreshToken,
     })),
   );
+  const resetNotifications = useNotificationStore((s) => s.reset);
   const isAuthenticated = Boolean(accessToken);
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -69,6 +72,7 @@ export default function NavBar() {
       // Revocation failed — clear client state anyway
     }
     clearAuth();
+    resetNotifications();
     router.push('/');
   }
 
@@ -129,6 +133,8 @@ export default function NavBar() {
 
         {/* ── Right side ── */}
         <div className="flex items-center gap-2">
+
+          <NotificationBell />
 
           {isAuthenticated ? (
             /* ── User dropdown ── */

@@ -8,6 +8,8 @@ import ShowingIdentityUploadButton, {
   canUploadShowingIdentity,
   isShowingIdentityAwaitingReview,
 } from '@/components/profile/ShowingIdentityUploadButton';
+import { showingAnchorId, useShowingDeepLink } from '@/lib/useShowingDeepLink';
+import { cn } from '@/lib/utils';
 import { fetchListingById } from '@/services/listingsService';
 import { fetchMyShowingRequests } from '@/services/showingService';
 import type { ShowingRequest } from '@/types/api';
@@ -38,6 +40,7 @@ export default function ClientShowingScheduleSection() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+  const highlightedShowingId = useShowingDeepLink(!loading);
 
   useEffect(() => {
     let active = true;
@@ -101,7 +104,10 @@ export default function ClientShowingScheduleSection() {
   }
 
   return (
-    <section className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/40">
+    <section
+      id="showing-schedule"
+      className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/40"
+    >
       <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">Showing schedule</h2>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
         Track your upcoming and past showings in one place.
@@ -123,7 +129,12 @@ export default function ClientShowingScheduleSection() {
             items.map((item) => (
               <article
                 key={item.id}
-                className="rounded-xl border border-zinc-200/80 p-3 dark:border-zinc-700/80"
+                id={showingAnchorId(item.id)}
+                className={cn(
+                  'rounded-xl border border-zinc-200/80 p-3 transition dark:border-zinc-700/80',
+                  item.id === highlightedShowingId &&
+                    'border-primarycolor/40 ring-2 ring-primarycolor/40 dark:border-primarycolor/40',
+                )}
               >
                 <div className="mb-2 inline-flex items-center rounded-full bg-primarycolor/10 px-2.5 py-1 text-[11px] font-semibold text-primarycolor">
                   {visitBadge(item.status)}
