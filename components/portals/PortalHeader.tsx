@@ -4,8 +4,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { LogOutIcon } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
+import NotificationBell from '@/components/notifications/NotificationBell';
 import { formatUserDisplayName } from '@/lib/userDisplayName';
 import { useAuthStore } from '@/stores/authStore';
+import { useNotificationStore } from '@/stores/notificationStore';
 import { logout } from '@/services/authService';
 import { Button } from '@/components/ui/button';
 
@@ -19,6 +21,8 @@ export default function PortalHeader({ title }: { title: string }) {
     })),
   );
 
+  const resetNotifications = useNotificationStore((s) => s.reset);
+
   async function handleLogout() {
     try {
       if (refreshToken) await logout(refreshToken);
@@ -26,6 +30,7 @@ export default function PortalHeader({ title }: { title: string }) {
       /* ignore */
     }
     clearAuth();
+    resetNotifications();
     router.push('/');
   }
 
@@ -48,6 +53,7 @@ export default function PortalHeader({ title }: { title: string }) {
           <p className="hidden max-w-[200px] truncate text-sm text-zinc-600 dark:text-zinc-300 sm:block">
             {formatUserDisplayName(user)}
           </p>
+          <NotificationBell />
           <Button
             type="button"
             variant="outline"

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 
 import AccountDataSection from '@/components/profile/AccountDataSection';
 import ProfileAccountForm from '@/components/profile/ProfileAccountForm';
@@ -18,13 +18,21 @@ import { useAuthStore } from '@/stores/authStore';
 import type { UserMe } from '@/types/api';
 import { userMeToAuthUser } from '@/types/api';
 
+function ShowingScheduleFallback() {
+  return (
+    <section className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/40">
+      <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">Showing schedule</h2>
+      <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">Loading showings…</p>
+    </section>
+  );
+}
+
 export default function ProfilePageView() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const updateUser = useAuthStore((s) => s.updateUser);
   const [me, setMe] = useState<UserMe | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
-  const savedAnchorRef = useRef<HTMLDivElement>(null);
 
   const loadProfile = useCallback(async () => {
     if (!accessToken) return;
@@ -45,11 +53,14 @@ export default function ProfilePageView() {
     void loadProfile();
   }, [loadProfile]);
 
+  // Scroll to whichever section the hash names (#saved-homes, #showing-schedule,
+  // and anything added later). Delayed so the section has mounted and loaded.
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (window.location.hash !== '#saved-homes') return;
+    const targetId = window.location.hash.slice(1);
+    if (!targetId) return;
     const t = window.setTimeout(() => {
-      savedAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 300);
     return () => window.clearTimeout(t);
   }, [loadingProfile, accessToken]);
@@ -154,7 +165,10 @@ export default function ProfilePageView() {
             <ClientSavedSearchesSection />
             <ClientNextStepsChecklistSection />
             <ClientDocumentsSection />
-            <ClientShowingScheduleSection />
+            {/* Reads `?showing=` from a notification deep link, so it needs a boundary. */}
+            <Suspense fallback={<ShowingScheduleFallback />}>
+              <ClientShowingScheduleSection />
+            </Suspense>
           </div>
         )}
 
@@ -166,7 +180,6 @@ export default function ProfilePageView() {
 
         <section
           id="saved-homes"
-          ref={savedAnchorRef}
           className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/40"
           aria-labelledby="saved-homes-heading"
         >

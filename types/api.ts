@@ -578,3 +578,50 @@ export type ChatMessage = {
   assumptions?: string[];
   sources?: ChatResponseSource[];
 };
+
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+
+/**
+ * Event types the API emits today. Deliberately an **open set** — new values ship
+ * without a frontend release, so every consumer must handle the default case.
+ */
+export type NotificationEventType =
+  | 'showing.requested'
+  | 'showing.confirmed'
+  | 'showing.rescheduled'
+  | 'report.status_updated';
+
+/**
+ * Mirrors NotificationRead from the API.
+ * Named `AppNotification` because `Notification` is a DOM global.
+ */
+export type AppNotification = {
+  id: string;
+  /** Widened past `NotificationEventType` on purpose — see the type's note. */
+  event_type: NotificationEventType | string;
+  /** Always `'transactional'` today, hence a plain string rather than a union. */
+  category: string;
+  title: string;
+  body: string | null;
+  /** Relative web-app path, e.g. `/profile?showing=<uuid>` — never an API URL. */
+  deep_link: string | null;
+  resource_type: string | null;
+  resource_id: string | null;
+  /** Metadata for badging and filtering only; all display copy is in title/body. */
+  payload_json: Record<string, unknown> | null;
+  read_at: string | null;
+  created_at: string;
+  /** Server-computed `read_at !== null`. */
+  is_read: boolean;
+};
+
+export type NotificationUnreadCount = {
+  unread: number;
+};
+
+/** Counts only the rows that were actually unread, so a repeat call returns 0. */
+export type NotificationMarkAllReadResponse = {
+  updated: number;
+};

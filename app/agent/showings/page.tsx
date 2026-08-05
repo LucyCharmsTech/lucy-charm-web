@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import {
   CalendarIcon,
   CheckCircleIcon,
@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import ShowingIdentityReviewDialog from '@/components/agent/ShowingIdentityReviewDialog';
 import ShowingRescheduleDialog from '@/components/agent/ShowingRescheduleDialog';
+import { showingAnchorId, useShowingDeepLink } from '@/lib/useShowingDeepLink';
 import { fetchMyAgentProfile } from '@/services/portalService';
 import { fetchShowingRequestsByAgent, updateShowingRequest } from '@/services/showingService';
 import type {
@@ -49,7 +50,7 @@ function StatusBadge({ status }: { status: ShowingRequestStatus }) {
   );
 }
 
-export default function AgentShowingsPage() {
+function AgentShowingsPageContent() {
   const [agent, setAgent] = useState<AgentProfile | null>(null);
   const [requests, setRequests] = useState<ShowingRequest[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +59,7 @@ export default function AgentShowingsPage() {
   const [rescheduleRequest, setRescheduleRequest] = useState<ShowingRequest | null>(null);
   const [rescheduleValue, setRescheduleValue] = useState('');
   const [reviewRequest, setReviewRequest] = useState<ShowingRequest | null>(null);
+  const highlightedShowingId = useShowingDeepLink(!loading);
 
   const load = useCallback(async () => {
     try {
@@ -157,6 +159,7 @@ export default function AgentShowingsPage() {
             onReschedule={openReschedule}
             onReviewDocuments={setReviewRequest}
             agentId={agent?.id}
+            highlightId={highlightedShowingId}
           />
         </section>
       )}
@@ -173,6 +176,7 @@ export default function AgentShowingsPage() {
             onReschedule={openReschedule}
             onReviewDocuments={setReviewRequest}
             agentId={agent?.id}
+            highlightId={highlightedShowingId}
           />
         </section>
       )}
@@ -200,6 +204,7 @@ function ShowingTable({
   onChangeStatus,
   onReschedule,
   onReviewDocuments,
+  highlightId,
 }: {
   rows: ShowingRequest[];
   updating: string | null;
@@ -207,6 +212,8 @@ function ShowingTable({
   onReschedule: (request: ShowingRequest) => void;
   onReviewDocuments: (request: ShowingRequest) => void;
   agentId?: string;
+  /** Row a notification deep link points at, tinted so it is findable in a long queue. */
+  highlightId?: string | null;
 }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
@@ -226,7 +233,15 @@ function ShowingTable({
         </thead>
         <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
           {rows.map((r) => (
-            <tr key={r.id} className="bg-white dark:bg-zinc-950/40">
+            <tr
+              key={r.id}
+              id={showingAnchorId(r.id)}
+              className={
+                r.id === highlightId
+                  ? 'bg-primarycolor/10 dark:bg-primarycolor/20'
+                  : 'bg-white dark:bg-zinc-950/40'
+              }
+            >
               <td className="px-4 py-3">
                 <p className="font-medium text-zinc-900 dark:text-zinc-100">
                   {r.first_name} {r.last_name}
@@ -369,5 +384,15 @@ function ActionButton({
     >
       {label}
     </button>
+  );
+}
+
+export default function AgentShowingsPage() {
+  return (
+    <Suspense
+      fallback={<p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>}
+    >
+      <AgentShowingsPageContent />
+    </Suspense>
   );
 }
