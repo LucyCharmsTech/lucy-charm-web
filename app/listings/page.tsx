@@ -11,12 +11,14 @@ import { COUNTRY_OPTIONS } from '@/components/listings/constants';
 import { matchListingsToPreferences } from '@/lib/listingMatching';
 import { apiListingToItem } from '@/lib/listingAdapter';
 import { isProptxLive } from '@/lib/proptxMode';
+import { realtimeChannel } from '@/lib/realtime/channels';
+import { useChannels, useRealtimeEvent, useRefetchOnReconnect } from '@/lib/realtime/hooks';
 import { fetchStoredUserPreferences } from '@/services/userPreferencesService';
 import {
   buildSearchParams,
   searchListings,
 } from '@/services/listingsService';
-import type { ApiListing } from '@/types/api';
+import type { ApiListing, ListingDeletedPayload, ListingUpdatedPayload } from '@/types/api';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -121,8 +123,10 @@ function ListingsPageContent() {
   // ---------------------------------------------------------------------------
   // Fetch from API whenever filters change
   // ---------------------------------------------------------------------------
-  const fetchListings = useCallback(async () => {
-    setLoading(true);
+  const fetchListings = useCallback(async (options?: { silent?: boolean }) => {
+    // Realtime-triggered refreshes are silent — flashing the skeleton over a
+    // grid the user is reading would make every background change disruptive.
+    if (!options?.silent) setLoading(true);
     setApiError(false);
 
     try {
@@ -173,6 +177,37 @@ function ListingsPageContent() {
   useEffect(() => {
     fetchListings();
   }, [fetchListings]);
+
+  // ---------------------------------------------------------------------------
+  // Realtime — keep the grid live while it is on screen (signed-in sessions
+  // only; anonymous visitors have no socket and just render the fetch above)
+  // ---------------------------------------------------------------------------
+  useChannels(isProptxLive() ? [realtimeChannel.listingsFeed] : []);
+
+  useRealtimeEvent<ListingUpdatedPayload>('listing.updated', ({ payload }) => {
+    if (!isProptxLive()) return;
+    // Replace the row wholesale from the event's full read model. Rows outside
+    // the current filters are simply not present — ignoring those misses is
+    // correct; never re-run the server's filters client-side.
+    setListings((prev) =>
+      prev.map((item) => (item.id === payload.listing_id ? apiListingToItem(payload.listing) : item)),
+    );
+  });
+
+  useRealtimeEvent<ListingDeletedPayload>('listing.deleted', ({ payload }) => {
+    if (!isProptxLive()) return;
+    setListings((prev) => prev.filter((item) => item.id !== payload.listing_id));
+  });
+
+  useRealtimeEvent('listing.created', () => {
+    // A new listing may not match the current filters, and the event cannot
+    // know what those are — let the server decide by refetching.
+    if (isProptxLive()) void fetchListings({ silent: true });
+  });
+
+  useRefetchOnReconnect(() => {
+    if (isProptxLive()) void fetchListings({ silent: true });
+  });
 
   const activeCountryLabel = country ? countryLabel(country) : null;
 

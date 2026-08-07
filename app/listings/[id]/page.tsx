@@ -13,6 +13,7 @@ import {
 
 import ListingDetailLocationSection from '@/components/listings/detail/ListingDetailLocationSection';
 import ListingDetailInteractiveShell from '@/components/listings/detail/ListingDetailInteractiveShell';
+import ListingDetailLiveUpdates from '@/components/listings/detail/ListingDetailLiveUpdates';
 import ListingDetailSidebar from '@/components/listings/detail/ListingDetailSidebar';
 import {
   getListingDetailMetrics,
@@ -38,8 +39,10 @@ export default async function ListingDetailPage({ params }: PageProps) {
   let listing: ListingDetail | null = null;
 
   if (isUuid(id)) {
-    // Real listing from the backend — fetch by UUID
-    const apiListing = await serverFetch<ApiListing>(`/listings/${id}`);
+    // Real listing from the backend — fetch by UUID. Uncached: this route is
+    // already dynamic, and `ListingDetailLiveUpdates` answers change events
+    // with router.refresh(), which must not be served the pre-change value.
+    const apiListing = await serverFetch<ApiListing>(`/listings/${id}`, { revalidate: 0 });
     if (apiListing) {
       listing = apiListingToDetail(apiListing);
     }
@@ -63,6 +66,8 @@ export default async function ListingDetailPage({ params }: PageProps) {
         listingId={listing.id}
         listingTitle={listing.title ?? listing.address}
       >
+      {/* Live updates only exist for real (UUID) listings — mocks have no channel. */}
+      {isUuid(id) && <ListingDetailLiveUpdates listingId={id} />}
       {/* Page shell — light marketing background; inner wrapper centers content and caps width. */}
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
         {/* Back navigation — returns shoppers to the searchable grid. */}

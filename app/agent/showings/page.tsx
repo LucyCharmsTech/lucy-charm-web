@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import ShowingIdentityReviewDialog from '@/components/agent/ShowingIdentityReviewDialog';
 import ShowingRescheduleDialog from '@/components/agent/ShowingRescheduleDialog';
+import { useLiveShowingRequests } from '@/lib/useLiveShowingRequests';
 import { showingAnchorId, useShowingDeepLink } from '@/lib/useShowingDeepLink';
 import { fetchMyAgentProfile } from '@/services/portalService';
 import { fetchShowingRequestsByAgent, updateShowingRequest } from '@/services/showingService';
@@ -81,6 +82,16 @@ function AgentShowingsPageContent() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Buyer actions (new request, ID upload, feedback, withdrawal) land here
+  // live via the auto-granted user channel. `load()` never flips `loading`
+  // after the first paint, so realtime refetches are flicker-free.
+  useLiveShowingRequests({
+    patch: (id, patch) =>
+      setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r))),
+    remove: (id) => setRequests((prev) => prev.filter((r) => r.id !== id)),
+    refetch: () => void load(),
+  });
 
   async function changeStatus(id: string, status: ShowingRequestStatus) {
     await patchShowingRequest(id, {
