@@ -61,7 +61,7 @@ export default async function ListingDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // Parsed beds/baths/sqft + formatted property type for reuse across sections.
+  // Parsed beds/baths/area + formatted property type for reuse across sections.
   const metrics = getListingDetailMetrics(listing);
   const mapUrls = getListingMapUrls(listing);
 
@@ -126,7 +126,7 @@ export default async function ListingDetailPage({ params }: PageProps) {
                 <span>Country: {listing.country}</span>
               </p>
             </section>
-            {/* Property specs — quick-scan pills (beds, baths, sqft, lot, year, parking). */}
+            {/* Property specs — quick-scan pills (beds, baths, area, lot, year, parking). */}
             <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/40 sm:p-6">
               <h2 className="text-[11px] font-bold uppercase tracking-widest text-zinc-800 dark:text-zinc-200">
                 Property specs
@@ -159,8 +159,8 @@ export default async function ListingDetailPage({ params }: PageProps) {
                       aria-hidden="true"
                     />
                   }
-                  label="Sq Ft"
-                  value={`${metrics.sqftVal} Sq Ft`}
+                  label="Area"
+                  value={metrics.areaText}
                 />
                 <ListingDetailSpecPill
                   icon={
@@ -217,8 +217,8 @@ export default async function ListingDetailPage({ params }: PageProps) {
                   value={metrics.bathsVal}
                 />
                 <ListingDetailFactCell
-                  label="Square feet"
-                  value={metrics.sqftVal}
+                  label="Area"
+                  value={metrics.areaText}
                 />
                 <ListingDetailFactCell
                   label="Year built"

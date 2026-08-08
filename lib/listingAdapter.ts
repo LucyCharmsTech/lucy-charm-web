@@ -22,6 +22,22 @@ function formatPrice(price: number): string {
 }
 
 /**
+ * Prefer building/living area, then fall back to the documented lot-size
+ * value. The normalized lot_size field is stored in acres.
+ */
+function formatArea(listing: ApiListing): string {
+  if (listing.sqft != null && listing.sqft > 0) {
+    return `${listing.sqft.toLocaleString('en-CA')} ft²`;
+  }
+  if (listing.lot_size != null && listing.lot_size > 0) {
+    return `${listing.lot_size.toLocaleString('en-CA', {
+      maximumFractionDigits: 4,
+    })} acres`;
+  }
+  return '—';
+}
+
+/**
  * Returns a deterministic placeholder image for listings that have no
  * primary_image_url — uses the UUID as a stable seed so the same listing
  * always shows the same picsum image.
@@ -40,7 +56,6 @@ function placeholderImage(id: string): string {
  */
 export function apiListingToItem(listing: ApiListing): ListingItem {
   const locationText = `${listing.city}, ${listing.state}`;
-  const sqft = listing.sqft;
 
   return {
     id: listing.id,
@@ -54,8 +69,7 @@ export function apiListingToItem(listing: ApiListing): ListingItem {
     address: listing.display_address || locationText,
     bedsText: listing.beds != null ? `${listing.beds} bd` : '—',
     bathsText: listing.baths != null ? `${listing.baths} ba` : '—',
-    sqftText:
-      sqft != null ? `${sqft.toLocaleString('en-CA')} ft²` : '—',
+    areaText: formatArea(listing),
     locationText,
     detailsHref: `/listings/${listing.id}`,
   };

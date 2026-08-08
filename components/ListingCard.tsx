@@ -109,7 +109,7 @@ type ListingCardProps = {
   title?: string;
   bedsText: string;
   bathsText: string;
-  sqftText?: string;
+  areaText?: string;
   locationText?: string;
   priceText: string;
   currency?: string;
@@ -133,7 +133,7 @@ export default function ListingCard({
   title,
   bedsText,
   bathsText,
-  sqftText,
+  areaText,
   locationText,
   priceText,
   currency = 'CAD',
@@ -189,10 +189,10 @@ export default function ListingCard({
               <BathIcon className="size-3.5" aria-hidden="true" />
               {bathsText}
             </span>
-            {sqftText && (
+            {areaText && (
               <span className="flex items-center gap-1">
                 <RulerIcon className="size-3.5" aria-hidden="true" />
-                {sqftText}
+                {areaText}
               </span>
             )}
             {locationText && (
@@ -274,10 +274,10 @@ export default function ListingCard({
             <BathIcon className="size-3.5" aria-hidden="true" />
             {bathsText}
           </span>
-          {sqftText && (
+          {areaText && (
             <span className="flex items-center gap-1">
               <RulerIcon className="size-3.5" aria-hidden="true" />
-              {sqftText}
+              {areaText}
             </span>
           )}
         </div>

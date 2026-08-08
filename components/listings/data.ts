@@ -9,7 +9,7 @@ export type ListingItem = {
   address: string;
   bedsText: string;
   bathsText: string;
-  sqftText: string;
+  areaText: string;
   locationText: string;
   detailsHref: string;
 };
@@ -26,7 +26,7 @@ export const MOCK_LISTINGS: ListingItem[] = [
     address: 'Ottawa, ON',
     bedsText: '2 bd',
     bathsText: '1 ba',
-    sqftText: '980 ft²',
+    areaText: '980 ft²',
     locationText: 'Ottawa, ON',
     detailsHref: '/listings/1',
   },
@@ -41,7 +41,7 @@ export const MOCK_LISTINGS: ListingItem[] = [
     address: 'Ottawa, ON',
     bedsText: '4 bd',
     bathsText: '3.5 ba',
-    sqftText: '2,950 ft²',
+    areaText: '2,950 ft²',
     locationText: 'Ottawa, ON',
     detailsHref: '/listings/2',
   },
@@ -56,7 +56,7 @@ export const MOCK_LISTINGS: ListingItem[] = [
     address: 'Calgary, AB',
     bedsText: '4 bd',
     bathsText: '3.5 ba',
-    sqftText: '2,400 ft²',
+    areaText: '2,400 ft²',
     locationText: 'Calgary, AB',
     detailsHref: '/listings/3',
   },
@@ -71,7 +71,7 @@ export const MOCK_LISTINGS: ListingItem[] = [
     address: 'Calgary, AB',
     bedsText: '2 bd',
     bathsText: '2 ba',
-    sqftText: '990 ft²',
+    areaText: '990 ft²',
     locationText: 'Calgary, AB',
     detailsHref: '/listings/4',
   },
@@ -86,7 +86,7 @@ export const MOCK_LISTINGS: ListingItem[] = [
     address: 'Calgary, AB',
     bedsText: '3 bd',
     bathsText: '2 ba',
-    sqftText: '1,420 ft²',
+    areaText: '1,420 ft²',
     locationText: 'Calgary, AB',
     detailsHref: '/listings/5',
   },
@@ -101,7 +101,7 @@ export const MOCK_LISTINGS: ListingItem[] = [
     address: 'Calgary, AB',
     bedsText: '4 bd',
     bathsText: '3.5 ba',
-    sqftText: '2,650 ft²',
+    areaText: '2,650 ft²',
     locationText: 'Calgary, AB',
     detailsHref: '/listings/6',
   },
@@ -116,7 +116,7 @@ export const MOCK_LISTINGS: ListingItem[] = [
     address: 'Calgary, AB',
     bedsText: '4 bd',
     bathsText: '3.5 ba',
-    sqftText: '2,650 ft²',
+    areaText: '2,650 ft²',
     locationText: 'Calgary, AB',
     detailsHref: '/listings/7',
   },

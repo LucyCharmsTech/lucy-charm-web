@@ -5,7 +5,7 @@ export type ListingDetailMetrics = {
   typeDisplay: string;
   bedsVal: string;
   bathsVal: string;
-  sqftVal: string;
+  areaText: string;
 };
 
 export function getListingDetailMetrics(
@@ -15,10 +15,7 @@ export function getListingDetailMetrics(
     typeDisplay: formatTypeLabel(listing.typeLabel),
     bedsVal: listing.bedsText.replace(/\s*bd\s*$/i, '').trim(),
     bathsVal: listing.bathsText.replace(/\s*ba(ths)?\s*$/i, '').trim(),
-    sqftVal: listing.sqftText
-      .replace(/\s*ft²?\s*$/i, '')
-      .replace(/,/g, '')
-      .trim(),
+    areaText: listing.areaText,
   };
 }
 
