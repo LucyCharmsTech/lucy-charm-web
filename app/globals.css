@@ -120,6 +120,11 @@
   --primarycolor: #eb1da3;
 }
 
+.listing-media-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--primarycolor) 60%, transparent) transparent;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

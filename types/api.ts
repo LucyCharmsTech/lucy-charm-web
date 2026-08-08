@@ -11,8 +11,7 @@ export type PaginatedItems<T> = {
   items: T[];
   total: number;
   page: number;
-  size: number;
-  pages: number;
+  page_size: number;
 };
 
 // ---------------------------------------------------------------------------
@@ -25,6 +24,16 @@ export type ApiListingAgentSummary = {
   name: string;
   phone: string;
   email: string;
+};
+
+export type ApiListingMedia = {
+  id: string;
+  media_url: string;
+  media_type: string | null;
+  media_category: string | null;
+  display_order: number;
+  caption: string | null;
+  is_primary: boolean;
 };
 
 /** Mirrors ListingsRead in lucy-charm-api */
@@ -62,6 +71,13 @@ export type ApiListing = {
   source_attribution: string | null;
   source_disclaimer: string | null;
   last_updated_at: string | null;
+  original_entry_at: string | null;
+  source_modified_at: string | null;
+  system_modified_at: string | null;
+  media_changed_at: string | null;
+  photos_changed_at: string | null;
+  last_seen_at: string | null;
+  is_feed_managed: boolean;
   agent_id: string;
   created_at: string;
   updated_at: string;
@@ -75,6 +91,8 @@ export type ListingSearchParams = {
   country?: string;
   market?: string;
   property_type?: string;
+  property_types?: string[];
+  titles?: string[];
   status?: string;
   price_min?: number;
   price_max?: number;

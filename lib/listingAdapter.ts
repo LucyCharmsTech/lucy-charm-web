@@ -8,10 +8,6 @@ import type { ListingItem } from '@/components/listings/data';
 import type { ListingDetail } from '@/components/listings/listingDetailData';
 import type { ApiListing } from '@/types/api';
 
-// Default lat/lng when the listing has no coordinates (Ottawa downtown)
-const DEFAULT_LAT = 45.4215;
-const DEFAULT_LNG = -75.6919;
-
 /** Capitalise the first letter of each word; normalise underscores to spaces */
 function humaniseType(raw: string | null): string {
   if (!raw) return 'Property';
@@ -102,8 +98,8 @@ export function apiListingToDetail(listing: ApiListing): ListingDetail {
       listing.description ||
       'No description has been provided for this property.',
     aiSummary: listing.ai_summary ?? '',
-    lat: listing.latitude ?? DEFAULT_LAT,
-    lng: listing.longitude ?? DEFAULT_LNG,
+    lat: listing.latitude,
+    lng: listing.longitude,
     agent: listing.agent ?? null,
   };
 }

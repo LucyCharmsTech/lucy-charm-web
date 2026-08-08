@@ -21,8 +21,8 @@ export type ListingDetail = ListingItem & {
   market: string;
   about: string;
   aiSummary: string;
-  lat: number;
-  lng: number;
+  lat: number | null;
+  lng: number | null;
   agent: ListingAgentSummary | null;
 };
 

@@ -5,7 +5,12 @@
  */
 
 import api from '@/lib/axios';
-import type { ApiListing, ListingSearchParams, PaginatedItems } from '@/types/api';
+import type {
+  ApiListing,
+  ApiListingMedia,
+  ListingSearchParams,
+  PaginatedItems,
+} from '@/types/api';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -17,6 +22,8 @@ function sortLabelToParams(label: string): {
   sort_order: string;
 } {
   switch (label) {
+    case 'Oldest':
+      return { sort_by: 'original_entry_at', sort_order: 'asc' };
     case 'Price ↑':
       return { sort_by: 'price', sort_order: 'asc' };
     case 'Price ↓':
@@ -24,7 +31,7 @@ function sortLabelToParams(label: string): {
     case 'Beds':
       return { sort_by: 'beds', sort_order: 'desc' };
     default:
-      return { sort_by: 'created_at', sort_order: 'desc' };
+      return { sort_by: 'original_entry_at', sort_order: 'desc' };
   }
 }
 
@@ -49,7 +56,12 @@ export async function searchListings(
 ): Promise<PaginatedItems<ApiListing>> {
   const res = await api.get<PaginatedItems<ApiListing>>(
     '/listings/search',
-    { params },
+    {
+      params,
+      // FastAPI list query parameters are encoded as repeated keys rather than
+      // Axios's default `property_types[]=...` form.
+      paramsSerializer: { indexes: null },
+    },
   );
   return res.data;
 }
@@ -60,10 +72,34 @@ export async function fetchListingById(id: string): Promise<ApiListing> {
   return res.data;
 }
 
+/** Fetches ordered media for a listing, used as an image fallback. */
+export async function fetchListingMedia(id: string): Promise<ApiListingMedia[]> {
+  const res = await api.get<ApiListingMedia[]>(`/listings/${id}/media`);
+  return res.data;
+}
+
 export type ListingFacetOptions = {
   cities: string[];
   propertyTypes: string[];
 };
+
+/** Fetches distinct property types from the listings table. */
+export async function fetchListingPropertyTypes(
+  status = 'active',
+): Promise<string[]> {
+  const res = await api.get<string[]>('/listings/property-types', {
+    params: status ? { status } : undefined,
+  });
+  return res.data;
+}
+
+/** Fetches distinct listing titles from the listings table. */
+export async function fetchListingTitles(status = 'active'): Promise<string[]> {
+  const res = await api.get<string[]>('/listings/titles', {
+    params: status ? { status } : undefined,
+  });
+  return res.data;
+}
 
 /**
  * Fetches distinct city and property-type options from live listings.
@@ -79,7 +115,7 @@ export async function fetchListingFacetOptions(): Promise<ListingFacetOptions> {
     if (item.property_type?.trim()) typeSet.add(item.property_type.trim().toLowerCase());
   }
 
-  const totalPages = Math.max(1, firstPage.pages);
+  const totalPages = Math.max(1, Math.ceil(firstPage.total / Math.max(1, firstPage.page_size)));
   if (totalPages > 1) {
     const pageRequests: Promise<PaginatedItems<ApiListing>>[] = [];
     for (let page = 2; page <= totalPages; page += 1) {
@@ -113,33 +149,39 @@ export async function fetchListingFacetOptions(): Promise<ListingFacetOptions> {
 export function buildSearchParams(
   status: string,
   propertyTypes: string[],
+  titles: string[],
   beds: string,
   baths: string,
   sortBy: string,
   country = '',
   city = '',
+  page = 1,
+  size = 12,
 ): ListingSearchParams {
   const { sort_by, sort_order } = sortLabelToParams(sortBy);
 
-  // Parse "2+" → 2.  API accepts a single property_type; when multiple are
-  // selected we omit the filter and handle client-side filtering instead.
+  // Parse "2+" → 2.
   const bedsMin = beds ? parseFloat(beds) || undefined : undefined;
   const bathsMin = baths ? parseFloat(baths) || undefined : undefined;
-  const propertyType =
-    propertyTypes.length === 1
-      ? propertyTypes[0].toLowerCase()
-      : undefined;
+  const propertyTypeValues = propertyTypes.length
+    ? propertyTypes.map((type) => type.toLowerCase())
+    : undefined;
+  const titleValues = titles.length
+    ? titles.map((title) => title.trim().toLowerCase())
+    : undefined;
   const countryCode = country.trim().toLowerCase() || undefined;
   const cityQuery = city.trim() || undefined;
 
   const params: ListingSearchParams = {
     status: status.toLowerCase(),
-    property_type: propertyType,
+    property_types: propertyTypeValues,
+    titles: titleValues,
     beds_min: bedsMin,
     baths_min: bathsMin,
     sort_by,
     sort_order,
-    size: 50, // fetch enough to cover multi-type client filtering
+    page,
+    size,
   };
 
   if (countryCode) params.country = countryCode;

@@ -25,7 +25,21 @@ export function getListingDetailMetrics(
 export function getListingMapUrls(listing: ListingDetail): {
   mapEmbedUrl: string;
   mapsLink: string;
-} {
+} | null {
+  if (
+    listing.lat == null ||
+    listing.lng == null ||
+    !Number.isFinite(listing.lat) ||
+    !Number.isFinite(listing.lng) ||
+    listing.lat < -90 ||
+    listing.lat > 90 ||
+    listing.lng < -180 ||
+    listing.lng > 180 ||
+    (listing.lat === 0 && listing.lng === 0)
+  ) {
+    return null;
+  }
+
   const mapEmbedUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${listing.lng - 0.06}%2C${listing.lat - 0.04}%2C${listing.lng + 0.06}%2C${listing.lat + 0.04}&layer=mapnik&marker=${listing.lat}%2C${listing.lng}`;
   const mapsLink = `https://www.google.com/maps?q=${listing.lat},${listing.lng}`;
   return { mapEmbedUrl, mapsLink };

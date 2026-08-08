@@ -15,6 +15,16 @@ const nextConfig: NextConfig = {
         hostname: 'images.unsplash.com',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'trreb-image.ampre.ca',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'ftrreb-image.ampre.ca',
+        pathname: '/**',
+      },
     ],
   },
 };

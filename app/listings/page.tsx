@@ -14,6 +14,8 @@ import { isProptxLive } from '@/lib/proptxMode';
 import { fetchStoredUserPreferences } from '@/services/userPreferencesService';
 import {
   buildSearchParams,
+  fetchListingPropertyTypes,
+  fetchListingTitles,
   searchListings,
 } from '@/services/listingsService';
 import type { ApiListing } from '@/types/api';
@@ -22,8 +24,7 @@ import type { ApiListing } from '@/types/api';
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Applies multi-type client-side filtering when more than one property type
- *  is selected (the API only accepts a single property_type at a time). */
+/** Applies property-type filtering to offline mock data. */
 function applyClientFilters(
   items: ListingItem[],
   propertyTypes: string[],
@@ -33,6 +34,12 @@ function applyClientFilters(
   return items.filter((item) =>
     lower.includes((item.typeLabel ?? '').toLowerCase()),
   );
+}
+
+function applyTitleFilters(items: ListingItem[], titles: string[]): ListingItem[] {
+  if (titles.length === 0) return items;
+  const lower = titles.map((title) => title.trim().toLowerCase());
+  return items.filter((item) => lower.includes(item.title.trim().toLowerCase()));
 }
 
 /** Offline mock fallback — static cards are all Canadian (Ottawa, ON). */
@@ -65,6 +72,8 @@ function countryLabel(code: string): string {
     COUNTRY_OPTIONS.find((option) => option.value === code)?.label ?? code.toUpperCase()
   );
 }
+
+const PAGE_SIZE = 12;
 
 function ListingsPageFallback() {
   return (
@@ -108,6 +117,7 @@ function ListingsPageContent() {
   // Filter state (local UI — country/city live in the URL)
   const [status, setStatus] = useState<string>('Active');
   const [propertyTypes, setPropertyTypes] = useState<string[]>([]);
+  const [listingTitles, setListingTitles] = useState<string[]>([]);
   const [beds, setBeds] = useState('');
   const [baths, setBaths] = useState('');
   const [sortBy, setSortBy] = useState<string>('Newest');
@@ -115,11 +125,68 @@ function ListingsPageContent() {
 
   // Data state — start empty; never show stale mock data while filters apply
   const [listings, setListings] = useState<ListingItem[]>([]);
+  const [totalListings, setTotalListings] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState(false);
+  const [propertyTypeOptions, setPropertyTypeOptions] = useState<string[]>([]);
+  const [propertyTypesLoading, setPropertyTypesLoading] = useState(true);
+  const [listingTitleOptions, setListingTitleOptions] = useState<string[]>([]);
+  const [listingTitlesLoading, setListingTitlesLoading] = useState(true);
+
+  useEffect(() => {
+    setPage(1);
+  }, [status, country, city, propertyTypes, listingTitles, beds, baths, sortBy]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setPropertyTypesLoading(true);
+    setListingTitlesLoading(true);
+
+    if (!isProptxLive()) {
+      const typeOptions = Array.from(
+        new Set(MOCK_LISTINGS.map((item) => item.typeLabel).filter(Boolean)),
+      ).sort((a, b) => a.localeCompare(b));
+      const titleOptions = Array.from(
+        new Set(MOCK_LISTINGS.map((item) => item.title.trim()).filter(Boolean)),
+      ).sort((a, b) => a.localeCompare(b));
+      setPropertyTypeOptions(typeOptions);
+      setListingTitleOptions(titleOptions);
+      setPropertyTypesLoading(false);
+      setListingTitlesLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    Promise.all([fetchListingPropertyTypes(status), fetchListingTitles(status)])
+      .then(([typeOptions, titleOptions]) => {
+        if (!cancelled) {
+          setPropertyTypeOptions(typeOptions);
+          setListingTitleOptions(titleOptions);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPropertyTypeOptions([]);
+          setListingTitleOptions([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setPropertyTypesLoading(false);
+          setListingTitlesLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [status]);
 
   // ---------------------------------------------------------------------------
-  // Fetch from API whenever filters change
+  // Fetch from API whenever filters or the current page change
   // ---------------------------------------------------------------------------
   const fetchListings = useCallback(async () => {
     setLoading(true);
@@ -132,43 +199,63 @@ function ListingsPageContent() {
           country || (preferences?.preferredCountry.toLowerCase() === 'canada' ? 'ca' : '');
         const effectiveCity = city || preferences?.preferredCity || '';
 
-        const mockItems = applyMockLocationFilters(
-          applyClientFilters(MOCK_LISTINGS, propertyTypes),
-          effectiveCountry,
-          effectiveCity,
+        const mockItems = matchListingsToPreferences(
+          applyMockLocationFilters(
+            applyTitleFilters(
+              applyClientFilters(MOCK_LISTINGS, propertyTypes),
+              listingTitles,
+            ),
+            effectiveCountry,
+            effectiveCity,
+          ),
+          preferences,
         );
-        setListings(matchListingsToPreferences(mockItems, preferences));
+        setTotalListings(mockItems.length);
+        setTotalPages(Math.max(1, Math.ceil(mockItems.length / PAGE_SIZE)));
+        const start = (page - 1) * PAGE_SIZE;
+        setListings(mockItems.slice(start, start + PAGE_SIZE));
         return;
       }
 
       const params = buildSearchParams(
         status,
         propertyTypes,
+        listingTitles,
         beds,
         baths,
         sortBy,
         country,
         city,
+        page,
+        PAGE_SIZE,
       );
       const data = await searchListings(params);
 
       const items: ListingItem[] = data.items.map((l: ApiListing) =>
         apiListingToItem(l),
       );
-      setListings(applyClientFilters(items, propertyTypes));
+      const pageSize = data.page_size || PAGE_SIZE;
+      setTotalListings(data.total);
+      setTotalPages(Math.max(1, Math.ceil(data.total / pageSize)));
+      setListings(items);
     } catch {
       setApiError(true);
-      setListings(
-        applyMockLocationFilters(
+      const fallbackItems = applyMockLocationFilters(
+        applyTitleFilters(
           applyClientFilters(MOCK_LISTINGS, propertyTypes),
-          country,
-          city,
+          listingTitles,
         ),
+        country,
+        city,
       );
+      setTotalListings(fallbackItems.length);
+      setTotalPages(Math.max(1, Math.ceil(fallbackItems.length / PAGE_SIZE)));
+      const start = (page - 1) * PAGE_SIZE;
+      setListings(fallbackItems.slice(start, start + PAGE_SIZE));
     } finally {
       setLoading(false);
     }
-  }, [status, country, city, propertyTypes, beds, baths, sortBy]);
+  }, [status, country, city, propertyTypes, listingTitles, beds, baths, sortBy, page]);
 
   useEffect(() => {
     fetchListings();
@@ -191,7 +278,13 @@ function ListingsPageContent() {
           city={city}
           setCity={(value) => updateSearchParam('city', value)}
           propertyTypes={propertyTypes}
+          propertyTypeOptions={propertyTypeOptions}
+          propertyTypesLoading={propertyTypesLoading}
+          listingTitles={listingTitles}
+          listingTitleOptions={listingTitleOptions}
+          listingTitlesLoading={listingTitlesLoading}
           setPropertyTypes={setPropertyTypes}
+          setListingTitles={setListingTitles}
           beds={beds}
           setBeds={setBeds}
           baths={baths}
@@ -202,7 +295,7 @@ function ListingsPageContent() {
       {/* Main content */}
       <div className="flex flex-1 flex-col px-6 py-6 sm:px-8">
         <ListingsToolbar
-          count={listings.length}
+          count={totalListings}
           sortBy={sortBy}
           setSortBy={setSortBy}
           view={view}
@@ -287,6 +380,33 @@ function ListingsPageContent() {
               />
             ))}
           </div>
+        )}
+
+        {!loading && totalPages > 1 && (
+          <nav
+            className="mt-8 flex items-center justify-center gap-4"
+            aria-label="Listings pagination"
+          >
+            <button
+              type="button"
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              disabled={page === 1}
+              className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            >
+              Previous
+            </button>
+            <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+              disabled={page === totalPages}
+              className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            >
+              Next
+            </button>
+          </nav>
         )}
 
         {/* Cards — list view */}

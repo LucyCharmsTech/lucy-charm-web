@@ -1,11 +1,104 @@
 'use client';
 
 import Link from 'next/link';
-import React from 'react';
+import { useState } from 'react';
 
 import { BathIcon, BedDoubleIcon, MapPinIcon, RulerIcon } from 'lucide-react';
 
 import SaveListingButton from '@/components/listings/SaveListingButton';
+import { fetchListingMedia } from '@/services/listingsService';
+
+const MEDIA_BATCH_SIZE = 5;
+
+function ListingCardImage({
+  src,
+  alt,
+  className,
+  listingId,
+}: {
+  src: string;
+  alt: string;
+  className: string;
+  listingId?: string | null;
+}) {
+  const [currentSrc, setCurrentSrc] = useState(src);
+  const [fallbackUrls, setFallbackUrls] = useState<string[] | null>(null);
+  const [fallbackIndex, setFallbackIndex] = useState(0);
+  const [failed, setFailed] = useState(false);
+  const [loadingFallback, setLoadingFallback] = useState(false);
+
+  const handleImageError = async () => {
+    if (fallbackUrls) {
+      const nextIndex = fallbackIndex + 1;
+      if (nextIndex < fallbackUrls.length) {
+        setFallbackIndex(nextIndex);
+        setCurrentSrc(fallbackUrls[nextIndex]);
+      } else {
+        setFailed(true);
+      }
+      return;
+    }
+
+    if (!listingId || loadingFallback || !/^[0-9a-f-]{36}$/i.test(listingId)) {
+      setFailed(true);
+      return;
+    }
+
+    setLoadingFallback(true);
+    try {
+      const media = await fetchListingMedia(listingId);
+      const urls = Array.from(
+        new Set(
+          media
+            .filter(
+              (item) =>
+                (!item.media_type || item.media_type.startsWith('image/')) &&
+                item.media_url,
+            )
+            .sort((a, b) => a.display_order - b.display_order)
+            .filter((_, index) => index % MEDIA_BATCH_SIZE === 0)
+            .map((item) => item.media_url)
+            .filter((url) => url !== currentSrc),
+        ),
+      );
+      setFallbackUrls(urls);
+      if (urls.length) {
+        setFallbackIndex(0);
+        setCurrentSrc(urls[0]);
+      } else {
+        setFailed(true);
+      }
+    } catch {
+      setFailed(true);
+    } finally {
+      setLoadingFallback(false);
+    }
+  };
+
+  if (failed) {
+    return (
+      <div
+        className={`flex items-center justify-center bg-zinc-100 text-xs text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500 ${className}`}
+        role="img"
+        aria-label={`${alt} image unavailable`}
+      >
+        Image unavailable
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={currentSrc}
+      alt={alt}
+      loading="lazy"
+      onError={() => {
+        void handleImageError();
+      }}
+      className={className}
+    />
+  );
+}
 
 type ListingCardProps = {
   statusLabel?: string;
@@ -55,10 +148,10 @@ export default function ListingCard({
     return (
       <article className="group flex overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-sm transition hover:shadow-md dark:border-zinc-800/80 dark:bg-zinc-950/30">
         <div className="relative w-40 sm:w-52 shrink-0">
-          <img
+          <ListingCardImage
             src={imageSrc}
             alt={imageAlt}
-            loading="lazy"
+            listingId={saveListingId}
             className="h-full w-full object-cover"
           />
           <span className="absolute left-2 top-2 inline-flex items-center rounded-full bg-emerald-600/90 px-2 py-0.5 text-[11px] font-semibold text-white">
@@ -141,10 +234,10 @@ export default function ListingCard({
   return (
     <article className="group overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-sm transition hover:shadow-md dark:border-zinc-800/80 dark:bg-zinc-950/30">
       <div className="relative">
-        <img
+        <ListingCardImage
           src={imageSrc}
           alt={imageAlt}
-          loading="lazy"
+          listingId={saveListingId}
           className="h-52 w-full object-cover"
         />
         <div className="absolute left-3 top-3 z-[1] flex flex-wrap gap-1.5">

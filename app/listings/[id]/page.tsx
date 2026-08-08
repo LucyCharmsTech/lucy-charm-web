@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import Image from 'next/image';
 import {
   BathIcon,
   BedDoubleIcon,
@@ -20,12 +19,13 @@ import {
 } from '@/components/listings/detail/ListingDetailFormat';
 import ListingDetailSpecPill from '@/components/listings/detail/ListingDetailSpecPill';
 import ListingDetailFactCell from '@/components/listings/detail/ListingDetailFactCell';
+import ListingMediaCarousel from '@/components/listings/detail/ListingMediaCarousel';
 
 // Data sources
 import { getListingDetail } from '@/components/listings/listingDetailData';
 import { apiListingToDetail } from '@/lib/listingAdapter';
 import { serverFetch, isUuid } from '@/lib/serverFetch';
-import type { ApiListing } from '@/types/api';
+import type { ApiListing, ApiListingMedia } from '@/types/api';
 import type { ListingDetail } from '@/components/listings/listingDetailData';
 
 type PageProps = {
@@ -36,12 +36,17 @@ export default async function ListingDetailPage({ params }: PageProps) {
   const { id } = await params;
 
   let listing: ListingDetail | null = null;
+  let listingMedia: ApiListingMedia[] = [];
 
   if (isUuid(id)) {
-    // Real listing from the backend — fetch by UUID
-    const apiListing = await serverFetch<ApiListing>(`/listings/${id}`);
+    // Fetch the listing and its media independently so search responses stay lightweight.
+    const [apiListing, media] = await Promise.all([
+      serverFetch<ApiListing>(`/listings/${id}`),
+      serverFetch<ApiListingMedia[]>(`/listings/${id}/media`),
+    ]);
     if (apiListing) {
       listing = apiListingToDetail(apiListing);
+      listingMedia = media ?? [];
     }
     // If API returned nothing for a valid UUID, 404 below
   } else {
@@ -55,7 +60,7 @@ export default async function ListingDetailPage({ params }: PageProps) {
 
   // Parsed beds/baths/sqft + formatted property type for reuse across sections.
   const metrics = getListingDetailMetrics(listing);
-  const { mapEmbedUrl, mapsLink } = getListingMapUrls(listing);
+  const mapUrls = getListingMapUrls(listing);
 
   return (
     <div className="min-h-screen bg-[#fef6f9] dark:bg-zinc-950">
@@ -78,17 +83,13 @@ export default async function ListingDetailPage({ params }: PageProps) {
         {/* Two-column layout: narrative + map on the left; financials & CTA on the right (sticky on large screens via sidebar component). */}
         <div className="grid gap-8 lg:grid-cols-[1fr_min(360px,100%)] lg:items-start">
           {/* Primary column — scrolls with the page. */}
-          <div className="space-y-6">
-            {/* Hero — primary listing photo (Next/Image for optimization). */}
-            <div className="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/40">
-              <Image
-                width={1000}
-                height={1000}
-                src={listing.imageSrc}
-                alt={listing.imageAlt}
-                className="aspect-16/10 w-full object-cover sm:aspect-21/9"
-              />
-            </div>
+          <div className="min-w-0 space-y-6">
+            {/* Hero — primary photo plus all IDX image media in a carousel. */}
+            <ListingMediaCarousel
+              primaryImage={listing.imageSrc}
+              imageAlt={listing.imageAlt}
+              media={listingMedia}
+            />
             {/* Summary — status/type chips, title, price, and high-level address metadata. */}
             <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/40 sm:p-6">
               <div className="flex flex-wrap gap-2">
@@ -237,8 +238,8 @@ export default async function ListingDetailPage({ params }: PageProps) {
             {/* Location — embedded map + coordinates + external maps link. */}
             <ListingDetailLocationSection
               listing={listing}
-              mapEmbedUrl={mapEmbedUrl}
-              mapsLink={mapsLink}
+              mapEmbedUrl={mapUrls?.mapEmbedUrl ?? null}
+              mapsLink={mapUrls?.mapsLink ?? null}
             />
           </div>
 
