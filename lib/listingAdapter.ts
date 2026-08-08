@@ -101,5 +101,7 @@ export function apiListingToDetail(listing: ApiListing): ListingDetail {
     lat: listing.latitude,
     lng: listing.longitude,
     agent: listing.agent ?? null,
+    idxAgent: listing.idx_agent ?? null,
+    idxOffice: listing.idx_office ?? null,
   };
 }

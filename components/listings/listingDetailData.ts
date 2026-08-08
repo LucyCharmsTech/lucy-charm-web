@@ -1,6 +1,10 @@
 import { MOCK_LISTINGS, type ListingItem } from '@/components/listings/data';
+import type { ApiIdxAgentSummary, ApiIdxOfficeSummary } from '@/types/api';
 
 /** Mirrors ApiListingAgentSummary — assigned agent on a listing detail view. */
+export type ListingIdxAgentSummary = ApiIdxAgentSummary;
+export type ListingIdxOfficeSummary = ApiIdxOfficeSummary;
+
 export type ListingAgentSummary = {
   id: string;
   name: string;
@@ -24,6 +28,8 @@ export type ListingDetail = ListingItem & {
   lat: number | null;
   lng: number | null;
   agent: ListingAgentSummary | null;
+  idxAgent: ListingIdxAgentSummary | null;
+  idxOffice: ListingIdxOfficeSummary | null;
 };
 
 const DEFAULT_DETAIL_FIELDS: Omit<ListingDetail, keyof ListingItem> = {
@@ -44,6 +50,8 @@ const DEFAULT_DETAIL_FIELDS: Omit<ListingDetail, keyof ListingItem> = {
   lat: 45.42111,
   lng: -75.6903,
   agent: null,
+  idxAgent: null,
+  idxOffice: null,
 };
 
 /** Richer mock copy for listing `1` to match marketing screenshots */
