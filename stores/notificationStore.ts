@@ -75,6 +75,24 @@ interface NotificationState {
   /** Soft delete. Optimistic; a 404 means it was already gone, so it stays removed. */
   dismiss: (id: string) => Promise<void>;
 
+  // Realtime appliers — no REST calls, no rollbacks. Events are at-least-once
+  // and include the echo of this tab's own optimistic mutations, so every one
+  // of these merges idempotently instead of appending or incrementing blindly.
+  // `unreadCount` is server-recomputed; null means the recount failed — keep
+  // the previous value rather than guessing low.
+
+  /** notification.created — prepend once, badge from the server's recount. */
+  applyRealtimeCreated: (notification: AppNotification, unreadCount: number | null) => void;
+
+  /** notification.read — another session (or this tab's echo) marked one row. */
+  applyRealtimeRead: (notificationId: string, unreadCount: number | null) => void;
+
+  /** notification.read_all */
+  applyRealtimeReadAll: (unreadCount: number | null) => void;
+
+  /** notification.dismissed */
+  applyRealtimeDismissed: (notificationId: string, unreadCount: number | null) => void;
+
   /** Wipe on logout so one user's notifications never leak into the next session. */
   reset: () => void;
 }
@@ -287,6 +305,73 @@ export const useNotificationStore = create<NotificationState>()(
             'notifications/dismiss:rollback',
           );
         }
+      },
+
+      applyRealtimeCreated: (notification, unreadCount) => {
+        const { items, total, unread, loaded } = get();
+        // Rows only exist client-side once a first fetch ran; until then the
+        // event still carries the one thing the bell renders — the count. A
+        // created row is always unread, so it belongs under either list filter.
+        const insert = loaded && !items.some((item) => item.id === notification.id);
+        set(
+          {
+            items: insert ? [notification, ...items] : items,
+            total: insert ? total + 1 : total,
+            unread: unreadCount ?? (insert ? unread + 1 : unread),
+          },
+          false,
+          'notifications/applyRealtimeCreated',
+        );
+      },
+
+      applyRealtimeRead: (notificationId, unreadCount) => {
+        const target = get().items.find((item) => item.id === notificationId);
+        set(
+          {
+            items:
+              target && !target.is_read
+                ? patchItem(get().items, notificationId, {
+                    is_read: true,
+                    read_at: new Date().toISOString(),
+                  })
+                : get().items,
+            unread: unreadCount ?? get().unread,
+          },
+          false,
+          'notifications/applyRealtimeRead',
+        );
+      },
+
+      applyRealtimeReadAll: (unreadCount) => {
+        set(
+          {
+            items: get().items.map((item) =>
+              item.is_read ? item : { ...item, is_read: true, read_at: new Date().toISOString() },
+            ),
+            // read_all leaves nothing unread by definition, so a failed recount
+            // can safely fall back to zero here.
+            unread: unreadCount ?? 0,
+          },
+          false,
+          'notifications/applyRealtimeReadAll',
+        );
+      },
+
+      applyRealtimeDismissed: (notificationId, unreadCount) => {
+        const target = get().items.find((item) => item.id === notificationId);
+        set(
+          {
+            items: target
+              ? get().items.filter((item) => item.id !== notificationId)
+              : get().items,
+            total: target ? Math.max(0, get().total - 1) : get().total,
+            unread:
+              unreadCount ??
+              (target && !target.is_read ? Math.max(0, get().unread - 1) : get().unread),
+          },
+          false,
+          'notifications/applyRealtimeDismissed',
+        );
       },
 
       reset: () => set({ ...INITIAL }, false, 'notifications/reset'),
