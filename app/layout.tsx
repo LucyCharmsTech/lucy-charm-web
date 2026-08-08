@@ -6,6 +6,8 @@ import Providers from '@/components/Providers';
 import { Geist } from 'next/font/google';
 import { cn } from '@/lib/utils';
 import NavBar from '@/components/NavBar';
+import ConnectionStatus from '@/components/realtime/ConnectionStatus';
+import RealtimeManager from '@/components/realtime/RealtimeManager';
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 
@@ -21,9 +23,11 @@ export default function RootLayout({
         <Providers>
           <HealthIndicator />
           <AuthHydrator />
+          <RealtimeManager />
           <NavBar />
           <SiteSignupSoftNudge />
           {children}
+          <ConnectionStatus />
         </Providers>
       </body>
     </html>

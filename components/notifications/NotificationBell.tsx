@@ -5,6 +5,8 @@ import dynamic from 'next/dynamic';
 import { BellIcon } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
+import { useLiveNotifications } from '@/components/notifications/useLiveNotifications';
+import { useRestFallback } from '@/lib/realtime/hooks';
 import { useAuthStore } from '@/stores/authStore';
 import { useNotificationStore } from '@/stores/notificationStore';
 
@@ -16,11 +18,11 @@ import { useNotificationStore } from '@/stores/notificationStore';
 const NotificationPanel = dynamic(() => import('@/components/notifications/NotificationPanel'));
 
 /**
- * How often the badge re-checks. There is no websocket or SSE — the API is built
- * for polling and the count is a single indexed COUNT. Per-user authenticated
- * query, so not aggressive.
+ * How often the badge re-checks while the socket is down. Live sessions need no
+ * interval — `notification.*` events carry the recomputed unread count — so this
+ * only runs in REST fallback. A single indexed COUNT, cheap at this cadence.
  */
-const UNREAD_POLL_MS = 60_000;
+const UNREAD_POLL_MS = 30_000;
 
 export default function NotificationBell() {
   const authed = useAuthStore((s) => Boolean(s.accessToken));
@@ -32,6 +34,9 @@ export default function NotificationBell() {
     })),
   );
 
+  useLiveNotifications();
+  const polling = useRestFallback();
+
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -39,20 +44,22 @@ export default function NotificationBell() {
     if (!authed) return;
 
     void loadUnreadCount();
-    const interval = setInterval(() => void loadUnreadCount(), UNREAD_POLL_MS);
+    const interval = polling
+      ? setInterval(() => void loadUnreadCount(), UNREAD_POLL_MS)
+      : null;
 
-    // A backgrounded tab misses ticks, so refresh the moment it is looked at
-    // again rather than showing a badge that is up to a minute stale.
+    // A backgrounded tab may miss ticks and events alike, so refresh the moment
+    // it is looked at again rather than trusting a possibly stale badge.
     function handleVisibilityChange() {
       if (document.visibilityState === 'visible') void loadUnreadCount();
     }
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      clearInterval(interval);
+      if (interval) clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [authed, loadUnreadCount]);
+  }, [authed, polling, loadUnreadCount]);
 
   useEffect(() => {
     if (!open) return;

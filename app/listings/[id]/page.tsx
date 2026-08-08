@@ -12,6 +12,7 @@ import {
 
 import ListingDetailLocationSection from '@/components/listings/detail/ListingDetailLocationSection';
 import ListingDetailInteractiveShell from '@/components/listings/detail/ListingDetailInteractiveShell';
+import ListingDetailLiveUpdates from '@/components/listings/detail/ListingDetailLiveUpdates';
 import ListingDetailSidebar from '@/components/listings/detail/ListingDetailSidebar';
 import {
   getListingDetailMetrics,
@@ -39,10 +40,12 @@ export default async function ListingDetailPage({ params }: PageProps) {
   let listingMedia: ApiListingMedia[] = [];
 
   if (isUuid(id)) {
-    // Fetch the listing and its media independently so search responses stay lightweight.
+    // Fetch listing + media independently so search stays lightweight.
+    // Uncached (`revalidate: 0`): ListingDetailLiveUpdates uses router.refresh()
+    // on change events and must not be served a stale pre-change value.
     const [apiListing, media] = await Promise.all([
-      serverFetch<ApiListing>(`/listings/${id}`),
-      serverFetch<ApiListingMedia[]>(`/listings/${id}/media`),
+      serverFetch<ApiListing>(`/listings/${id}`, { revalidate: 0 }),
+      serverFetch<ApiListingMedia[]>(`/listings/${id}/media`, { revalidate: 0 }),
     ]);
     if (apiListing) {
       listing = apiListingToDetail(apiListing);
@@ -68,6 +71,8 @@ export default async function ListingDetailPage({ params }: PageProps) {
         listingId={listing.id}
         listingTitle={listing.title ?? listing.address}
       >
+      {/* Live updates only exist for real (UUID) listings — mocks have no channel. */}
+      {isUuid(id) && <ListingDetailLiveUpdates listingId={id} />}
       {/* Page shell — light marketing background; inner wrapper centers content and caps width. */}
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
         {/* Back navigation — returns shoppers to the searchable grid. */}

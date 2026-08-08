@@ -677,3 +677,159 @@ export type NotificationUnreadCount = {
 export type NotificationMarkAllReadResponse = {
   updated: number;
 };
+
+// ---------------------------------------------------------------------------
+// Realtime (WebSocket)
+// ---------------------------------------------------------------------------
+
+/** Mirrors WsTicketResponse from the API — POST /ws/ticket. */
+export type WsTicketResponse = {
+  ticket: string;
+  expires_in: number;
+  url: string;
+};
+
+/**
+ * Mirrors RealtimeEventType from the API. Open set, like NotificationEventType —
+ * the `lead.*` values are reserved by the API but nothing publishes them yet.
+ */
+export type RealtimeEventType =
+  | 'notification.created'
+  | 'notification.read'
+  | 'notification.read_all'
+  | 'notification.dismissed'
+  | 'showing.status_changed'
+  | 'showing.withdrawn'
+  | 'showing.id_verification_changed'
+  | 'showing.document_uploaded'
+  | 'showing.feedback_submitted'
+  | 'listing.created'
+  | 'listing.updated'
+  | 'listing.deleted'
+  | 'lead.assigned'
+  | 'lead.status_changed';
+
+/** Mirrors RealtimeEvent from the API — one fan-out unit on the socket. */
+export type RealtimeEvent<P = Record<string, unknown>> = {
+  v: number;
+  /** Dedupe key. The same logical change publishes to several channels with distinct ids. */
+  id: string;
+  /** Per-channel monotonic counter — lets a reconnect ask for a gap replay. */
+  seq: number;
+  type: RealtimeEventType | string;
+  channel: string;
+  occurred_at: string;
+  payload: P;
+};
+
+export type RealtimeReplayStatus = 'current' | 'replayed' | 'refetch_required';
+export type RealtimeRejectReason = 'not_authorized' | 'unknown_channel' | 'channel_limit';
+
+/** Server → client frames — mirrors ServerMessageType and the shapes in resource.py. */
+export type RealtimeServerFrame =
+  | {
+      type: 'welcome';
+      v: number;
+      connection_id: string;
+      user_id: string;
+      channels: string[];
+      heartbeat_interval: number;
+      max_connection_seconds: number;
+    }
+  | {
+      type: 'subscribed';
+      channels: string[];
+      rejected: { channel: string; reason: RealtimeRejectReason | string }[];
+      replay: Record<string, RealtimeReplayStatus>;
+    }
+  | { type: 'unsubscribed'; channels: string[]; reason?: string }
+  | { type: 'event'; event: RealtimeEvent; replayed?: boolean }
+  | { type: 'ping' }
+  | { type: 'pong' }
+  | { type: 'error'; code: string; message: string };
+
+/** notification.created — the full inbox row plus the recomputed badge count. */
+export type NotificationCreatedPayload = {
+  notification: AppNotification;
+  /** null when the server's recount failed — keep the previous value, never render 0. */
+  unread_count: number | null;
+};
+
+/** notification.read / notification.read_all / notification.dismissed. */
+export type NotificationReadStatePayload = {
+  notification_id?: string;
+  updated?: number;
+  unread_count: number | null;
+};
+
+export type ListingCreatedPayload = {
+  listing_id: string;
+  listing: ApiListing;
+};
+
+export type ListingUpdatedPayload = {
+  listing_id: string;
+  /** Only the columns whose value actually changed — patch these in place. */
+  changed: Record<string, unknown>;
+  /** The full read model, for when replacing the row is simpler than merging. */
+  listing: ApiListing;
+};
+
+export type ListingDeletedPayload = {
+  listing_id: string;
+};
+
+/**
+ * Showing payloads carry ids, statuses and non-sensitive fields only — reviewer
+ * notes, feedback comments and contact details stay behind the authenticated REST
+ * reads, matching the notification-centre redaction rule.
+ */
+export type ShowingStatusChangedPayload = {
+  showing_request_id: string;
+  listing_id: string;
+  status: ShowingRequestStatus;
+  /** null announces a brand-new request (the agent's queue gains a row). */
+  previous_status: ShowingRequestStatus | null;
+  scheduled_at: string | null;
+  previous_scheduled_at?: string | null;
+  rescheduled?: boolean;
+  id_verification_status?: ShowingIdVerificationStatus;
+};
+
+export type ShowingWithdrawnPayload = {
+  showing_request_id: string;
+  listing_id: string;
+  previous_status: ShowingRequestStatus;
+};
+
+export type ShowingIdVerificationChangedPayload = {
+  showing_request_id: string;
+  listing_id: string;
+  id_verification_status: ShowingIdVerificationStatus;
+  previous_id_verification_status: ShowingIdVerificationStatus;
+  document_id?: string;
+  document_status?: ShowingVerificationDocument['status'];
+  /** Present when the change came from an agent reviewing a document. */
+  review_status?: 'verified' | 'rejected';
+};
+
+export type ShowingDocumentUploadedPayload = {
+  showing_request_id: string;
+  listing_id: string;
+  document_id: string;
+  document_status: ShowingVerificationDocument['status'];
+  content_type: string;
+  id_verification_status: ShowingIdVerificationStatus;
+  previous_id_verification_status: ShowingIdVerificationStatus;
+};
+
+/** Structured feedback signal only — `feedback_comment` is deliberately not on the wire. */
+export type ShowingFeedbackSubmittedPayload = {
+  showing_request_id: string;
+  listing_id: string;
+  feedback_submitted_at: string | null;
+  feedback_rating: number | null;
+  feedback_interest_level: ShowingFeedbackInterestLevel | null;
+  feedback_price_fit: ShowingFeedbackPriceFit | null;
+  feedback_would_offer: boolean | null;
+};

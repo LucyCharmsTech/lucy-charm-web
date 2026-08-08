@@ -1,18 +1,25 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import ShowingFeedbackDialog from '@/components/profile/ShowingFeedbackDialog';
 import ShowingIdentityUploadButton, {
   canUploadShowingIdentity,
   isShowingIdentityAwaitingReview,
 } from '@/components/profile/ShowingIdentityUploadButton';
+import { useLiveShowingRequests } from '@/lib/useLiveShowingRequests';
 import { showingAnchorId, useShowingDeepLink } from '@/lib/useShowingDeepLink';
 import { cn } from '@/lib/utils';
 import { fetchListingById } from '@/services/listingsService';
 import { fetchMyShowingRequests } from '@/services/showingService';
 import type { ShowingRequest } from '@/types/api';
+
+function sortByPreferredDate(rows: ShowingRequest[]): ShowingRequest[] {
+  return [...rows].sort(
+    (a, b) => new Date(a.preferred_date).getTime() - new Date(b.preferred_date).getTime(),
+  );
+}
 
 function statusTone(status: ShowingRequest['status']): string {
   if (status === 'confirmed' || status === 'rescheduled') {
@@ -50,9 +57,7 @@ export default function ClientShowingScheduleSection() {
       try {
         const rows = await fetchMyShowingRequests();
         if (!active) return;
-        const sorted = [...rows].sort(
-          (a, b) => new Date(a.preferred_date).getTime() - new Date(b.preferred_date).getTime(),
-        );
+        const sorted = sortByPreferredDate(rows);
         setItems(sorted);
 
         const uniqueListingIds = Array.from(new Set(sorted.map((row) => row.listing_id)));
@@ -80,6 +85,51 @@ export default function ClientShowingScheduleSection() {
       active = false;
     };
   }, []);
+
+  // Rows arriving after the initial load (a realtime refetch) can reference
+  // listings the title cache has not seen — fill just those gaps.
+  useEffect(() => {
+    const missing = Array.from(new Set(items.map((item) => item.listing_id))).filter(
+      (listingId) => !(listingId in listingTitlesById),
+    );
+    if (missing.length === 0) return;
+    let active = true;
+    void (async () => {
+      const titlePairs = await Promise.all(
+        missing.map(async (listingId) => {
+          try {
+            const listing = await fetchListingById(listingId);
+            return [listingId, listing.title] as const;
+          } catch {
+            return [listingId, `Listing ${listingId.slice(0, 8)}...`] as const;
+          }
+        }),
+      );
+      if (!active) return;
+      setListingTitlesById((prev) => ({ ...prev, ...Object.fromEntries(titlePairs) }));
+    })();
+    return () => {
+      active = false;
+    };
+  }, [items, listingTitlesById]);
+
+  // Agent actions (confirm, reschedule, ID review, withdrawal) land here live.
+  // Silent on purpose: no loading flip, and a failed refetch keeps current rows.
+  const refreshRows = useCallback(async () => {
+    try {
+      const rows = await fetchMyShowingRequests();
+      setItems(sortByPreferredDate(rows));
+    } catch {
+      /* the next event, poll, or reconnect refetch retries */
+    }
+  }, []);
+
+  useLiveShowingRequests({
+    patch: (id, patch) =>
+      setItems((prev) => prev.map((item) => (item.id === id ? { ...item, ...patch } : item))),
+    remove: (id) => setItems((prev) => prev.filter((item) => item.id !== id)),
+    refetch: () => void refreshRows(),
+  });
 
   function canLeaveFeedback(item: ShowingRequest): boolean {
     if (item.feedback_submitted_at) return false;
@@ -188,16 +238,9 @@ export default function ClientShowingScheduleSection() {
                   <ShowingIdentityUploadButton
                     className="mt-3"
                     request={item}
-                    onUploaded={async () => {
+                    onUploaded={() => {
                       setUploadMessage('ID uploaded. Your agent will review it shortly.');
-                      const rows = await fetchMyShowingRequests();
-                      setItems(
-                        [...rows].sort(
-                          (a, b) =>
-                            new Date(a.preferred_date).getTime() -
-                            new Date(b.preferred_date).getTime(),
-                        ),
-                      );
+                      void refreshRows();
                     }}
                     onError={(message) => setError(message)}
                   />
