@@ -94,10 +94,7 @@ function AgentShowingsPageContent() {
   });
 
   async function changeStatus(id: string, status: ShowingRequestStatus) {
-    await patchShowingRequest(id, {
-      status,
-      confirmed_at: status === 'confirmed' ? new Date().toISOString() : undefined,
-    });
+    await patchShowingRequest(id, { status });
   }
 
   function openReschedule(request: ShowingRequest) {

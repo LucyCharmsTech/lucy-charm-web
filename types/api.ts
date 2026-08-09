@@ -578,6 +578,7 @@ export type ShowingRequestCreate = {
 
 /** Mirrors ShowingRequestUpdate body */
 export type ShowingRequestUpdate = {
+  agent_id?: string | null;
   status?: ShowingRequestStatus;
   confirmed_at?: string;
   scheduled_at?: string;

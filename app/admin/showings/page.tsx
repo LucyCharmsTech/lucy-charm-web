@@ -10,7 +10,8 @@ import {
 } from 'lucide-react';
 import ShowingIdentityReviewDialog from '@/components/agent/ShowingIdentityReviewDialog';
 import { fetchAllShowingRequestsAdmin, updateShowingRequest } from '@/services/showingService';
-import type { ApiPaginated, ShowingRequest, ShowingRequestStatus } from '@/types/api';
+import { fetchAllAgents } from '@/services/portalService';
+import type { AgentProfile, ApiPaginated, ShowingRequest, ShowingRequestStatus } from '@/types/api';
 
 const STATUS_STYLES: Record<ShowingRequestStatus, string> = {
   pending: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
@@ -41,6 +42,7 @@ function StatusBadge({ status }: { status: ShowingRequestStatus }) {
 
 export default function AdminShowingsPage() {
   const [data, setData] = useState<ApiPaginated<ShowingRequest> | null>(null);
+  const [agents, setAgents] = useState<AgentProfile[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
@@ -48,8 +50,12 @@ export default function AdminShowingsPage() {
 
   const load = useCallback(async () => {
     try {
-      const result = await fetchAllShowingRequestsAdmin(1, 100);
+      const [result, agentResult] = await Promise.all([
+        fetchAllShowingRequestsAdmin(1, 100),
+        fetchAllAgents(1, 100),
+      ]);
       setData(result);
+      setAgents(agentResult.items);
     } catch (e: unknown) {
       const msg =
         (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
@@ -68,6 +74,24 @@ export default function AdminShowingsPage() {
       const updated = await updateShowingRequest(id, {
         status,
         confirmed_at: status === 'confirmed' ? new Date().toISOString() : undefined,
+      });
+      setData((prev) =>
+        prev
+          ? { ...prev, items: prev.items.map((r) => (r.id === id ? updated : r)) }
+          : prev,
+      );
+    } catch {
+      /* noop */
+    } finally {
+      setUpdating(null);
+    }
+  }
+
+  async function assignAgent(id: string, agentId: string) {
+    setUpdating(id);
+    try {
+      const updated = await updateShowingRequest(id, {
+        agent_id: agentId || null,
       });
       setData((prev) =>
         prev
@@ -121,6 +145,7 @@ export default function AdminShowingsPage() {
                 <th scope="col" className="px-4 py-3">Listing</th>
                 <th scope="col" className="px-4 py-3">Type</th>
                 <th scope="col" className="px-4 py-3">Preferred date</th>
+                <th scope="col" className="px-4 py-3">Assigned agent</th>
                 <th scope="col" className="px-4 py-3">Status</th>
                 <th scope="col" className="px-4 py-3">ID verification</th>
                 <th scope="col" className="px-4 py-3">Pre-approved</th>
@@ -145,13 +170,35 @@ export default function AdminShowingsPage() {
                   <td className="px-4 py-3 capitalize text-zinc-700 dark:text-zinc-300">
                     {r.showing_type.replace('_', ' ')}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-zinc-700 dark:text-zinc-300">
+                <td className="whitespace-nowrap px-4 py-3 text-zinc-700 dark:text-zinc-300">
                     <span className="flex items-center gap-1.5">
                       <CalendarIcon className="size-3.5 shrink-0 text-zinc-400" aria-hidden="true" />
                       {new Date(r.preferred_date).toLocaleString()}
                     </span>
-                  </td>
-                  <td className="px-4 py-3">
+                </td>
+                <td className="px-4 py-3">
+                  {r.status === 'pending' || r.status === 'rescheduled' ? (
+                    <select
+                      aria-label="Assign agent"
+                      value={r.agent_id ?? ''}
+                      disabled={updating === r.id}
+                      onChange={(event) => void assignAgent(r.id, event.target.value)}
+                      className="max-w-[180px] rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                    >
+                      <option value="">Admin queue</option>
+                      {agents.map((agent) => (
+                        <option key={agent.id} value={agent.id}>
+                          {agent.name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="text-xs text-zinc-700 dark:text-zinc-300">
+                      {agents.find((agent) => agent.id === r.agent_id)?.name ?? '—'}
+                    </span>
+                  )}
+                </td>
+                <td className="px-4 py-3">
                     <StatusBadge status={r.status} />
                   </td>
                   <td className="px-4 py-3">
@@ -182,14 +229,9 @@ export default function AdminShowingsPage() {
                     <div className="flex flex-wrap gap-1.5">
                       {r.status === 'pending' && (
                         <>
-                          <button
-                            type="button"
-                            disabled={updating === r.id}
-                            onClick={() => changeStatus(r.id, 'confirmed')}
-                            className="inline-flex h-7 items-center rounded-full bg-emerald-600 px-3 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
-                          >
-                            Confirm
-                          </button>
+                          <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                            {r.agent_id ? 'Awaiting agent acceptance' : 'Select an agent'}
+                          </span>
                           <button
                             type="button"
                             disabled={updating === r.id}

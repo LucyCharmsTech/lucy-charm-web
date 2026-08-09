@@ -15,6 +15,17 @@ export async function fetchMyAgentProfile(): Promise<AgentProfile> {
   return res.data;
 }
 
+/** Superadmin: list active agents for showing assignment. */
+export async function fetchAllAgents(
+  page = 1,
+  size = 100,
+): Promise<ApiPaginated<AgentProfile>> {
+  const res = await api.get<ApiPaginated<AgentProfile>>('/agents/', {
+    params: { page, size },
+  });
+  return res.data;
+}
+
 /** Paginated active listings for the given agent id (public endpoint; used only after we verified caller owns this agent). */
 export async function fetchListingsByAgentId(
   agentId: string,

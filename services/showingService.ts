@@ -45,7 +45,7 @@ export async function fetchAllShowingRequestsAdmin(
   return res.data;
 }
 
-/** Agent / admin: update status, confirm, add notes. */
+/** Agent accepts, or admin assigns/updates, a showing request. */
 export async function updateShowingRequest(
   id: string,
   payload: ShowingRequestUpdate,
