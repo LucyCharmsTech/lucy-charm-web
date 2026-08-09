@@ -157,8 +157,11 @@ function ChatPageFallback() {
 function ChatPageContent() {
   const searchParams = useSearchParams();
 
-  const { userId } = useAuthStore(
-    useShallow((s) => ({ userId: s.user?.user_id ?? null })),
+  const { userId, email } = useAuthStore(
+    useShallow((s) => ({
+      userId: s.user?.user_id ?? null,
+      email: s.user?.email ?? null,
+    })),
   );
 
   // Session
@@ -236,6 +239,7 @@ function ChatPageContent() {
         const response = await sendChatMessage({
           session_id: sessionId,
           message_text: messageText,
+          email: email ?? undefined,
           page_url: typeof window !== 'undefined' ? window.location.href : undefined,
         });
 
@@ -287,19 +291,19 @@ function ChatPageContent() {
         setSending(false);
       }
     },
-    [inputValue, sessionId, sending],
+    [email, inputValue, sessionId, sending],
   );
 
   const handleRequestHuman = useCallback(async () => {
     if (!sessionId || humanRequested || humanRequestPending) return;
     setHumanRequestPending(true);
     try {
-      await requestHumanAgent({ sessionId });
+      await requestHumanAgent({ sessionId, email: email ?? undefined });
       setHumanRequested(true);
     } finally {
       setHumanRequestPending(false);
     }
-  }, [sessionId, humanRequested, humanRequestPending]);
+  }, [email, sessionId, humanRequested, humanRequestPending]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {

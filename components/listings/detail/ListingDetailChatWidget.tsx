@@ -30,10 +30,11 @@ export default function ListingDetailChatWidget({
   listingTitle,
 }: ListingDetailChatWidgetProps) {
   const pathname = usePathname();
-  const { accessToken, userId } = useAuthStore(
+  const { accessToken, userId, email } = useAuthStore(
     useShallow((s) => ({
       accessToken: s.accessToken,
       userId: s.user?.user_id ?? null,
+      email: s.user?.email ?? null,
     })),
   );
   const isAuthenticated = Boolean(accessToken);
@@ -103,6 +104,7 @@ export default function ListingDetailChatWidget({
         const response = await sendChatMessage({
           session_id: sessionId,
           message_text: messageText,
+          email: email ?? undefined,
           listing_id: listingId,
           page_url: typeof window !== 'undefined' ? window.location.href : undefined,
         });
@@ -161,7 +163,7 @@ export default function ListingDetailChatWidget({
         setSending(false);
       }
     },
-    [inputValue, sessionId, sending, listingId, openShowingModal],
+    [email, inputValue, sessionId, sending, listingId, openShowingModal],
   );
 
   const handleRequestHuman = useCallback(async () => {
@@ -171,6 +173,7 @@ export default function ListingDetailChatWidget({
       await requestHumanAgent({
         sessionId,
         listingId: listingId,
+        email: email ?? undefined,
       });
       setHumanRequested(true);
     } catch {
@@ -178,7 +181,7 @@ export default function ListingDetailChatWidget({
     } finally {
       setHumanRequestPending(false);
     }
-  }, [sessionId, listingId, humanRequestPending, humanRequested]);
+  }, [email, sessionId, listingId, humanRequestPending, humanRequested]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {

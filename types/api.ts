@@ -400,6 +400,7 @@ export type LeadTagRead = {
 export type ChatSendRequest = {
   session_id: string;
   message_text: string;
+  email?: string;
   listing_id?: string;
   /** Browser URL from which the message was sent — stored for the audit log. */
   page_url?: string;
@@ -781,4 +782,81 @@ export type ShowingFeedbackSubmittedPayload = {
   feedback_interest_level: ShowingFeedbackInterestLevel | null;
   feedback_price_fit: ShowingFeedbackPriceFit | null;
   feedback_would_offer: boolean | null;
+};
+
+// ---------------------------------------------------------------------------
+// Seller acquisition and transaction foundation
+// ---------------------------------------------------------------------------
+
+export type SellerLeadStatus =
+  | 'new'
+  | 'valuation_requested'
+  | 'consultation_requested'
+  | 'qualified'
+  | 'converted'
+  | 'lost';
+
+export type SellerRepresentationType = 'brokerage' | 'designated';
+
+export type SellerLead = {
+  id: string;
+  user_id: string | null;
+  assigned_agent_id: string | null;
+  first_name: string;
+  last_name: string | null;
+  email: string | null;
+  phone: string | null;
+  inquiry_type: string;
+  status: SellerLeadStatus;
+  representation_status: 'none' | 'pending' | 'active' | 'ended';
+  source: string | null;
+  notes: string | null;
+  property_address: string | null;
+  property_unit: string | null;
+  property_city: string | null;
+  property_region: string | null;
+  property_postal_code: string | null;
+  property_country: string;
+  converted_client_id: string | null;
+  portal_activated_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SellerLeadCreateRequest = {
+  first_name: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  agent_email?: string;
+  inquiry_type: string;
+  source?: string;
+  notes?: string;
+  property_address?: string;
+  property_unit?: string;
+  property_city?: string;
+  property_region?: string;
+  property_postal_code?: string;
+  property_country: string;
+};
+
+export type SellerLeadUpdateRequest = {
+  assigned_agent_id?: string | null;
+  status?: Exclude<SellerLeadStatus, 'converted'>;
+  notes?: string;
+  inquiry_type?: string;
+};
+
+export type SellerTransaction = {
+  id: string;
+  seller_client_id: string;
+  property_id: string;
+  stage: string;
+  status: string;
+  representation_type: SellerRepresentationType | null;
+  representation_status: 'none' | 'pending' | 'active' | 'ended';
+  portal_activated_at: string | null;
+  closed_at: string | null;
+  created_at: string;
+  updated_at: string;
 };

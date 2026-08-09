@@ -28,6 +28,7 @@ import { logout } from '@/services/authService';
 const NAV_LINKS = [
   { label: 'Home', href: '/' },
   { label: 'Buy', href: '/listings' },
+  { label: 'Sell', href: '/sell' },
 ];
 
 export default function NavBar() {
