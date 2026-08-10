@@ -1,19 +1,33 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ShieldCheckIcon } from 'lucide-react';
 
-import ShowingIdentityUploadButton, {
-  canUploadShowingIdentity,
-  isShowingIdentityAwaitingReview,
-} from '@/components/profile/ShowingIdentityUploadButton';
-import { fetchMyShowingRequests, fetchShowingIdentityDocuments } from '@/services/showingService';
-import type { ShowingRequest, ShowingVerificationDocument } from '@/types/api';
+import ClientDocumentCard from '@/components/documents/ClientDocumentCard';
+import DocumentUploadButton from '@/components/documents/DocumentUploadButton';
+import { useRealtimeEvent, useRefetchOnReconnect } from '@/lib/realtime/hooks';
+import {
+  fetchDocuments,
+  isHistoryDocument,
+  NEEDS_CLIENT_ACTION,
+  sortDocumentsForClient,
+} from '@/services/documentService';
+import { fetchMyShowingRequests } from '@/services/showingService';
+import type { AppDocument, NotificationCreatedPayload, ShowingRequest } from '@/types/api';
 
-type DocumentRow = { request: ShowingRequest; documents: ShowingVerificationDocument[] };
+type DocumentRow = { request: ShowingRequest; documents: AppDocument[] };
 
-function needsIdentitySection(request: ShowingRequest): boolean {
-  return request.id_verification_requested || request.id_verification_status !== 'not_requested';
+/**
+ * A row is shown when the showing opted into ID verification, or when any
+ * document exists on it — staff can request documents on any showing, and a
+ * request with no file is still a real document the client must see.
+ */
+function isRelevant(row: DocumentRow): boolean {
+  return (
+    row.request.id_verification_requested ||
+    row.request.id_verification_status !== 'not_requested' ||
+    row.documents.length > 0
+  );
 }
 
 export default function ClientDocumentsSection() {
@@ -21,35 +35,56 @@ export default function ClientDocumentsSection() {
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  async function load() {
+  const load = useCallback(async () => {
     try {
       const requests = await fetchMyShowingRequests();
-      const verificationRequests = requests.filter(needsIdentitySection);
       const documents = await Promise.all(
-        verificationRequests.map(async (request) => ({
+        requests.map(async (request) => ({
           request,
-          documents: await fetchShowingIdentityDocuments(request.id),
+          documents: await fetchDocuments('showing_request', request.id),
         })),
       );
-      setRows(documents);
+      setRows(documents.filter(isRelevant));
+      setError(null);
     } catch {
-      setError('Could not load your verification documents.');
+      setError('Could not load your documents.');
     }
-  }
+  }, []);
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
+
+  // Document notifications (requested / reviewed / expired) arrive over the
+  // socket; the payload is deliberately vague, so refetch rather than patch.
+  useRealtimeEvent<NotificationCreatedPayload>('notification.created', (event) => {
+    if (event.payload?.notification?.resource_type === 'document') void load();
+  });
+  useRefetchOnReconnect(() => void load());
+
+  const outstanding = rows
+    .flatMap((row) => row.documents)
+    .filter((doc) => NEEDS_CLIENT_ACTION.includes(doc.status)).length;
 
   return (
-    <section className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/40">
+    <section
+      id="documents"
+      className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/40"
+    >
       <div className="flex items-start gap-3">
         <ShieldCheckIcon className="mt-0.5 size-5 text-primarycolor" aria-hidden="true" />
         <div>
-          <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">Verification documents</h2>
+          <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
+            Documents
+            {outstanding > 0 && (
+              <span className="ml-2 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                {outstanding} needing action
+              </span>
+            )}
+          </h2>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Upload a photo or PDF of your ID for showings where you requested verification. Your agent
-            reviews the file here.
+            Upload and track the documents your agent needs — like a photo or PDF of your ID for
+            verified showings. Your agent reviews them here.
           </p>
         </div>
       </div>
@@ -66,64 +101,75 @@ export default function ClientDocumentsSection() {
       <div className="mt-4 space-y-3">
         {rows.length === 0 ? (
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            No ID verification is needed right now. When you request a showing, check “Request ID
-            verification” to enable upload.
+            Nothing is needed right now. When you request a showing, check “Request ID
+            verification” to enable upload — or your agent may ask you for a document here.
           </p>
         ) : (
           rows.map(({ request, documents }) => {
-            const activeDocs = documents.filter((doc) => doc.status !== 'rejected');
-            const awaiting = isShowingIdentityAwaitingReview(request);
+            const visibleDocs = sortDocumentsForClient(
+              documents.filter((doc) => !isHistoryDocument(doc)),
+            );
+            const needsFirstIdUpload =
+              (request.id_verification_requested ||
+                request.id_verification_status === 'pending') &&
+              request.id_verification_status !== 'verified' &&
+              !documents.some((doc) => doc.category === 'identity');
             return (
               <div
                 key={request.id}
                 className="rounded-xl border border-zinc-200/80 p-3 dark:border-zinc-700/80"
               >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                    Showing on{' '}
-                    {new Date(request.scheduled_at ?? request.preferred_date).toLocaleString()}
-                  </p>
-                  <span
-                    className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                      request.id_verification_status === 'verified'
-                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
-                        : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
-                    }`}
-                  >
-                    ID {request.id_verification_status}
-                  </span>
+                <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                  Showing on{' '}
+                  {new Date(request.scheduled_at ?? request.preferred_date).toLocaleString()}
+                </p>
+                <div className="mt-2 space-y-2">
+                  {visibleDocs.map((doc) => (
+                    <ClientDocumentCard
+                      key={doc.id}
+                      document={doc}
+                      onChanged={() => {
+                        setError(null);
+                        setStatusMessage('Uploaded. Your agent will review it shortly.');
+                        void load();
+                      }}
+                      onError={(message) => {
+                        setStatusMessage(null);
+                        setError(message);
+                      }}
+                    />
+                  ))}
+                  {visibleDocs.length === 0 && !needsFirstIdUpload && (
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">No documents yet.</p>
+                  )}
+                  {needsFirstIdUpload && (
+                    <div className="rounded-lg border border-dashed border-zinc-300 p-3 dark:border-zinc-700">
+                      <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                        Upload a photo or PDF of your ID (max 10 MB) so your agent can verify it.
+                      </p>
+                      <DocumentUploadButton
+                        className="mt-2"
+                        target={{
+                          kind: 'new',
+                          resourceType: 'showing_request',
+                          resourceId: request.id,
+                          category: 'identity',
+                        }}
+                        withExpiryField
+                        label="Upload ID"
+                        onUploaded={() => {
+                          setError(null);
+                          setStatusMessage('ID uploaded. Your agent will review it shortly.');
+                          void load();
+                        }}
+                        onError={(message) => {
+                          setStatusMessage(null);
+                          setError(message);
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
-                {activeDocs.length === 0 ? (
-                  <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-                    No ID file uploaded yet.
-                  </p>
-                ) : (
-                  activeDocs.map((document) => (
-                    <p
-                      key={document.id}
-                      className="mt-2 text-xs text-zinc-600 dark:text-zinc-300"
-                    >
-                      {document.original_filename} ·{' '}
-                      <span className="font-semibold">{document.status}</span>
-                      {document.review_note ? ` · ${document.review_note}` : ''}
-                    </p>
-                  ))
-                )}
-                {(canUploadShowingIdentity(request) || awaiting) && (
-                  <ShowingIdentityUploadButton
-                    className="mt-3"
-                    request={request}
-                    onUploaded={async () => {
-                      setError(null);
-                      setStatusMessage('ID uploaded. Your agent will review it shortly.');
-                      await load();
-                    }}
-                    onError={(message) => {
-                      setStatusMessage(null);
-                      setError(message);
-                    }}
-                  />
-                )}
               </div>
             );
           })

@@ -548,17 +548,129 @@ export type ShowingRequestFeedbackSubmit = {
   feedback_ai_profile_consent?: boolean;
 };
 
-export type ShowingVerificationDocument = {
+// ---------------------------------------------------------------------------
+// Document centre (/api/v1/documents)
+// ---------------------------------------------------------------------------
+
+export type DocumentStatus =
+  | 'requested' // asked for; no file yet
+  | 'missing' // staff gave up waiting; a late upload is still accepted
+  | 'uploaded' // file received, not yet decided
+  | 'under_review' // a reviewer has opened it
+  | 'accepted'
+  | 'rejected'
+  | 'replacement_needed' // legitimate but unusable — send a fresh copy
+  | 'expired' // passed its own expires_at
+  | 'superseded'; // replaced by a newer version; history
+
+export type DocumentCategory =
+  | 'identity' // the only one in use at launch
+  | 'proof_of_funds'
+  | 'pre_approval'
+  | 'other';
+
+export type DocumentVisibility = 'client_visible' | 'internal_only';
+export type DocumentScanStatus = 'pending' | 'clean' | 'infected' | 'error' | 'skipped';
+export type DocumentResourceType = 'showing_request' | 'user';
+export type DocumentReviewOutcome = 'accepted' | 'rejected' | 'replacement_needed';
+
+/**
+ * What the document's owner sees. All file fields are null while status is
+ * `requested` or `missing` — a document row can exist with no file.
+ */
+export type ClientDocument = {
   id: string;
-  showing_request_id: string;
-  original_filename: string;
-  content_type: string;
-  size_bytes: number;
-  status: 'uploaded' | 'verified' | 'rejected';
+  resource_type: DocumentResourceType;
+  resource_id: string;
+  category: DocumentCategory;
+  description: string | null;
+  original_filename: string | null;
+  content_type: string | null;
+  size_bytes: number | null;
+  status: DocumentStatus;
+  version: number;
+  supersedes_document_id: string | null;
+  superseded_by_document_id: string | null;
+  /** When the DOCUMENT stops being valid (e.g. an ID card's own expiry). */
+  expires_at: string | null;
+  /** Advisory only — nothing happens server-side when it passes. */
+  due_date: string | null;
   reviewed_at: string | null;
-  review_note: string | null;
-  viewed_at: string | null;
+  /** Why it was rejected / why a replacement is needed. Safe to show the client. */
+  client_reason: string | null;
   created_at: string;
+  updated_at: string;
+};
+
+/** What a managing agent or superadmin sees. Superset of ClientDocument. */
+export type StaffDocument = ClientDocument & {
+  owner_user_id: string;
+  uploaded_by_user_id: string;
+  visibility: DocumentVisibility;
+  checksum_sha256: string | null;
+  scan_status: DocumentScanStatus;
+  /** INTERNAL. Never render in a client-facing view. */
+  review_note: string | null;
+  reviewed_by_user_id: string | null;
+  retention_expires_at: string | null;
+  purged_at: string | null;
+  deleted_at: string | null;
+  storage_key: string | null;
+};
+
+export type AppDocument = ClientDocument | StaffDocument;
+
+/** Mirrors DocumentAccessUrl — a short-lived signed S3 URL. Never cache it. */
+export type DocumentAccessUrl = {
+  url: string;
+  expires_in: number; // seconds, typically 300
+  filename: string;
+  content_type: string;
+  inline: boolean; // true = renders in-tab, false = downloads
+};
+
+export type DocumentAuditEntry = {
+  id: string;
+  document_id: string;
+  actor_user_id: string | null; // null for system actions (expiry, purge)
+  action:
+  | 'requested'
+  | 'uploaded'
+  | 'viewed'
+  | 'downloaded'
+  | 'replaced'
+  | 'reviewed'
+  | 'deleted'
+  | 'expired'
+  | 'purged';
+  document_status: string | null;
+  detail_json: Record<string, unknown> | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  created_at: string;
+};
+
+export type DocumentHistory = {
+  /** Oldest version first. */
+  versions: AppDocument[];
+  /** Populated for staff only; an empty array for clients, never absent. */
+  audit: DocumentAuditEntry[];
+};
+
+export type RequestDocumentBody = {
+  resource_type: DocumentResourceType;
+  resource_id: string;
+  category?: DocumentCategory; // defaults to "identity"
+  description?: string | null; // ≤1000 chars; shown to the client
+  due_date?: string | null; // ISO 8601, must be in the future
+};
+
+export type DocumentReviewBody = {
+  outcome: DocumentReviewOutcome;
+  /** Required unless outcome is "accepted". ≤1000 chars. Shown to the client. */
+  client_reason?: string | null;
+  /** Staff-only, never shown to the client. ≤2000 chars. */
+  review_note?: string | null;
 };
 
 // Roles used in the local chat message list
@@ -593,7 +705,12 @@ export type NotificationEventType =
   | 'showing.requested'
   | 'showing.confirmed'
   | 'showing.rescheduled'
-  | 'report.status_updated';
+  | 'report.status_updated'
+  | 'document.requested'
+  | 'document.reminder'
+  | 'document.uploaded'
+  | 'document.reviewed'
+  | 'document.expired';
 
 /**
  * Mirrors NotificationRead from the API.
@@ -678,20 +795,20 @@ export type RealtimeRejectReason = 'not_authorized' | 'unknown_channel' | 'chann
 /** Server → client frames — mirrors ServerMessageType and the shapes in resource.py. */
 export type RealtimeServerFrame =
   | {
-      type: 'welcome';
-      v: number;
-      connection_id: string;
-      user_id: string;
-      channels: string[];
-      heartbeat_interval: number;
-      max_connection_seconds: number;
-    }
+    type: 'welcome';
+    v: number;
+    connection_id: string;
+    user_id: string;
+    channels: string[];
+    heartbeat_interval: number;
+    max_connection_seconds: number;
+  }
   | {
-      type: 'subscribed';
-      channels: string[];
-      rejected: { channel: string; reason: RealtimeRejectReason | string }[];
-      replay: Record<string, RealtimeReplayStatus>;
-    }
+    type: 'subscribed';
+    channels: string[];
+    rejected: { channel: string; reason: RealtimeRejectReason | string }[];
+    replay: Record<string, RealtimeReplayStatus>;
+  }
   | { type: 'unsubscribed'; channels: string[]; reason?: string }
   | { type: 'event'; event: RealtimeEvent; replayed?: boolean }
   | { type: 'ping' }
@@ -758,7 +875,8 @@ export type ShowingIdVerificationChangedPayload = {
   id_verification_status: ShowingIdVerificationStatus;
   previous_id_verification_status: ShowingIdVerificationStatus;
   document_id?: string;
-  document_status?: ShowingVerificationDocument['status'];
+  /** Legacy identity-flow vocabulary — the document centre uses DocumentStatus. */
+  document_status?: 'uploaded' | 'verified' | 'rejected';
   /** Present when the change came from an agent reviewing a document. */
   review_status?: 'verified' | 'rejected';
 };
@@ -767,7 +885,8 @@ export type ShowingDocumentUploadedPayload = {
   showing_request_id: string;
   listing_id: string;
   document_id: string;
-  document_status: ShowingVerificationDocument['status'];
+  /** Legacy identity-flow vocabulary — the document centre uses DocumentStatus. */
+  document_status: 'uploaded' | 'verified' | 'rejected';
   content_type: string;
   id_verification_status: ShowingIdVerificationStatus;
   previous_id_verification_status: ShowingIdVerificationStatus;
