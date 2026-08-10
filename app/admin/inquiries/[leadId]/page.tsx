@@ -5,14 +5,51 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ArrowLeftIcon } from 'lucide-react';
 import LeadNotesTagsPanel from '@/components/admin/LeadNotesTagsPanel';
-import { fetchLeadById } from '@/services/superadminService';
-import type { LeadRead } from '@/types/api';
+import LeadStageSelect from '@/components/common/LeadStageSelect';
+import {
+  assignLeadAgent,
+  fetchAgentsAdmin,
+  fetchLeadById,
+} from '@/services/superadminService';
+import { getApiErrorMessage } from '@/lib/apiErrorMessage';
+import type { AgentProfile, LeadRead } from '@/types/api';
 
 export default function AdminLeadDetailPage() {
   const params = useParams();
   const leadId = typeof params.leadId === 'string' ? params.leadId : '';
   const [lead, setLead] = useState<LeadRead | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [agents, setAgents] = useState<AgentProfile[]>([]);
+  const [assigning, setAssigning] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetchAgentsAdmin()
+      .then((list) => {
+        if (active) setAgents(list);
+      })
+      .catch(() => {
+        // Picker degrades to "no agents loaded"; the page still works.
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  async function handleAssign(agentId: string) {
+    if (!lead || !agentId) return;
+    setAssigning(true);
+    setActionError(null);
+    try {
+      const updated = await assignLeadAgent(lead.id, agentId);
+      setLead(updated);
+    } catch (err: unknown) {
+      setActionError(getApiErrorMessage(err, 'Could not assign the agent.'));
+    } finally {
+      setAssigning(false);
+    }
+  }
 
   useEffect(() => {
     if (!leadId) return;
@@ -73,6 +110,63 @@ export default function AdminLeadDetailPage() {
         </h1>
         <p className="mt-1 font-mono text-xs text-zinc-500 dark:text-zinc-400">{lead.id}</p>
       </div>
+
+      <section
+        aria-labelledby="lead-pipeline-heading"
+        className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60"
+      >
+        <h2
+          id="lead-pipeline-heading"
+          className="text-xs font-semibold uppercase text-zinc-500 dark:text-zinc-400"
+        >
+          Pipeline
+        </h2>
+        {actionError && (
+          <p className="mt-2 text-sm text-red-600 dark:text-red-400" role="alert">
+            {actionError}
+          </p>
+        )}
+        <div className="mt-3 flex flex-wrap items-end gap-6">
+          <div>
+            <label
+              htmlFor="lead-stage"
+              className="mb-1 block text-xs font-semibold text-zinc-600 dark:text-zinc-400"
+            >
+              Stage
+            </label>
+            <LeadStageSelect
+              key={lead.status}
+              lead={lead}
+              onChanged={setLead}
+              onError={setActionError}
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="lead-agent"
+              className="mb-1 block text-xs font-semibold text-zinc-600 dark:text-zinc-400"
+            >
+              Assigned agent
+            </label>
+            <select
+              id="lead-agent"
+              value={lead.assigned_agent_id ?? ''}
+              disabled={assigning || agents.length === 0}
+              onChange={(e) => void handleAssign(e.target.value)}
+              className="rounded-xl border border-zinc-200 bg-white px-2 py-1.5 text-sm font-medium text-zinc-800 shadow-sm transition disabled:cursor-wait disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+            >
+              <option value="" disabled>
+                {agents.length === 0 ? 'No agents loaded' : 'Unassigned — pick an agent'}
+              </option>
+              {agents.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </section>
 
       <section
         aria-labelledby="lead-summary-heading"

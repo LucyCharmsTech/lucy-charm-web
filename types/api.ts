@@ -317,6 +317,28 @@ export type AiMessageRecord = {
 // Superadmin portal
 // ---------------------------------------------------------------------------
 
+/** Pipeline stages — mirrors LeadStage constants; changed by hand only. */
+export type LeadStage =
+  | 'new'
+  | 'contacted'
+  | 'qualified'
+  | 'appointment'
+  | 'active'
+  | 'offer'
+  | 'closed'
+  | 'lost';
+
+export const LEAD_STAGES: readonly LeadStage[] = [
+  'new',
+  'contacted',
+  'qualified',
+  'appointment',
+  'active',
+  'offer',
+  'closed',
+  'lost',
+] as const;
+
 /** Mirrors LeadsRead */
 export type LeadRead = {
   id: string;
@@ -331,6 +353,7 @@ export type LeadRead = {
   lead_type: string;
   lead_temperature: string;
   lead_score: number;
+  status: LeadStage;
   source: string | null;
   primary_intent: string | null;
   intent_confidence: number | null;
