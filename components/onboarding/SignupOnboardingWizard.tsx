@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { LoaderIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { track } from '@/lib/analytics';
 import { getApiErrorMessage } from '@/lib/apiErrorMessage';
 import { fetchCurrentUserOnboarding, submitCurrentUserOnboarding } from '@/services/userService';
 import { useAuthStore } from '@/stores/authStore';
@@ -208,6 +209,7 @@ export default function SignupOnboardingWizard() {
         main_priorities: mainPriorities,
         wants_listing_alerts: wantsListingAlerts,
       });
+      track('signup_completed');
       router.replace('/');
     } catch (err: unknown) {
       setError(

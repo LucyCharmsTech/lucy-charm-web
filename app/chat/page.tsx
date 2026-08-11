@@ -19,6 +19,7 @@ import {
   InputGroupInput,
 } from '@/components/ui/input-group';
 import { useShallow } from 'zustand/react/shallow';
+import { track } from '@/lib/analytics';
 import {
   createAiSession,
   sendChatMessage,
@@ -178,6 +179,11 @@ function ChatPageContent() {
   const [humanRequestPending, setHumanRequestPending] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatStartedRef = useRef(false);
+
+  useEffect(() => {
+    track('chat_opened', { surface: 'general' });
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Initialise AI session on mount
@@ -234,6 +240,10 @@ function ChatPageContent() {
       setSending(true);
       setSendError(false);
       setSendErrorDetail(null);
+      if (!chatStartedRef.current) {
+        chatStartedRef.current = true;
+        track('chat_started', { surface: 'general' });
+      }
 
       try {
         const response = await sendChatMessage({
@@ -242,6 +252,7 @@ function ChatPageContent() {
           email: email ?? undefined,
           page_url: typeof window !== 'undefined' ? window.location.href : undefined,
         });
+        if (response.escalation_flag) track('chat_escalated', { surface: 'general' });
 
         const assistantMsg: ChatMessage = {
           id: crypto.randomUUID(),

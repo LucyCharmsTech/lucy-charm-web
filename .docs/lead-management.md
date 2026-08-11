@@ -16,6 +16,11 @@ notes changes, sync-status badges.
 | `/admin/inquiries` | "All leads / Unassigned" tabs, per-row **Stage** dropdown, **Agent** column (name or amber Unassigned badge) |
 | `/admin/inquiries/[leadId]` | "Pipeline" card: stage select + assigned-agent picker (admin-only action) |
 | `/agent/leads` (new nav item "My leads") | Own leads only: contact, stage dropdown, temperature badge, score, source, **listing link**, **AI summary** (3-line clamp, full on hover), tag chips with inline add/remove |
+| `/admin/insights` | **"Lead pipeline (current stage)"** panel: all 8 stages as bars, plus Total leads and Unassigned tiles (the latter links to Inquiries when non-zero) |
+
+**Two panels, two meanings — label them clearly.** "Lead pipeline (current
+stage)" shows where leads sit now; the older "Lead funnel" below it counts
+events that happened. They are not duplicates and will not agree numerically.
 
 ## Services
 
@@ -54,6 +59,12 @@ notes changes, sync-status badges.
 
 ## Tests
 
-`__tests__/leads/LeadStageSelect.test.tsx` — renders all 8 stages in order,
-label mapping, saves + notifies parent on change, rolls back on API rejection.
+- `__tests__/leads/LeadStageSelect.test.tsx` — renders all 8 stages in order,
+  label mapping, saves + notifies parent on change, rolls back on API
+  rejection (the agent-403 UX).
+- `__tests__/leads/SuperadminDashboardView.test.tsx` — the pipeline panel:
+  every stage label present including empty ones, total/unassigned counts,
+  the "Assign them" shortcut appearing only when something is unassigned, and
+  stage counts rendering from the API payload.
+
 Run with `npx jest __tests__/leads`.

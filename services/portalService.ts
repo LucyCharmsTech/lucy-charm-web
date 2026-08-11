@@ -4,6 +4,7 @@
 
 import api from '@/lib/axios';
 import type {
+  AgentInsightsResponse,
   AgentProfile,
   ApiListing,
   ApiPaginated,
@@ -12,6 +13,12 @@ import type {
 
 export async function fetchMyAgentProfile(): Promise<AgentProfile> {
   const res = await api.get<AgentProfile>('/agents/me');
+  return res.data;
+}
+
+/** Response-time metrics for the calling agent — own data only. */
+export async function fetchMyAgentInsights(): Promise<AgentInsightsResponse> {
+  const res = await api.get<AgentInsightsResponse>('/agents/me/insights');
   return res.data;
 }
 

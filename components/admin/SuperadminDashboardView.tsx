@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { leadStageLabel } from '@/components/common/LeadStageSelect';
 import type {
   SuperadminDashboardSummary,
   SuperadminFunnelStage,
@@ -14,15 +15,7 @@ function formatDurationSeconds(seconds: number | null | undefined): string {
   return `${m < 10 ? m.toFixed(1) : Math.round(m)} min`;
 }
 
-function BarRow({
-  label,
-  count,
-  max,
-}: {
-  label: string;
-  count: number;
-  max: number;
-}) {
+function BarRow({ label, count, max }: { label: string; count: number; max: number }) {
   const pct = max > 0 ? Math.min(100, Math.round((count / max) * 100)) : 0;
   return (
     <div className="space-y-1">
@@ -61,9 +54,70 @@ export default function SuperadminDashboardView({ data }: { data: SuperadminDash
   const maxIntent = Math.max(...data.top_intent_types.map((s) => s.count), 1);
   const maxCta = Math.max(...data.cta_event_counts.map((s) => s.count), 1);
   const h = data.handoff_timing;
+  const pipeline = data.pipeline;
+  const maxPipeline = Math.max(...pipeline.by_stage.map((s) => s.count), 1);
 
   return (
     <div className="space-y-10">
+      {/* Current pipeline position of every lead — distinct from the event
+          funnel below, which counts things that happened. */}
+      <section aria-labelledby="pipeline-heading">
+        <h2
+          id="pipeline-heading"
+          className="mb-3 text-sm font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
+        >
+          Lead pipeline (current stage)
+        </h2>
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
+            <div className="space-y-3">
+              {pipeline.by_stage.map((stage) => (
+                <BarRow
+                  key={stage.status}
+                  label={leadStageLabel(stage.status)}
+                  count={stage.count}
+                  max={maxPipeline}
+                />
+              ))}
+            </div>
+            <p className="mt-4 text-xs text-zinc-500 dark:text-zinc-400">
+              Where each lead sits right now. Stages are set by hand in Inquiries or by the assigned
+              agent.
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+            <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
+              <p className="text-xs font-semibold uppercase text-zinc-500 dark:text-zinc-400">
+                Total leads
+              </p>
+              <p className="mt-1 text-2xl font-extrabold tabular-nums text-zinc-900 dark:text-zinc-50">
+                {pipeline.total_leads}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
+              <p className="text-xs font-semibold uppercase text-zinc-500 dark:text-zinc-400">
+                Unassigned
+              </p>
+              <p className="mt-1 text-2xl font-extrabold tabular-nums text-zinc-900 dark:text-zinc-50">
+                {pipeline.unassigned_leads}
+              </p>
+              {pipeline.unassigned_leads > 0 ? (
+                <Link
+                  href="/admin/inquiries"
+                  className="mt-2 inline-flex text-xs font-semibold text-primarycolor hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                >
+                  Assign them →
+                </Link>
+              ) : (
+                <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                  Every lead has an owner.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section aria-labelledby="handoff-heading">
         <h2
           id="handoff-heading"
@@ -80,7 +134,8 @@ export default function SuperadminDashboardView({ data }: { data: SuperadminDash
               {h.sample_size}
             </p>
             <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-              Rows with <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">assigned_at</code>
+              Rows with{' '}
+              <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">assigned_at</code>
             </p>
           </div>
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
@@ -189,7 +244,9 @@ export default function SuperadminDashboardView({ data }: { data: SuperadminDash
           </h2>
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
             {data.top_listings_by_engagement.length === 0 ? (
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">No listing-tied engagement yet.</p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                No listing-tied engagement yet.
+              </p>
             ) : (
               <ul className="divide-y divide-zinc-100 dark:divide-zinc-800" role="list">
                 {data.top_listings_by_engagement.map((row) => (

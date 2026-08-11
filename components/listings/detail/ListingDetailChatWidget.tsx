@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useShallow } from 'zustand/react/shallow';
 
+import { track } from '@/lib/analytics';
 import {
   createAiSession,
   sendChatMessage,
@@ -53,6 +54,11 @@ export default function ListingDetailChatWidget({
   const [humanRequestPending, setHumanRequestPending] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatStartedRef = useRef(false);
+
+  useEffect(() => {
+    if (open) track('chat_opened', { listing_id: listingId });
+  }, [open, listingId]);
 
   // Session — initialised lazily when the panel first opens
   useEffect(() => {
@@ -99,6 +105,10 @@ export default function ListingDetailChatWidget({
       setSending(true);
       setSendError(false);
       setSendErrorDetail(null);
+      if (!chatStartedRef.current) {
+        chatStartedRef.current = true;
+        track('chat_started', { listing_id: listingId });
+      }
 
       try {
         const response = await sendChatMessage({
@@ -108,6 +118,7 @@ export default function ListingDetailChatWidget({
           listing_id: listingId,
           page_url: typeof window !== 'undefined' ? window.location.href : undefined,
         });
+        if (response.escalation_flag) track('chat_escalated', { listing_id: listingId });
 
         const assistantMsg: ChatMessage = {
           id: crypto.randomUUID(),
