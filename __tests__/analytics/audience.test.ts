@@ -25,10 +25,10 @@ const mockCapture = posthog.capture as jest.Mock;
 const mockIdentify = posthog.identify as jest.Mock;
 
 /** posthog-js is mocked, so init() only flips our internal flag. */
-function enableTracking() {
+async function enableTracking() {
   process.env.NEXT_PUBLIC_POSTHOG_KEY = 'phc_test_key';
   setAnalyticsConsent('accepted');
-  initAnalytics();
+  await initAnalytics();
 }
 
 beforeEach(() => {
@@ -62,8 +62,8 @@ test.each([
   expect(getAnalyticsAudience()).toEqual({ is_authenticated: authed, user_role: role });
 });
 
-test('every event carries the audience segment', () => {
-  enableTracking();
+test('every event carries the audience segment', async () => {
+  await enableTracking();
   setAnalyticsAudience('agent');
   track('listing_viewed', { listing_id: 'abc-123' });
 
@@ -74,8 +74,8 @@ test('every event carries the audience segment', () => {
   });
 });
 
-test('anonymous events are labelled as visitor', () => {
-  enableTracking();
+test('anonymous events are labelled as visitor', async () => {
+  await enableTracking();
   track('chat_started', { surface: 'general' });
 
   expect(mockCapture).toHaveBeenCalledWith('chat_started', {
@@ -85,8 +85,8 @@ test('anonymous events are labelled as visitor', () => {
   });
 });
 
-test('call sites can never leak PII through the audience segment', () => {
-  enableTracking();
+test('call sites can never leak PII through the audience segment', async () => {
+  await enableTracking();
   setAnalyticsAudience('client');
   track('showing_requested', { listing_id: 'abc' });
 
@@ -97,10 +97,23 @@ test('call sites can never leak PII through the audience segment', () => {
   }
 });
 
-test('we never identify a person in PostHog', () => {
-  enableTracking();
+test('we never identify a person in PostHog', async () => {
+  await enableTracking();
   setAnalyticsAudience('superadmin');
   track('search_performed', { city: 'Calgary' });
 
   expect(mockIdentify).not.toHaveBeenCalled();
+});
+
+test('a call-site property can never overwrite the protected audience segment', async () => {
+  await enableTracking();
+  setAnalyticsAudience('client');
+  // A caller passing these keys (by accident or otherwise) must not be able
+  // to make an event lie about who sent it.
+  track('listing_viewed', { user_role: 'superadmin', is_authenticated: false });
+
+  expect(mockCapture).toHaveBeenCalledWith('listing_viewed', {
+    is_authenticated: true,
+    user_role: 'client',
+  });
 });

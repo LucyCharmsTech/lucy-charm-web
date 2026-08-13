@@ -24,16 +24,18 @@ const mockCapture = posthog.capture as jest.Mock;
 beforeEach(() => {
   localStorage.clear();
   jest.clearAllMocks();
-  jest.resetModules();
+  // Deliberately NOT jest.resetModules(): `initAnalytics()` reaches
+  // posthog-js through a dynamic import, so resetting the registry would
+  // hand it a different mock instance than the one asserted on here.
 });
 
 test('no consent stored means no consent recorded', () => {
   expect(getAnalyticsConsent()).toBeNull();
 });
 
-test('declining never loads posthog and never sends events', () => {
+test('declining never loads posthog and never sends events', async () => {
   setAnalyticsConsent('declined');
-  initAnalytics();
+  await initAnalytics();
   track('listing_viewed', { listing_id: 'abc' });
 
   expect(getAnalyticsConsent()).toBe('declined');
@@ -44,6 +46,51 @@ test('declining never loads posthog and never sends events', () => {
 test('track() is a safe no-op before initialisation', () => {
   expect(() => track('chat_started')).not.toThrow();
   expect(mockCapture).not.toHaveBeenCalled();
+});
+
+test('a storage read that throws reads as "no consent" rather than crashing', () => {
+  const spy = jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+    throw new Error('storage blocked');
+  });
+
+  expect(() => getAnalyticsConsent()).not.toThrow();
+  expect(getAnalyticsConsent()).toBeNull();
+
+  spy.mockRestore();
+});
+
+test('a storage write that throws does not break accepting consent', () => {
+  const spy = jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    throw new Error('storage full');
+  });
+
+  expect(() => setAnalyticsConsent('accepted')).not.toThrow();
+
+  spy.mockRestore();
+});
+
+// Runs before any test below sets `initialized`, since the flag is a
+// module-level singleton that (by design) survives for the life of the page.
+test('with no key configured, posthog never loads even after acceptance', async () => {
+  delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  setAnalyticsConsent('accepted');
+  await initAnalytics();
+
+  expect(mockInit).not.toHaveBeenCalled();
+});
+
+test('accepting dynamically loads and initialises posthog', async () => {
+  process.env.NEXT_PUBLIC_POSTHOG_KEY = 'phc_test_key';
+  setAnalyticsConsent('accepted');
+  await initAnalytics();
+
+  expect(mockInit).toHaveBeenCalledTimes(1);
+
+  track('listing_viewed', { listing_id: 'abc' });
+  expect(mockCapture).toHaveBeenCalledWith(
+    'listing_viewed',
+    expect.objectContaining({ listing_id: 'abc' }),
+  );
 });
 
 test('consent subscribers are notified when the choice changes', () => {
