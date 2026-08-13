@@ -137,9 +137,9 @@ export function uploadDocument(input: {
   if (input.expiresAt) form.set('expires_at', input.expiresAt);
   if (input.visibility) form.set('visibility', input.visibility);
   return call(() =>
-    // Override the client-wide JSON default so the browser sets the multipart boundary.
+    // Unset the client-wide JSON default so the browser sets the multipart boundary itself.
     api.post<AppDocument>('/documents', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      headers: { 'Content-Type': undefined },
     }),
   );
 }
@@ -158,8 +158,9 @@ export function uploadDocumentRevision(
   form.set('file', file);
   if (expiresAt) form.set('expires_at', expiresAt);
   return call(() =>
+    // Unset the client-wide JSON default so the browser sets the multipart boundary itself.
     api.post<AppDocument>(`/documents/${id}/file`, form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      headers: { 'Content-Type': undefined },
     }),
   );
 }
