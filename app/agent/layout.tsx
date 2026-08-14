@@ -7,6 +7,7 @@ import PortalSidebar from '@/components/portals/PortalSidebar';
 const NAV_LINKS = [
   { href: '/agent', label: 'Overview' },
   { href: '/agent/listings', label: 'My listings' },
+  { href: '/agent/leads', label: 'My leads' },
   { href: '/agent/showings', label: 'Showings' },
 ];
 

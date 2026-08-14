@@ -3,21 +3,26 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
-import { fetchLeadsAdmin } from '@/services/superadminService';
-import type { ApiPaginated, LeadRead } from '@/types/api';
+import LeadStageSelect from '@/components/common/LeadStageSelect';
+import { fetchAgentsAdmin, fetchLeadsAdmin } from '@/services/superadminService';
+import type { AgentProfile, ApiPaginated, LeadRead } from '@/types/api';
 
 const PAGE_SIZE = 25;
 
+type LeadFilter = 'all' | 'unassigned';
+
 export default function AdminInquiriesPage() {
   const [page, setPage] = useState(1);
+  const [filter, setFilter] = useState<LeadFilter>('all');
   const [data, setData] = useState<ApiPaginated<LeadRead> | null>(null);
+  const [agents, setAgents] = useState<AgentProfile[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async (p: number) => {
+  const load = useCallback(async (p: number, f: LeadFilter) => {
     setLoading(true);
     try {
-      const res = await fetchLeadsAdmin(p, PAGE_SIZE);
+      const res = await fetchLeadsAdmin(p, PAGE_SIZE, f === 'unassigned');
       setData(res);
       setError(null);
     } catch (e: unknown) {
@@ -31,8 +36,24 @@ export default function AdminInquiriesPage() {
   }, []);
 
   useEffect(() => {
-    load(page);
-  }, [load, page]);
+    load(page, filter);
+  }, [load, page, filter]);
+
+  useEffect(() => {
+    let active = true;
+    fetchAgentsAdmin()
+      .then((list) => {
+        if (active) setAgents(list);
+      })
+      .catch(() => {
+        // Agent names are a nicety on this list; the id fallback still renders.
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const agentNameById = new Map(agents.map((a) => [a.id, a.name]));
 
   const totalPages =
     data && data.total > 0 ? Math.max(1, Math.ceil(data.total / data.page_size)) : 1;
@@ -69,6 +90,34 @@ export default function AdminInquiriesPage() {
         </p>
       </div>
 
+      {/* All vs Unassigned — unassigned leads have no listing agent and need a manual owner. */}
+      <div className="flex items-center gap-2" role="tablist" aria-label="Lead filter">
+        {(
+          [
+            { key: 'all', label: 'All leads' },
+            { key: 'unassigned', label: 'Unassigned' },
+          ] as { key: LeadFilter; label: string }[]
+        ).map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            role="tab"
+            aria-selected={filter === tab.key}
+            onClick={() => {
+              setFilter(tab.key);
+              setPage(1);
+            }}
+            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor ${
+              filter === tab.key
+                ? 'bg-primarycolor text-white shadow-sm'
+                : 'border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <div className="flex items-center justify-between gap-2">
         <button
           type="button"
@@ -99,11 +148,17 @@ export default function AdminInquiriesPage() {
         </p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
-          <table className="w-full min-w-[960px] text-left text-sm">
+          <table className="w-full min-w-[1160px] text-left text-sm">
             <thead className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
               <tr>
                 <th scope="col" className="px-4 py-3">
                   Contact
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Stage
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Agent
                 </th>
                 <th scope="col" className="px-4 py-3">
                   Temperature
@@ -137,6 +192,19 @@ export default function AdminInquiriesPage() {
                     )}
                     {r.phone && (
                       <p className="text-xs text-zinc-500 dark:text-zinc-400">{r.phone}</p>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <LeadStageSelect lead={r} />
+                  </td>
+                  <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">
+                    {r.assigned_agent_id ? (
+                      (agentNameById.get(r.assigned_agent_id) ??
+                        `${r.assigned_agent_id.slice(0, 8)}…`)
+                    ) : (
+                      <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                        Unassigned
+                      </span>
                     )}
                   </td>
                   <td className="px-4 py-3 capitalize text-zinc-700 dark:text-zinc-300">

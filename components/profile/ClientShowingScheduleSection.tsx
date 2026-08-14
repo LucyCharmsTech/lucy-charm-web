@@ -4,10 +4,6 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 
 import ShowingFeedbackDialog from '@/components/profile/ShowingFeedbackDialog';
-import ShowingIdentityUploadButton, {
-  canUploadShowingIdentity,
-  isShowingIdentityAwaitingReview,
-} from '@/components/profile/ShowingIdentityUploadButton';
 import { useLiveShowingRequests } from '@/lib/useLiveShowingRequests';
 import { showingAnchorId, useShowingDeepLink } from '@/lib/useShowingDeepLink';
 import { cn } from '@/lib/utils';
@@ -46,7 +42,6 @@ export default function ClientShowingScheduleSection() {
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const highlightedShowingId = useShowingDeepLink(!loading);
 
   useEffect(() => {
@@ -165,11 +160,6 @@ export default function ClientShowingScheduleSection() {
 
       {loading && <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">Loading showings...</p>}
       {error && !loading && <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
-      {uploadMessage && !loading && (
-        <p className="mt-3 text-sm text-emerald-700 dark:text-emerald-400" role="status">
-          {uploadMessage}
-        </p>
-      )}
 
       {!loading && !error && (
         <div className="mt-4 space-y-3">
@@ -234,17 +224,15 @@ export default function ClientShowingScheduleSection() {
                 {item.message && (
                   <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{item.message}</p>
                 )}
-                {(canUploadShowingIdentity(item) || isShowingIdentityAwaitingReview(item)) && (
-                  <ShowingIdentityUploadButton
-                    className="mt-3"
-                    request={item}
-                    onUploaded={() => {
-                      setUploadMessage('ID uploaded. Your agent will review it shortly.');
-                      void refreshRows();
-                    }}
-                    onError={(message) => setError(message)}
-                  />
-                )}
+                {item.id_verification_requested &&
+                  item.id_verification_status !== 'verified' && (
+                    <Link
+                      href="#documents"
+                      className="mt-2 inline-flex h-8 items-center rounded-full border border-primarycolor/40 px-3 text-xs font-semibold text-primarycolor transition hover:bg-primarycolor/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                    >
+                      Manage ID documents
+                    </Link>
+                  )}
                 {canLeaveFeedback(item) && (
                   <button
                     type="button"

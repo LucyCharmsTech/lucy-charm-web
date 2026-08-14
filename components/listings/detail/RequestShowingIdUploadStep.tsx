@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { CheckCircleIcon } from 'lucide-react';
 
-import ShowingIdentityUploadButton from '@/components/profile/ShowingIdentityUploadButton';
+import DocumentUploadButton from '@/components/documents/DocumentUploadButton';
 import { Button } from '@/components/ui/button';
 import type { ShowingRequest } from '@/types/api';
 
@@ -36,23 +36,29 @@ export default function RequestShowingIdUploadStep({
         <div className="mt-1 w-full max-w-sm rounded-xl border border-zinc-200 bg-zinc-50/80 p-4 text-left dark:border-zinc-700 dark:bg-zinc-900/60">
           <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Upload your ID</p>
           <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
-            You opted into ID verification. Upload a PDF, JPEG, or PNG (max 10 MB) so your agent can
-            review it.
+            You opted into ID verification. Upload a PDF, JPEG, PNG, or WebP (max 10 MB) so your
+            agent can review it.
           </p>
 
           {!isAuthenticated ? (
             <p className="mt-3 text-xs text-amber-800 dark:text-amber-300">
-              Sign in, then upload from your profile under Showing schedule or Verification
-              documents.
+              Sign in, then upload from your profile under Documents.
             </p>
           ) : uploaded ? (
             <p className="mt-3 text-sm font-medium text-emerald-700 dark:text-emerald-400" role="status">
               ID uploaded. Your agent will review it shortly.
             </p>
           ) : (
-            <ShowingIdentityUploadButton
+            <DocumentUploadButton
               className="mt-3"
-              request={request}
+              target={{
+                kind: 'new',
+                resourceType: 'showing_request',
+                resourceId: request.id,
+                category: 'identity',
+              }}
+              withExpiryField
+              label="Upload ID photo"
               onUploaded={() => {
                 setError(null);
                 setUploaded(true);
