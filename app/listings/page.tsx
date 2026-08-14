@@ -11,6 +11,7 @@ import { COUNTRY_OPTIONS } from '@/components/listings/constants';
 import { matchListingsToPreferences } from '@/lib/listingMatching';
 import { apiListingToItem } from '@/lib/listingAdapter';
 import { isProptxLive } from '@/lib/proptxMode';
+import { track } from '@/lib/analytics';
 import { realtimeChannel } from '@/lib/realtime/channels';
 import { useChannels, useRealtimeEvent, useRefetchOnReconnect } from '@/lib/realtime/hooks';
 import { fetchStoredUserPreferences } from '@/services/userPreferencesService';
@@ -111,6 +112,7 @@ function ListingsPageContent() {
       }
 
       const qs = params.toString();
+      if (cleaned) track('search_performed', { [key]: cleaned });
       router.replace(qs ? `/listings?${qs}` : '/listings', { scroll: false });
     },
     [router, searchParams],

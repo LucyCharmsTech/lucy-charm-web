@@ -10,7 +10,6 @@ import type {
   ShowingRequestCreate,
   ShowingRequestFeedbackSubmit,
   ShowingRequestUpdate,
-  ShowingVerificationDocument,
   ApiPaginated,
 } from '@/types/api';
 
@@ -63,38 +62,5 @@ export async function submitShowingFeedback(
   return res.data;
 }
 
-export async function uploadShowingIdentityDocument(showingRequestId: string, file: File): Promise<ShowingVerificationDocument> {
-  const body = new FormData();
-  body.append('file', file);
-  // Drop instance default application/json so the browser sets multipart boundary.
-  const res = await api.post<ShowingVerificationDocument>(
-    `/showing_requests/${showingRequestId}/identity_documents`,
-    body,
-    {
-      transformRequest: [
-        (data, headers) => {
-          if (typeof FormData !== 'undefined' && data instanceof FormData) {
-            headers.delete('Content-Type');
-          }
-          return data;
-        },
-      ],
-    },
-  );
-  return res.data;
-}
-
-export async function fetchShowingIdentityDocuments(showingRequestId: string): Promise<ShowingVerificationDocument[]> {
-  const res = await api.get<ShowingVerificationDocument[]>(`/showing_requests/${showingRequestId}/identity_documents`);
-  return res.data;
-}
-
-export async function reviewShowingIdentityDocument(showingRequestId: string, documentId: string, status: 'verified' | 'rejected', review_note?: string): Promise<ShowingVerificationDocument> {
-  const res = await api.patch<ShowingVerificationDocument>(`/showing_requests/${showingRequestId}/identity_documents/${documentId}`, { status, review_note });
-  return res.data;
-}
-
-export async function openShowingIdentityDocument(showingRequestId: string, documentId: string): Promise<void> {
-  const res = await api.get(`/showing_requests/${showingRequestId}/identity_documents/${documentId}/file`, { responseType: 'blob' });
-  window.open(URL.createObjectURL(res.data), '_blank', 'noopener,noreferrer');
-}
+// Identity document upload/review moved to the document centre —
+// see services/documentService.ts (/api/v1/documents).

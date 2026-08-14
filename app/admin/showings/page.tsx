@@ -8,7 +8,7 @@ import {
   XCircleIcon,
   RefreshCcwIcon,
 } from 'lucide-react';
-import ShowingIdentityReviewDialog from '@/components/agent/ShowingIdentityReviewDialog';
+import ShowingDocumentsDialog from '@/components/documents/ShowingDocumentsDialog';
 import { fetchAllShowingRequestsAdmin, updateShowingRequest } from '@/services/showingService';
 import { fetchAllAgents } from '@/services/portalService';
 import type { AgentProfile, ApiPaginated, ShowingRequest, ShowingRequestStatus } from '@/types/api';
@@ -242,21 +242,18 @@ export default function AdminShowingsPage() {
                           </button>
                         </>
                       )}
-                      {r.id_verification_status === 'pending' && r.identity_document_uploaded && (
-                        <button
-                          type="button"
-                          disabled={updating === r.id}
-                          onClick={() => setReviewRequest(r)}
-                          className="inline-flex h-7 items-center rounded-full bg-emerald-600 px-3 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
-                        >
-                          Review ID
-                        </button>
-                      )}
-                      {r.id_verification_status === 'pending' && !r.identity_document_uploaded && (
-                        <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                          Waiting for buyer ID upload
-                        </span>
-                      )}
+                      <button
+                        type="button"
+                        disabled={updating === r.id}
+                        onClick={() => setReviewRequest(r)}
+                        className={`inline-flex h-7 items-center rounded-full px-3 text-xs font-semibold transition disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor ${
+                          r.id_verification_status === 'pending'
+                            ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                            : 'bg-zinc-200 text-zinc-800 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-100'
+                        }`}
+                      >
+                        {r.id_verification_status === 'pending' ? 'Review documents' : 'Documents'}
+                      </button>
                       {r.message && (
                         <p className="mt-1 max-w-[180px] truncate text-xs text-zinc-400" title={r.message}>
                           &ldquo;{r.message}&rdquo;
@@ -270,11 +267,11 @@ export default function AdminShowingsPage() {
           </table>
         </div>
       )}
-      <ShowingIdentityReviewDialog
+      <ShowingDocumentsDialog
         open={Boolean(reviewRequest)}
         request={reviewRequest}
         onClose={() => setReviewRequest(null)}
-        onReviewed={() => void load()}
+        onChanged={() => void load()}
       />
     </div>
   );

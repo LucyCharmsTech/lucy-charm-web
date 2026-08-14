@@ -4,6 +4,11 @@ import {
   CalendarCheckIcon,
   CalendarClockIcon,
   CalendarPlusIcon,
+  FileCheckIcon,
+  FileClockIcon,
+  FilePlusIcon,
+  FileUpIcon,
+  FileXIcon,
   type LucideIcon,
 } from 'lucide-react';
 import type { NotificationEventType } from '@/types/api';
@@ -35,6 +40,26 @@ const VISUALS: Record<NotificationEventType, NotificationVisual> = {
   'report.status_updated': {
     Icon: BadgeCheckIcon,
     tone: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300',
+  },
+  'document.requested': {
+    Icon: FilePlusIcon,
+    tone: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+  },
+  'document.reminder': {
+    Icon: FileClockIcon,
+    tone: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+  },
+  'document.uploaded': {
+    Icon: FileUpIcon,
+    tone: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  },
+  'document.reviewed': {
+    Icon: FileCheckIcon,
+    tone: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+  },
+  'document.expired': {
+    Icon: FileXIcon,
+    tone: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400',
   },
 };
 

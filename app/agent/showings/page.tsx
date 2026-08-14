@@ -8,7 +8,7 @@ import {
   XCircleIcon,
   RefreshCcwIcon,
 } from 'lucide-react';
-import ShowingIdentityReviewDialog from '@/components/agent/ShowingIdentityReviewDialog';
+import ShowingDocumentsDialog from '@/components/documents/ShowingDocumentsDialog';
 import ShowingRescheduleDialog from '@/components/agent/ShowingRescheduleDialog';
 import { useLiveShowingRequests } from '@/lib/useLiveShowingRequests';
 import { showingAnchorId, useShowingDeepLink } from '@/lib/useShowingDeepLink';
@@ -196,11 +196,11 @@ function AgentShowingsPageContent() {
         onCancel={() => setRescheduleRequest(null)}
         onSave={() => void submitReschedule()}
       />
-      <ShowingIdentityReviewDialog
+      <ShowingDocumentsDialog
         open={Boolean(reviewRequest)}
         request={reviewRequest}
         onClose={() => setReviewRequest(null)}
-        onReviewed={() => void load()}
+        onChanged={() => void load()}
       />
     </div>
   );
@@ -344,19 +344,16 @@ function ShowingTable({
                       />
                     </>
                   )}
-                  {r.id_verification_status === 'pending' && r.identity_document_uploaded && (
-                    <ActionButton
-                      label="Review ID"
-                      busy={updating === r.id}
-                      onClick={() => onReviewDocuments(r)}
-                      className="bg-emerald-600 text-white hover:bg-emerald-700"
-                    />
-                  )}
-                  {r.id_verification_status === 'pending' && !r.identity_document_uploaded && (
-                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                      Waiting for buyer ID upload
-                    </span>
-                  )}
+                  <ActionButton
+                    label={r.id_verification_status === 'pending' ? 'Review documents' : 'Documents'}
+                    busy={updating === r.id}
+                    onClick={() => onReviewDocuments(r)}
+                    className={
+                      r.id_verification_status === 'pending'
+                        ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                        : 'bg-zinc-200 text-zinc-800 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-100'
+                    }
+                  />
                 </div>
                 {r.message && (
                   <p className="mt-1.5 max-w-[200px] truncate text-xs text-zinc-500 dark:text-zinc-400" title={r.message}>

@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuthStore } from '@/stores/authStore';
 import RequestShowingIdUploadStep from '@/components/listings/detail/RequestShowingIdUploadStep';
 import { useListingChatSession } from '@/components/listings/detail/ListingChatSessionContext';
+import { track } from '@/lib/analytics';
 import { submitShowingRequest } from '@/services/showingService';
 import type { ShowingRequest, ShowingType } from '@/types/api';
 
@@ -121,6 +122,7 @@ export default function RequestShowingModal({ open, listingId, listingTitle, onC
         ai_session_id: aiSessionId ?? undefined,
       });
       setSubmittedRequest(created);
+      track('showing_requested', { listing_id: listingId });
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??

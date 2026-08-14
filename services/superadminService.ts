@@ -5,6 +5,7 @@
 
 import api from '@/lib/axios';
 import type {
+  AgentProfile,
   AiMessageRecord,
   AiSession,
   ApiPaginated,
@@ -26,9 +27,10 @@ export async function fetchSuperadminDashboard(): Promise<SuperadminDashboardSum
 export async function fetchLeadsAdmin(
   page = 1,
   size = 25,
+  unassigned = false,
 ): Promise<ApiPaginated<LeadRead>> {
   const res = await api.get<ApiPaginated<LeadRead>>('/leads/', {
-    params: { page, size },
+    params: { page, size, unassigned },
     timeout: LONG_READ_MS,
   });
   return res.data;
@@ -38,6 +40,20 @@ export async function fetchLeadsAdmin(
 export async function fetchLeadById(leadId: string): Promise<LeadRead> {
   const res = await api.get<LeadRead>(`/leads/${leadId}`);
   return res.data;
+}
+
+/** Assign/reassign a lead to an agent — superadmin only on the backend. */
+export async function assignLeadAgent(leadId: string, agentId: string): Promise<LeadRead> {
+  const res = await api.patch<LeadRead>(`/leads/${leadId}`, { assigned_agent_id: agentId });
+  return res.data;
+}
+
+/** Agents for the assign picker (first page is plenty for a small brokerage). */
+export async function fetchAgentsAdmin(size = 100): Promise<AgentProfile[]> {
+  const res = await api.get<ApiPaginated<AgentProfile>>('/agents/', {
+    params: { page: 1, size },
+  });
+  return res.data.items;
 }
 
 export async function fetchAiSessionsAdmin(

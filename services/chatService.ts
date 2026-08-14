@@ -71,11 +71,13 @@ export async function sendChatMessage(
 export async function requestHumanAgent(options: {
   sessionId: string;
   listingId?: string;
+  email?: string;
   message?: string;
 }): Promise<ChatRequestHumanResponse> {
   const res = await api.post<ChatRequestHumanResponse>('/chat/request_human', {
     session_id: options.sessionId,
     listing_id: options.listingId ?? null,
+    email: options.email ?? null,
     message: options.message ?? null,
   });
   return res.data;

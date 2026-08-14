@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useShallow } from 'zustand/react/shallow';
 
+import { track } from '@/lib/analytics';
 import {
   createAiSession,
   sendChatMessage,
@@ -30,10 +31,11 @@ export default function ListingDetailChatWidget({
   listingTitle,
 }: ListingDetailChatWidgetProps) {
   const pathname = usePathname();
-  const { accessToken, userId } = useAuthStore(
+  const { accessToken, userId, email } = useAuthStore(
     useShallow((s) => ({
       accessToken: s.accessToken,
       userId: s.user?.user_id ?? null,
+      email: s.user?.email ?? null,
     })),
   );
   const isAuthenticated = Boolean(accessToken);
@@ -52,6 +54,11 @@ export default function ListingDetailChatWidget({
   const [humanRequestPending, setHumanRequestPending] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatStartedRef = useRef(false);
+
+  useEffect(() => {
+    if (open) track('chat_opened', { listing_id: listingId });
+  }, [open, listingId]);
 
   // Session — initialised lazily when the panel first opens
   useEffect(() => {
@@ -98,14 +105,20 @@ export default function ListingDetailChatWidget({
       setSending(true);
       setSendError(false);
       setSendErrorDetail(null);
+      if (!chatStartedRef.current) {
+        chatStartedRef.current = true;
+        track('chat_started', { listing_id: listingId });
+      }
 
       try {
         const response = await sendChatMessage({
           session_id: sessionId,
           message_text: messageText,
+          email: email ?? undefined,
           listing_id: listingId,
           page_url: typeof window !== 'undefined' ? window.location.href : undefined,
         });
+        if (response.escalation_flag) track('chat_escalated', { listing_id: listingId });
 
         const assistantMsg: ChatMessage = {
           id: crypto.randomUUID(),
@@ -161,7 +174,7 @@ export default function ListingDetailChatWidget({
         setSending(false);
       }
     },
-    [inputValue, sessionId, sending, listingId, openShowingModal],
+    [email, inputValue, sessionId, sending, listingId, openShowingModal],
   );
 
   const handleRequestHuman = useCallback(async () => {
@@ -171,6 +184,7 @@ export default function ListingDetailChatWidget({
       await requestHumanAgent({
         sessionId,
         listingId: listingId,
+        email: email ?? undefined,
       });
       setHumanRequested(true);
     } catch {
@@ -178,7 +192,7 @@ export default function ListingDetailChatWidget({
     } finally {
       setHumanRequestPending(false);
     }
-  }, [sessionId, listingId, humanRequestPending, humanRequested]);
+  }, [email, sessionId, listingId, humanRequestPending, humanRequested]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {

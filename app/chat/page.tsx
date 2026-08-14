@@ -19,6 +19,7 @@ import {
   InputGroupInput,
 } from '@/components/ui/input-group';
 import { useShallow } from 'zustand/react/shallow';
+import { track } from '@/lib/analytics';
 import {
   createAiSession,
   sendChatMessage,
@@ -157,8 +158,11 @@ function ChatPageFallback() {
 function ChatPageContent() {
   const searchParams = useSearchParams();
 
-  const { userId } = useAuthStore(
-    useShallow((s) => ({ userId: s.user?.user_id ?? null })),
+  const { userId, email } = useAuthStore(
+    useShallow((s) => ({
+      userId: s.user?.user_id ?? null,
+      email: s.user?.email ?? null,
+    })),
   );
 
   // Session
@@ -175,6 +179,11 @@ function ChatPageContent() {
   const [humanRequestPending, setHumanRequestPending] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatStartedRef = useRef(false);
+
+  useEffect(() => {
+    track('chat_opened', { surface: 'general' });
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Initialise AI session on mount
@@ -231,13 +240,19 @@ function ChatPageContent() {
       setSending(true);
       setSendError(false);
       setSendErrorDetail(null);
+      if (!chatStartedRef.current) {
+        chatStartedRef.current = true;
+        track('chat_started', { surface: 'general' });
+      }
 
       try {
         const response = await sendChatMessage({
           session_id: sessionId,
           message_text: messageText,
+          email: email ?? undefined,
           page_url: typeof window !== 'undefined' ? window.location.href : undefined,
         });
+        if (response.escalation_flag) track('chat_escalated', { surface: 'general' });
 
         const assistantMsg: ChatMessage = {
           id: crypto.randomUUID(),
@@ -287,19 +302,19 @@ function ChatPageContent() {
         setSending(false);
       }
     },
-    [inputValue, sessionId, sending],
+    [email, inputValue, sessionId, sending],
   );
 
   const handleRequestHuman = useCallback(async () => {
     if (!sessionId || humanRequested || humanRequestPending) return;
     setHumanRequestPending(true);
     try {
-      await requestHumanAgent({ sessionId });
+      await requestHumanAgent({ sessionId, email: email ?? undefined });
       setHumanRequested(true);
     } finally {
       setHumanRequestPending(false);
     }
-  }, [sessionId, humanRequested, humanRequestPending]);
+  }, [email, sessionId, humanRequested, humanRequestPending]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {

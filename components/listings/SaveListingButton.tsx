@@ -4,6 +4,7 @@ import { HeartIcon } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { track } from '@/lib/analytics';
 import { isUuid } from '@/lib/serverFetch';
 import { bumpEngagement } from '@/lib/siteEngagement';
 import { cn } from '@/lib/utils';
@@ -93,6 +94,7 @@ export default function SaveListingButton({
         setSavedRowId(null);
         if (didAttemptSave && nextSaved) {
           bumpEngagement(5);
+          track('listing_saved', { listing_id: listingId });
         }
         onChange?.({ saved: nextSaved, listingId });
         return;
@@ -119,6 +121,7 @@ export default function SaveListingButton({
       setSavedRowId(sync.saved_listing_id);
       if (didAttemptSave && sync.saved) {
         bumpEngagement(5);
+        track('listing_saved', { listing_id: listingId });
       }
       onChange?.({ saved: sync.saved, listingId });
     } catch {
