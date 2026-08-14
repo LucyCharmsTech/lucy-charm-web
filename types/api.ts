@@ -255,6 +255,20 @@ export type AgentProfile = {
   updated_at: string;
 };
 
+/** Mirrors AgentShowingResponseStats from GET /agents/me/insights */
+export type AgentShowingResponseStats = {
+  confirmed_count: number;
+  avg_seconds_to_confirm: number | null;
+  min_seconds_to_confirm: number | null;
+  max_seconds_to_confirm: number | null;
+};
+
+/** Mirrors AgentInsightsResponse from GET /agents/me/insights */
+export type AgentInsightsResponse = {
+  agent_id: string;
+  showings: AgentShowingResponseStats;
+};
+
 /** Mirrors ClientIntentSummary from listing insights API */
 export type ClientIntentSummary = {
   user_id: string;
@@ -387,6 +401,19 @@ export type SuperadminHandoffTiming = {
   max_seconds_to_assign: number | null;
 };
 
+/** Mirrors PipelineStageCount — where leads sit now, not events that happened */
+export type SuperadminPipelineStage = {
+  status: LeadStage;
+  count: number;
+};
+
+/** Mirrors PipelineSummary */
+export type SuperadminPipelineSummary = {
+  total_leads: number;
+  unassigned_leads: number;
+  by_stage: SuperadminPipelineStage[];
+};
+
 /** Mirrors SuperadminDashboardSummary from GET /superadmin/insights/dashboard */
 export type SuperadminDashboardSummary = {
   top_intent_types: SuperadminNamedCount[];
@@ -394,6 +421,7 @@ export type SuperadminDashboardSummary = {
   cta_event_counts: SuperadminNamedCount[];
   top_listings_by_engagement: SuperadminListingEngagement[];
   handoff_timing: SuperadminHandoffTiming;
+  pipeline: SuperadminPipelineSummary;
 };
 
 export type LeadInternalNoteRead = {

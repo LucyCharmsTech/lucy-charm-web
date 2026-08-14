@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { LayoutGridIcon, UsersIcon } from 'lucide-react';
+import AgentResponseTimeCard from '@/components/agent/AgentResponseTimeCard';
 import ListingCard from '@/components/ListingCard';
 import { apiListingToItem } from '@/lib/listingAdapter';
 import { fetchMyAgentProfile, fetchListingsByAgentId } from '@/services/portalService';
@@ -95,6 +96,8 @@ export default function AgentDashboardPage() {
           <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">{agent.phone}</p>
         </div>
       </div>
+
+      <AgentResponseTimeCard />
 
       {listings.items.length > 0 && (
         <section aria-labelledby="agent-preview-heading">
