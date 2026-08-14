@@ -8,7 +8,6 @@ import {
   BATHROOMS,
   BEDROOMS,
   COUNTRY_OPTIONS,
-  PROPERTY_TYPES,
   STATUSES,
 } from '@/components/listings/constants';
 import FilterChip from '@/components/listings/FilterChip';
@@ -21,7 +20,13 @@ type FilterPanelProps = {
   city: string;
   setCity: (v: string) => void;
   propertyTypes: string[];
+  propertyTypeOptions: string[];
+  propertyTypesLoading: boolean;
+  listingTitles: string[];
+  listingTitleOptions: string[];
+  listingTitlesLoading: boolean;
   setPropertyTypes: (v: string[]) => void;
+  setListingTitles: (v: string[]) => void;
   beds: string;
   setBeds: (v: string) => void;
   baths: string;
@@ -32,6 +37,12 @@ function toggleItem<T>(value: T, arr: T[]): T[] {
   return arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value];
 }
 
+function formatPropertyType(value: string): string {
+  return value
+    .replace(/[_-]/g, ' ')
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
 export default function FilterPanel({
   status,
   setStatus,
@@ -39,8 +50,14 @@ export default function FilterPanel({
   setCountry,
   city,
   setCity,
-  propertyTypes,
+  propertyTypes = [],
+  propertyTypeOptions = [],
+  propertyTypesLoading = false,
+  listingTitles = [],
+  listingTitleOptions = [],
+  listingTitlesLoading = false,
   setPropertyTypes,
+  setListingTitles,
   beds,
   setBeds,
   baths,
@@ -157,13 +174,44 @@ export default function FilterPanel({
               Property Type
             </Label>
             <div className="flex flex-wrap gap-1.5">
-              {PROPERTY_TYPES.map((t) => (
+              {propertyTypesLoading && (
+                <span className="text-xs text-zinc-400">Loading types…</span>
+              )}
+              {!propertyTypesLoading && propertyTypeOptions.length === 0 && (
+                <span className="text-xs text-zinc-400">No types available</span>
+              )}
+              {propertyTypeOptions.map((type) => (
                 <FilterChip
-                  key={t}
-                  active={propertyTypes.includes(t)}
-                  onClick={() => setPropertyTypes(toggleItem(t, propertyTypes))}
+                  key={type}
+                  active={propertyTypes.includes(type)}
+                  onClick={() => setPropertyTypes(toggleItem(type, propertyTypes))}
                 >
-                  {t}
+                  {formatPropertyType(type)}
+                </FilterChip>
+              ))}
+            </div>
+          </div>
+
+          <hr className="border-zinc-100 dark:border-zinc-800" />
+
+          <div className="space-y-2">
+            <Label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+              Listing Title
+            </Label>
+            <div className="max-h-52 space-y-1 overflow-y-auto pr-1">
+              {listingTitlesLoading && (
+                <span className="text-xs text-zinc-400">Loading titles…</span>
+              )}
+              {!listingTitlesLoading && listingTitleOptions.length === 0 && (
+                <span className="text-xs text-zinc-400">No titles available</span>
+              )}
+              {listingTitleOptions.map((title) => (
+                <FilterChip
+                  key={title}
+                  active={listingTitles.includes(title)}
+                  onClick={() => setListingTitles(toggleItem(title, listingTitles))}
+                >
+                  {title}
                 </FilterChip>
               ))}
             </div>

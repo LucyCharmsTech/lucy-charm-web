@@ -8,10 +8,6 @@ import type { ListingItem } from '@/components/listings/data';
 import type { ListingDetail } from '@/components/listings/listingDetailData';
 import type { ApiListing } from '@/types/api';
 
-// Default lat/lng when the listing has no coordinates (Ottawa downtown)
-const DEFAULT_LAT = 45.4215;
-const DEFAULT_LNG = -75.6919;
-
 /** Capitalise the first letter of each word; normalise underscores to spaces */
 function humaniseType(raw: string | null): string {
   if (!raw) return 'Property';
@@ -23,6 +19,22 @@ function humaniseType(raw: string | null): string {
 /** Format a numeric price into "$1,234,000" */
 function formatPrice(price: number): string {
   return `$${price.toLocaleString('en-CA')}`;
+}
+
+/**
+ * Prefer building/living area, then fall back to the documented lot-size
+ * value. The normalized lot_size field is stored in acres.
+ */
+function formatArea(listing: ApiListing): string {
+  if (listing.sqft != null && listing.sqft > 0) {
+    return `${listing.sqft.toLocaleString('en-CA')} ft²`;
+  }
+  if (listing.lot_size != null && listing.lot_size > 0) {
+    return `${listing.lot_size.toLocaleString('en-CA', {
+      maximumFractionDigits: 4,
+    })} acres`;
+  }
+  return '—';
 }
 
 /**
@@ -44,7 +56,6 @@ function placeholderImage(id: string): string {
  */
 export function apiListingToItem(listing: ApiListing): ListingItem {
   const locationText = `${listing.city}, ${listing.state}`;
-  const sqft = listing.sqft;
 
   return {
     id: listing.id,
@@ -58,8 +69,7 @@ export function apiListingToItem(listing: ApiListing): ListingItem {
     address: listing.display_address || locationText,
     bedsText: listing.beds != null ? `${listing.beds} bd` : '—',
     bathsText: listing.baths != null ? `${listing.baths} ba` : '—',
-    sqftText:
-      sqft != null ? `${sqft.toLocaleString('en-CA')} ft²` : '—',
+    areaText: formatArea(listing),
     locationText,
     detailsHref: `/listings/${listing.id}`,
   };
@@ -102,8 +112,10 @@ export function apiListingToDetail(listing: ApiListing): ListingDetail {
       listing.description ||
       'No description has been provided for this property.',
     aiSummary: listing.ai_summary ?? '',
-    lat: listing.latitude ?? DEFAULT_LAT,
-    lng: listing.longitude ?? DEFAULT_LNG,
+    lat: listing.latitude,
+    lng: listing.longitude,
     agent: listing.agent ?? null,
+    idxAgent: listing.idx_agent ?? null,
+    idxOffice: listing.idx_office ?? null,
   };
 }

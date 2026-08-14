@@ -56,7 +56,7 @@ export default function ListingDetailSidebar({ listing }: ListingDetailSidebarPr
           </dl>
         </div>
 
-        <ListingDetailAgentCard agent={listing.agent} />
+        <ListingDetailAgentCard agent={listing.agent} idxAgent={listing.idxAgent} idxOffice={listing.idxOffice} />
 
         {/* Book a showing CTA */}
         <Button

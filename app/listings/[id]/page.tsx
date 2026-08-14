@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import Image from 'next/image';
 import {
   BathIcon,
   BedDoubleIcon,
@@ -21,12 +20,13 @@ import {
 } from '@/components/listings/detail/ListingDetailFormat';
 import ListingDetailSpecPill from '@/components/listings/detail/ListingDetailSpecPill';
 import ListingDetailFactCell from '@/components/listings/detail/ListingDetailFactCell';
+import ListingMediaCarousel from '@/components/listings/detail/ListingMediaCarousel';
 
 // Data sources
 import { getListingDetail } from '@/components/listings/listingDetailData';
 import { apiListingToDetail } from '@/lib/listingAdapter';
 import { serverFetch, isUuid } from '@/lib/serverFetch';
-import type { ApiListing } from '@/types/api';
+import type { ApiListing, ApiListingMedia } from '@/types/api';
 import type { ListingDetail } from '@/components/listings/listingDetailData';
 
 type PageProps = {
@@ -37,14 +37,19 @@ export default async function ListingDetailPage({ params }: PageProps) {
   const { id } = await params;
 
   let listing: ListingDetail | null = null;
+  let listingMedia: ApiListingMedia[] = [];
 
   if (isUuid(id)) {
-    // Real listing from the backend — fetch by UUID. Uncached: this route is
-    // already dynamic, and `ListingDetailLiveUpdates` answers change events
-    // with router.refresh(), which must not be served the pre-change value.
-    const apiListing = await serverFetch<ApiListing>(`/listings/${id}`, { revalidate: 0 });
+    // Fetch listing + media independently so search stays lightweight.
+    // Uncached (`revalidate: 0`): ListingDetailLiveUpdates uses router.refresh()
+    // on change events and must not be served a stale pre-change value.
+    const [apiListing, media] = await Promise.all([
+      serverFetch<ApiListing>(`/listings/${id}`, { revalidate: 0 }),
+      serverFetch<ApiListingMedia[]>(`/listings/${id}/media`, { revalidate: 0 }),
+    ]);
     if (apiListing) {
       listing = apiListingToDetail(apiListing);
+      listingMedia = media ?? [];
     }
     // If API returned nothing for a valid UUID, 404 below
   } else {
@@ -56,9 +61,9 @@ export default async function ListingDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // Parsed beds/baths/sqft + formatted property type for reuse across sections.
+  // Parsed beds/baths/area + formatted property type for reuse across sections.
   const metrics = getListingDetailMetrics(listing);
-  const { mapEmbedUrl, mapsLink } = getListingMapUrls(listing);
+  const mapUrls = getListingMapUrls(listing);
 
   return (
     <div className="min-h-screen bg-[#fef6f9] dark:bg-zinc-950">
@@ -83,17 +88,13 @@ export default async function ListingDetailPage({ params }: PageProps) {
         {/* Two-column layout: narrative + map on the left; financials & CTA on the right (sticky on large screens via sidebar component). */}
         <div className="grid gap-8 lg:grid-cols-[1fr_min(360px,100%)] lg:items-start">
           {/* Primary column — scrolls with the page. */}
-          <div className="space-y-6">
-            {/* Hero — primary listing photo (Next/Image for optimization). */}
-            <div className="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/40">
-              <Image
-                width={1000}
-                height={1000}
-                src={listing.imageSrc}
-                alt={listing.imageAlt}
-                className="aspect-16/10 w-full object-cover sm:aspect-21/9"
-              />
-            </div>
+          <div className="min-w-0 space-y-6">
+            {/* Hero — primary photo plus all IDX image media in a carousel. */}
+            <ListingMediaCarousel
+              primaryImage={listing.imageSrc}
+              imageAlt={listing.imageAlt}
+              media={listingMedia}
+            />
             {/* Summary — status/type chips, title, price, and high-level address metadata. */}
             <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/40 sm:p-6">
               <div className="flex flex-wrap gap-2">
@@ -125,7 +126,7 @@ export default async function ListingDetailPage({ params }: PageProps) {
                 <span>Country: {listing.country}</span>
               </p>
             </section>
-            {/* Property specs — quick-scan pills (beds, baths, sqft, lot, year, parking). */}
+            {/* Property specs — quick-scan pills (beds, baths, area, lot, year, parking). */}
             <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/40 sm:p-6">
               <h2 className="text-[11px] font-bold uppercase tracking-widest text-zinc-800 dark:text-zinc-200">
                 Property specs
@@ -158,8 +159,8 @@ export default async function ListingDetailPage({ params }: PageProps) {
                       aria-hidden="true"
                     />
                   }
-                  label="Sq Ft"
-                  value={`${metrics.sqftVal} Sq Ft`}
+                  label="Area"
+                  value={metrics.areaText}
                 />
                 <ListingDetailSpecPill
                   icon={
@@ -216,8 +217,8 @@ export default async function ListingDetailPage({ params }: PageProps) {
                   value={metrics.bathsVal}
                 />
                 <ListingDetailFactCell
-                  label="Square feet"
-                  value={metrics.sqftVal}
+                  label="Area"
+                  value={metrics.areaText}
                 />
                 <ListingDetailFactCell
                   label="Year built"
@@ -242,8 +243,8 @@ export default async function ListingDetailPage({ params }: PageProps) {
             {/* Location — embedded map + coordinates + external maps link. */}
             <ListingDetailLocationSection
               listing={listing}
-              mapEmbedUrl={mapEmbedUrl}
-              mapsLink={mapsLink}
+              mapEmbedUrl={mapUrls?.mapEmbedUrl ?? null}
+              mapsLink={mapUrls?.mapsLink ?? null}
             />
           </div>
 

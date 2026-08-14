@@ -11,8 +11,7 @@ export type PaginatedItems<T> = {
   items: T[];
   total: number;
   page: number;
-  size: number;
-  pages: number;
+  page_size: number;
 };
 
 // ---------------------------------------------------------------------------
@@ -25,6 +24,46 @@ export type ApiListingAgentSummary = {
   name: string;
   phone: string;
   email: string;
+};
+
+export type ApiIdxAgentSummary = {
+  member_key: string;
+  member_mls_id: string | null;
+  full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  preferred_phone: string | null;
+  direct_phone: string | null;
+  mobile_phone: string | null;
+  office_phone: string | null;
+  office_phone_ext: string | null;
+  member_status: string | null;
+  member_type: string | null;
+  state_license: string | null;
+  office_key: string | null;
+};
+
+export type ApiIdxOfficeSummary = {
+  office_key: string;
+  office_mls_id: string | null;
+  office_name: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  city: string | null;
+  province: string | null;
+  postal_code: string | null;
+};
+
+export type ApiListingMedia = {
+  id: string;
+  media_url: string;
+  media_type: string | null;
+  media_category: string | null;
+  display_order: number;
+  caption: string | null;
+  is_primary: boolean;
 };
 
 /** Mirrors ListingsRead in lucy-charm-api */
@@ -62,11 +101,22 @@ export type ApiListing = {
   source_attribution: string | null;
   source_disclaimer: string | null;
   last_updated_at: string | null;
-  agent_id: string;
+  original_entry_at: string | null;
+  source_modified_at: string | null;
+  system_modified_at: string | null;
+  media_changed_at: string | null;
+  photos_changed_at: string | null;
+  last_seen_at: string | null;
+  is_feed_managed: boolean;
+  agent_id: string | null;
   created_at: string;
   updated_at: string;
   /** Present on current API; omitted on older backends. */
   agent?: ApiListingAgentSummary | null;
+  idx_member_key: string | null;
+  idx_office_key: string | null;
+  idx_agent?: ApiIdxAgentSummary | null;
+  idx_office?: ApiIdxOfficeSummary | null;
 };
 
 export type ListingSearchParams = {
@@ -75,6 +125,8 @@ export type ListingSearchParams = {
   country?: string;
   market?: string;
   property_type?: string;
+  property_types?: string[];
+  titles?: string[];
   status?: string;
   price_min?: number;
   price_max?: number;
