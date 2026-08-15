@@ -968,6 +968,65 @@ export type SellerLeadStatus =
 
 export type SellerRepresentationType = 'brokerage' | 'designated';
 
+export type SellerJourneyStatus =
+  | 'exploring'
+  | 'details_in_progress'
+  | 'plan_ready'
+  | 'professional_review_requested'
+  | 'professional_follow_up'
+  | 'converted_to_client'
+  | 'paused_inactive';
+
+export type SellerJourneyPropertyRelationship =
+  'owner' | 'researching' | 'curious';
+
+export type SellerJourney = {
+  id: string;
+  user_id: string | null;
+  anonymous_session_id: string | null;
+  property_id: string;
+  property_address: string;
+  property_unit: string | null;
+  property_city: string;
+  property_region: string;
+  property_postal_code: string;
+  property_country: 'CA' | 'US';
+  relationship_to_property: SellerJourneyPropertyRelationship | null;
+  selling_timeline: string | null;
+  property_condition: string | null;
+  renovations_upgrades: string | null;
+  primary_goal: string | null;
+  home_value_request_id: string | null;
+  home_value_result_id: string | null;
+  status: SellerJourneyStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SellerJourneyCreateRequest = {
+  property_id?: string;
+  property_address?: string;
+  property_unit?: string;
+  property_city?: string;
+  property_region?: string;
+  property_postal_code?: string;
+  property_country?: 'CA' | 'US';
+  relationship_to_property?: SellerJourneyPropertyRelationship;
+  selling_timeline?: string;
+  property_condition?: string;
+  renovations_upgrades?: string;
+  primary_goal?: string;
+  home_value_request_id?: string;
+  home_value_result_id?: string;
+};
+
+export type SellerJourneyUpdateRequest = Omit<
+  SellerJourneyCreateRequest,
+  'property_country'
+> & {
+  property_country?: 'CA' | 'US';
+};
+
 export type SellerLead = {
   id: string;
   user_id: string | null;
