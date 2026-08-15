@@ -157,6 +157,7 @@ function ChatPageFallback() {
 
 function ChatPageContent() {
   const searchParams = useSearchParams();
+  const sellerJourneyId = searchParams.get('sellerJourneyId');
 
   const { userId, email } = useAuthStore(
     useShallow((s) => ({
@@ -171,7 +172,9 @@ function ChatPageContent() {
 
   // Messages
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState(
+    () => searchParams.get('q') ?? '',
+  );
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState(false);
   const [sendErrorDetail, setSendErrorDetail] = useState<string | null>(null);
@@ -212,7 +215,11 @@ function ChatPageContent() {
   // Pre-fill input from URL ?q= param (linked from the homepage AI section)
   useEffect(() => {
     const q = searchParams.get('q');
-    if (q) setInputValue(q);
+    if (!q) return;
+    // Schedule after the current render so a client-side URL change does not
+    // synchronously cascade a render from this effect.
+    const timer = window.setTimeout(() => setInputValue(q), 0);
+    return () => window.clearTimeout(timer);
   }, [searchParams]);
 
   // Auto-scroll to latest message
@@ -250,6 +257,7 @@ function ChatPageContent() {
           session_id: sessionId,
           message_text: messageText,
           email: email ?? undefined,
+          seller_journey_id: sellerJourneyId ?? undefined,
           page_url: typeof window !== 'undefined' ? window.location.href : undefined,
         });
         if (response.escalation_flag) track('chat_escalated', { surface: 'general' });
@@ -302,7 +310,7 @@ function ChatPageContent() {
         setSending(false);
       }
     },
-    [email, inputValue, sessionId, sending],
+    [email, inputValue, sellerJourneyId, sessionId, sending],
   );
 
   const handleRequestHuman = useCallback(async () => {

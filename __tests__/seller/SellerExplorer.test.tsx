@@ -16,6 +16,7 @@ jest.mock('@/services/sellerJourneyService', () => ({
   createSellerJourney: jest.fn(),
   fetchSellerJourney: jest.fn(),
   getStoredSellerJourneyId: jest.fn(),
+  requestProfessionalReview: jest.fn(),
   resumeSellerJourney: jest.fn(),
   updateSellerJourney: jest.fn(),
   updateSellerJourneyStatus: jest.fn(),
@@ -25,6 +26,7 @@ import {
   createSellerJourney,
   fetchSellerJourney,
   getStoredSellerJourneyId,
+  requestProfessionalReview,
   resumeSellerJourney,
   updateSellerJourney,
   updateSellerJourneyStatus,
@@ -41,6 +43,9 @@ const storedJourneyId = getStoredSellerJourneyId as jest.MockedFunction<
 >;
 const resumeJourney = resumeSellerJourney as jest.MockedFunction<
   typeof resumeSellerJourney
+>;
+const requestReview = requestProfessionalReview as jest.MockedFunction<
+  typeof requestProfessionalReview
 >;
 const updateJourney = updateSellerJourney as jest.MockedFunction<
   typeof updateSellerJourney
@@ -110,7 +115,9 @@ test('shows a local Zod validation error for an incomplete postal or ZIP code', 
   fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
 
   expect(
-    screen.getByText('Enter a complete postal or ZIP code (at least 3 characters).'),
+    screen.getByText(
+      'Enter a complete postal or ZIP code (at least 3 characters).',
+    ),
   ).toBeTruthy();
   expect(createJourney).not.toHaveBeenCalled();
 });
@@ -190,6 +197,9 @@ test('an anonymous visitor creates a private journey then saves their situation 
   expect(
     screen.getByText(/Nothing here creates or publishes a listing/i),
   ).toBeTruthy();
+  expect(screen.getByRole('link', { name: 'Ask Lucy' }).getAttribute('href')).toContain(
+    'sellerJourneyId=journey-1',
+  );
 });
 
 test('refreshing restores saved property and situation fields for an anonymous journey', async () => {
@@ -243,24 +253,73 @@ test('signing in resumes the anonymous journey and attaches it through the resum
   await waitFor(() => expect(resumeJourney).toHaveBeenCalledWith('journey-1'));
 });
 
-test('requesting human help only advances the private journey and never creates a listing', async () => {
+test('human handoff appears only after the action, then creates a private professional review without a listing', async () => {
   storedJourneyId.mockReturnValue('journey-1');
   fetchJourney.mockResolvedValue(journey({ status: 'plan_ready' }));
-  updateStatus.mockResolvedValue(
-    journey({ status: 'professional_review_requested' }),
-  );
+  requestReview.mockResolvedValue({
+    seller_lead_id: 'seller-lead-1',
+    seller_journey_id: 'journey-1',
+    property_id: 'property-1',
+    status: 'consultation_requested',
+    assigned_agent_id: null,
+    representation_status: 'none',
+    created_at: '2026-08-15T00:00:00Z',
+  });
   render(<SellPage />);
   await screen.findByText('Your Seller Snapshot');
+  expect(screen.queryByText('Talk with the seller team')).toBeNull();
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Request Professional Review' }),
+  );
+  expect(screen.getByText('Talk with the seller team')).toBeTruthy();
+  fireEvent.change(screen.getByLabelText('First name *'), {
+    target: { value: 'Ada' },
+  });
+  fireEvent.change(screen.getByLabelText('Email'), {
+    target: { value: 'ada@example.com' },
+  });
+  fireEvent.change(screen.getByLabelText('What would you like help with? *'), {
+    target: { value: 'Please help me plan a move.' },
+  });
   fireEvent.click(
     screen.getByRole('button', { name: 'Request Professional Review' }),
   );
   await waitFor(() =>
-    expect(updateStatus).toHaveBeenCalledWith(
-      'journey-1',
-      'professional_review_requested',
-    ),
+    expect(requestReview).toHaveBeenCalledWith('journey-1', {
+      first_name: 'Ada',
+      last_name: undefined,
+      email: 'ada@example.com',
+      phone: undefined,
+      request: 'Please help me plan a move.',
+    }),
   );
   expect(
-    screen.getByText(/not a listing or representation agreement/i),
-  ).toBeTruthy();
+    screen.getAllByText(/not a listing or representation agreement/i),
+  ).toHaveLength(2);
+});
+
+test('handoff omits contact fields already known from the signed-in account', async () => {
+  useAuthStore.setState({
+    accessToken: 'token',
+    refreshToken: 'refresh',
+    user: {
+      user_id: 'user-1',
+      email: 'ada@example.com',
+      first_name: 'Ada',
+      last_name: 'Homeowner',
+      role: 'client',
+    },
+  });
+  storedJourneyId.mockReturnValue('journey-1');
+  resumeJourney.mockResolvedValue(
+    journey({ user_id: 'user-1', status: 'plan_ready' }),
+  );
+  render(<SellPage />);
+  await screen.findByText('Your Seller Snapshot');
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Talk to a Professional' }),
+  );
+  expect(screen.queryByLabelText('First name *')).toBeNull();
+  expect(screen.queryByLabelText('Email')).toBeNull();
+  expect(screen.getByText(/We already have the property/i)).toBeTruthy();
 });

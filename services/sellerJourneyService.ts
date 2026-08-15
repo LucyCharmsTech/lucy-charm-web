@@ -6,6 +6,8 @@ import type {
   SellerJourneyCreateRequest,
   SellerJourneyStatus,
   SellerJourneyUpdateRequest,
+  ProfessionalReview,
+  ProfessionalReviewCreateRequest,
 } from '@/types/api';
 
 const JOURNEY_STORAGE_KEY = 'lucy-seller-explorer-journey-id';
@@ -83,5 +85,17 @@ export async function resumeSellerJourney(
     { headers: journeyHeaders() },
   );
   storeSellerJourneyId(response.data.id);
+  return response.data;
+}
+
+export async function requestProfessionalReview(
+  journeyId: string,
+  payload: ProfessionalReviewCreateRequest,
+): Promise<ProfessionalReview> {
+  const response = await api.post<ProfessionalReview>(
+    `/seller-journeys/${journeyId}/professional-review`,
+    payload,
+    { headers: journeyHeaders() },
+  );
   return response.data;
 }

@@ -12,9 +12,11 @@ import {
   createSellerJourney,
   fetchSellerJourney,
   getStoredSellerJourneyId,
+  requestProfessionalReview,
   resumeSellerJourney,
   updateSellerJourney,
 } from '@/services/sellerJourneyService';
+import { sendChatMessage } from '@/services/chatService';
 import api from '@/lib/axios';
 
 const mockApi = api as jest.Mocked<typeof api>;
@@ -93,4 +95,48 @@ test('uses the same anonymous token to retrieve, update, and attach a journey af
       headers: { 'X-Anonymous-Session-Token': 'anonymous-session-token-1234' },
     },
   );
+});
+
+test('submits an explicit professional-review handoff with the same journey ownership token', async () => {
+  mockApi.post.mockResolvedValueOnce({
+    data: {
+      seller_lead_id: 'seller-lead-1',
+      seller_journey_id: 'journey-1',
+      property_id: 'property-1',
+      status: 'consultation_requested',
+      assigned_agent_id: null,
+      representation_status: 'none',
+      created_at: '2026-08-15T00:00:00Z',
+    },
+  });
+
+  await requestProfessionalReview('journey-1', {
+    first_name: 'Ada',
+    email: 'ada@example.com',
+    request: 'Please help me plan a move.',
+  });
+
+  expect(mockApi.post).toHaveBeenCalledWith(
+    '/seller-journeys/journey-1/professional-review',
+    expect.objectContaining({ request: 'Please help me plan a move.' }),
+    {
+      headers: { 'X-Anonymous-Session-Token': 'anonymous-session-token-1234' },
+    },
+  );
+});
+
+test('sends a Seller Journey chat request with the journey ownership token', async () => {
+  const payload = {
+    session_id: 'session-1',
+    seller_journey_id: 'journey-1',
+    message_text: 'What usually happens during the selling process?',
+  };
+  mockApi.post.mockResolvedValueOnce({ data: { reply_text: 'General education.' } });
+
+  await sendChatMessage(payload);
+
+  expect(mockApi.post).toHaveBeenCalledWith('/chat/send', payload, {
+    timeout: 300_000,
+    headers: { 'X-Anonymous-Session-Token': 'anonymous-session-token-1234' },
+  });
 });

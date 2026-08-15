@@ -9,6 +9,7 @@ import {
   createSellerJourney,
   fetchSellerJourney,
   getStoredSellerJourneyId,
+  requestProfessionalReview,
   resumeSellerJourney,
   updateSellerJourney,
   updateSellerJourneyStatus,
@@ -17,6 +18,8 @@ import type {
   SellerJourney,
   SellerJourneyPropertyRelationship,
   SellerJourneyStatus,
+  ProfessionalReviewCreateRequest,
+  AuthUser,
 } from '@/types/api';
 
 type ExplorerStep = 'welcome' | 'property' | 'situation' | 'plan';
@@ -33,6 +36,14 @@ type ExplorerForm = {
   goal: string;
 };
 
+type ReviewForm = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  request: string;
+};
+
 const EMPTY_FORM: ExplorerForm = {
   address: '',
   unit: '',
@@ -44,6 +55,14 @@ const EMPTY_FORM: ExplorerForm = {
   condition: '',
   renovations: '',
   goal: '',
+};
+
+const EMPTY_REVIEW_FORM: ReviewForm = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  request: '',
 };
 
 const STEP_LABELS = ['Your home', 'Your situation', 'Your snapshot'];
@@ -80,9 +99,18 @@ const PROPERTY_SCHEMA = z.object({
 });
 
 const SITUATION_SCHEMA = z.object({
-  timeline: z.string().trim().max(128, 'Timeline must be 128 characters or fewer.'),
-  condition: z.string().trim().max(128, 'Condition must be 128 characters or fewer.'),
-  renovations: z.string().trim().max(5000, 'Keep renovations under 5,000 characters.'),
+  timeline: z
+    .string()
+    .trim()
+    .max(128, 'Timeline must be 128 characters or fewer.'),
+  condition: z
+    .string()
+    .trim()
+    .max(128, 'Condition must be 128 characters or fewer.'),
+  renovations: z
+    .string()
+    .trim()
+    .max(5000, 'Keep renovations under 5,000 characters.'),
   goal: z.string().trim().max(5000, 'Keep your goal under 5,000 characters.'),
 });
 
@@ -118,6 +146,7 @@ function errorMessage(error: unknown): string {
 export default function SellPage() {
   const router = useRouter();
   const accessToken = useAuthStore((state) => state.accessToken);
+  const user = useAuthStore((state) => state.user);
   const [step, setStep] = useState<ExplorerStep>('welcome');
   const [journey, setJourney] = useState<SellerJourney | null>(null);
   const [form, setForm] = useState<ExplorerForm>(EMPTY_FORM);
@@ -161,7 +190,9 @@ export default function SellPage() {
     event.preventDefault();
     const validation = PROPERTY_SCHEMA.safeParse(form);
     if (!validation.success) {
-      setError(validation.error.issues[0]?.message ?? 'Check your property details.');
+      setError(
+        validation.error.issues[0]?.message ?? 'Check your property details.',
+      );
       return;
     }
 
@@ -201,7 +232,9 @@ export default function SellPage() {
     if (!journey) return;
     const validation = SITUATION_SCHEMA.safeParse(form);
     if (!validation.success) {
-      setError(validation.error.issues[0]?.message ?? 'Check your situation details.');
+      setError(
+        validation.error.issues[0]?.message ?? 'Check your situation details.',
+      );
       return;
     }
     setSaving(true);
@@ -251,22 +284,18 @@ export default function SellPage() {
     }
   }
 
-  async function requestReview() {
+  async function requestReview(payload: ProfessionalReviewCreateRequest) {
     if (!journey) return;
     setSaving(true);
     setError(null);
     setNotice(null);
     try {
-      const saved =
-        journey.status === 'plan_ready'
-          ? await updateSellerJourneyStatus(
-              journey.id,
-              'professional_review_requested',
-            )
-          : journey;
-      applyJourney(saved);
+      const review = await requestProfessionalReview(journey.id, payload);
+      applyJourney({ ...journey, status: 'professional_review_requested' });
       setNotice(
-        'Your request is noted. This is not a listing or representation agreement.',
+        review.assigned_agent_id
+          ? 'Your request was routed to your Lucy Charms agent. This is not a listing or representation agreement.'
+          : 'Your request was sent to the Lucy Charms seller team. This is not a listing or representation agreement.',
       );
     } catch (requestError) {
       setError(errorMessage(requestError));
@@ -380,6 +409,7 @@ export default function SellPage() {
               form={form}
               saving={saving}
               onReview={requestReview}
+              user={user}
               onEdit={() => setStep('property')}
             />
           )}
@@ -633,14 +663,17 @@ function PlanStep({
   form,
   saving,
   onReview,
+  user,
   onEdit,
 }: {
   journey: SellerJourney | null;
   form: ExplorerForm;
   saving: boolean;
-  onReview: () => void;
+  onReview: (payload: ProfessionalReviewCreateRequest) => Promise<void>;
+  user: AuthUser | null;
   onEdit: () => void;
 }) {
+  const [handoffOpen, setHandoffOpen] = useState(false);
   const homeValue = journey?.home_value_result_id
     ? 'A Home Value result is connected to this exploration.'
     : journey?.home_value_request_id
@@ -706,38 +739,201 @@ function PlanStep({
           feel comfortable, and noting questions you want answered.
         </p>
       </div>
-      <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-        <Link
-          href="/chat?q=I%20have%20a%20question%20about%20selling%20my%20home"
-          className="rounded-full border border-primarycolor px-5 py-3 text-center text-sm font-semibold text-primarycolor hover:bg-primarycolor/5"
-        >
-          Ask Lucy
-        </Link>
+      {handoffOpen && journey ? (
+        <ProfessionalReviewForm
+          journey={journey}
+          user={user}
+          saving={saving}
+          onCancel={() => setHandoffOpen(false)}
+          onSubmit={onReview}
+        />
+      ) : (
+        <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <Link
+            href={
+              journey
+                ? `/chat?q=${encodeURIComponent('I have a question about selling my home')}&sellerJourneyId=${journey.id}`
+                : '/chat?q=I%20have%20a%20question%20about%20selling%20my%20home'
+            }
+            className="rounded-full border border-primarycolor px-5 py-3 text-center text-sm font-semibold text-primarycolor hover:bg-primarycolor/5"
+          >
+            Ask Lucy
+          </Link>
+          {journey?.status === 'plan_ready' ? (
+            <>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => setHandoffOpen(true)}
+                className="rounded-full bg-primarycolor px-5 py-3 text-sm font-semibold text-white hover:bg-primarycolor/90 disabled:opacity-50"
+              >
+                Request Professional Review
+              </button>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => setHandoffOpen(true)}
+                className="rounded-full px-5 py-3 text-sm font-semibold text-primarycolor hover:bg-primarycolor/5"
+              >
+                I’m Ready to Discuss Selling
+              </button>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => setHandoffOpen(true)}
+                className="rounded-full px-5 py-3 text-sm font-semibold text-primarycolor hover:bg-primarycolor/5"
+              >
+                Talk to a Professional
+              </button>
+            </>
+          ) : journey?.status === 'professional_review_requested' ? (
+            <p className="text-sm font-semibold text-primarycolor">
+              Professional review requested — the seller team will follow up.
+            </p>
+          ) : null}
+          <button
+            type="button"
+            onClick={onEdit}
+            className="rounded-full px-5 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          >
+            Update my details
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProfessionalReviewForm({
+  journey,
+  user,
+  saving,
+  onCancel,
+  onSubmit,
+}: {
+  journey: SellerJourney;
+  user: AuthUser | null;
+  saving: boolean;
+  onCancel: () => void;
+  onSubmit: (payload: ProfessionalReviewCreateRequest) => Promise<void>;
+}) {
+  const [form, setForm] = useState<ReviewForm>(EMPTY_REVIEW_FORM);
+  const [error, setError] = useState<string | null>(null);
+  const knownFirstName = user?.first_name ?? '';
+  const knownLastName = user?.last_name ?? '';
+  const knownEmail = user?.email ?? '';
+
+  function setField<K extends keyof ReviewForm>(
+    field: K,
+    value: ReviewForm[K],
+  ) {
+    setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const firstName = (knownFirstName || form.firstName).trim();
+    const lastName = (knownLastName || form.lastName).trim();
+    const email = (knownEmail || form.email).trim();
+    const phone = form.phone.trim();
+    if (!firstName || !form.request.trim()) {
+      setError('Add your first name and what you would like help with.');
+      return;
+    }
+    if (!email && !phone) {
+      setError(
+        'Add an email address or phone number so the seller team can reply.',
+      );
+      return;
+    }
+    setError(null);
+    await onSubmit({
+      first_name: knownFirstName ? undefined : firstName,
+      last_name: knownLastName ? undefined : lastName || undefined,
+      email: knownEmail ? undefined : email || undefined,
+      phone: phone || undefined,
+      request: form.request.trim(),
+    });
+  }
+
+  return (
+    <form
+      onSubmit={submit}
+      className="mt-7 rounded-xl border border-primarycolor/20 bg-primarycolor/5 p-4 sm:p-5"
+    >
+      <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primarycolor">
+        Professional Review
+      </p>
+      <h2 className="mt-2 text-xl font-bold text-zinc-900 dark:text-zinc-50">
+        Talk with the seller team
+      </h2>
+      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
+        We already have the property at {journey.property_address},{' '}
+        {journey.property_city}. This is a request for help, not a listing or
+        representation agreement.
+      </p>
+      {error && (
+        <p role="alert" className="mt-4 text-sm text-red-700 dark:text-red-300">
+          {error}
+        </p>
+      )}
+      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        {!knownFirstName && (
+          <Input
+            label="First name *"
+            value={form.firstName}
+            onChange={(value) => setField('firstName', value)}
+          />
+        )}
+        {!knownLastName && (
+          <Input
+            label="Last name"
+            value={form.lastName}
+            onChange={(value) => setField('lastName', value)}
+          />
+        )}
+        {!knownEmail && (
+          <Input
+            label="Email"
+            value={form.email}
+            onChange={(value) => setField('email', value)}
+          />
+        )}
+        {!knownEmail && (
+          <Input
+            label="Phone"
+            value={form.phone}
+            onChange={(value) => setField('phone', value)}
+          />
+        )}
+      </div>
+      <label className="mt-4 block text-sm font-semibold text-zinc-800 dark:text-zinc-100">
+        What would you like help with? *
+        <textarea
+          value={form.request}
+          onChange={(event) => setField('request', event.target.value)}
+          maxLength={5000}
+          rows={4}
+          placeholder="For example: I would like to discuss timing, preparation, or next steps."
+          className="mt-2 w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-base font-normal text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
+        />
+      </label>
+      <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <button
           type="button"
-          disabled={saving}
-          onClick={onReview}
-          className="rounded-full bg-primarycolor px-5 py-3 text-sm font-semibold text-white hover:bg-primarycolor/90 disabled:opacity-50"
-        >
-          Request Professional Review
-        </button>
-        <button
-          type="button"
-          disabled={saving}
-          onClick={onReview}
+          onClick={onCancel}
           className="rounded-full px-5 py-3 text-sm font-semibold text-primarycolor hover:bg-primarycolor/5"
         >
-          I’m Ready to Discuss Selling
+          Cancel
         </button>
         <button
-          type="button"
-          onClick={onEdit}
-          className="rounded-full px-5 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          disabled={saving}
+          className="rounded-full bg-primarycolor px-5 py-3 text-sm font-semibold text-white hover:bg-primarycolor/90 disabled:opacity-50"
         >
-          Update my details
+          {saving ? 'Sending…' : 'Request Professional Review'}
         </button>
       </div>
-    </div>
+    </form>
   );
 }
 
