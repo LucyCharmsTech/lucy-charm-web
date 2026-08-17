@@ -632,7 +632,8 @@ export type DocumentCategory =
 export type DocumentVisibility = 'client_visible' | 'internal_only';
 export type DocumentScanStatus =
   'pending' | 'clean' | 'infected' | 'error' | 'skipped';
-export type DocumentResourceType = 'showing_request' | 'user';
+export type DocumentResourceType =
+  'showing_request' | 'user' | 'seller_transaction';
 export type DocumentReviewOutcome =
   'accepted' | 'rejected' | 'replacement_needed';
 
@@ -1104,6 +1105,12 @@ export type SellerLeadUpdateRequest = {
   status?: Exclude<SellerLeadStatus, 'converted'>;
   notes?: string;
   inquiry_type?: string;
+};
+
+/** Explicit staff attestation required to activate an offline seller client. */
+export type SellerLeadConvertRequest = {
+  representation_type: SellerRepresentationType;
+  compliance_approved: true;
 };
 
 export type SellerTransaction = {

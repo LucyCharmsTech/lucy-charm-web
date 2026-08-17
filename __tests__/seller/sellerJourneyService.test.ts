@@ -17,6 +17,7 @@ import {
   updateSellerJourney,
 } from '@/services/sellerJourneyService';
 import { sendChatMessage } from '@/services/chatService';
+import { convertSellerLead, fetchMySellerPortals } from '@/services/sellerService';
 import api from '@/lib/axios';
 
 const mockApi = api as jest.Mocked<typeof api>;
@@ -139,4 +140,25 @@ test('sends a Seller Journey chat request with the journey ownership token', asy
     timeout: 300_000,
     headers: { 'X-Anonymous-Session-Token': 'anonymous-session-token-1234' },
   });
+});
+
+test('converts an offline seller only with explicit representation and compliance approval', async () => {
+  mockApi.post.mockResolvedValueOnce({ data: { id: 'transaction-1' } });
+
+  await convertSellerLead('lead-1', {
+    representation_type: 'brokerage',
+    compliance_approved: true,
+  });
+
+  expect(mockApi.post).toHaveBeenCalledWith('/seller-leads/lead-1/convert', {
+    representation_type: 'brokerage',
+    compliance_approved: true,
+  });
+});
+
+test('retrieves only the signed-in seller portal entry points', async () => {
+  mockApi.get.mockResolvedValueOnce({ data: [{ transaction_id: 'transaction-1' }] });
+
+  await expect(fetchMySellerPortals()).resolves.toEqual([{ transaction_id: 'transaction-1' }]);
+  expect(mockApi.get).toHaveBeenCalledWith('/seller-transactions/mine');
 });

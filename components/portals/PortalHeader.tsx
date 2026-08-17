@@ -11,7 +11,14 @@ import { useNotificationStore } from '@/stores/notificationStore';
 import { logout } from '@/services/authService';
 import { Button } from '@/components/ui/button';
 
-export default function PortalHeader({ title }: { title: string }) {
+export default function PortalHeader({
+  title,
+  fullWidth = false,
+}: {
+  title: string;
+  /** Lets wide portal workspaces use the full viewport instead of a centered content cap. */
+  fullWidth?: boolean;
+}) {
   const router = useRouter();
   const { user, refreshToken, clearAuth } = useAuthStore(
     useShallow((s) => ({
@@ -36,7 +43,7 @@ export default function PortalHeader({ title }: { title: string }) {
 
   return (
     <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/95 px-4 py-3 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/95">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+      <div className={`flex items-center justify-between gap-4 ${fullWidth ? 'w-full' : 'mx-auto max-w-7xl'}`}>
         <div className="flex items-center gap-3">
           <Link
             href="/"
