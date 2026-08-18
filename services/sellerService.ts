@@ -3,9 +3,9 @@ import type {
   ApiPaginated,
   SellerLead,
   SellerLeadCreateRequest,
+  SellerLeadConvertRequest,
   SellerLeadUpdateRequest,
   SellerTransaction,
-  SellerRepresentationType,
 } from '@/types/api';
 
 export async function createSellerLead(
@@ -35,11 +35,9 @@ export async function updateSellerLead(
 
 export async function convertSellerLead(
   leadId: string,
-  representationType?: SellerRepresentationType,
+  payload: SellerLeadConvertRequest,
 ): Promise<SellerTransaction> {
-  const res = await api.post<SellerTransaction>('/seller-leads/' + leadId + '/convert', {
-    representation_type: representationType ?? null,
-  });
+  const res = await api.post<SellerTransaction>('/seller-leads/' + leadId + '/convert', payload);
   return res.data;
 }
 
@@ -50,5 +48,20 @@ export async function fetchSellerTransactionsAdmin(
   const res = await api.get<ApiPaginated<SellerTransaction>>('/seller-transactions/', {
     params: { page, size },
   });
+  return res.data;
+}
+
+export type SellerPortalAccess = {
+  transaction_id: string;
+  property_id: string;
+  property_address: string;
+  property_unit: string | null;
+  property_city: string;
+  property_region: string;
+  current_stage: string;
+};
+
+export async function fetchMySellerPortals(): Promise<SellerPortalAccess[]> {
+  const res = await api.get<SellerPortalAccess[]>('/seller-transactions/mine');
   return res.data;
 }

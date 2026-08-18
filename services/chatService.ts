@@ -4,6 +4,8 @@
  */
 
 import api from '@/lib/axios';
+import { getOrCreateAnonymousSessionToken } from '@/lib/anonymousSession';
+import { ANONYMOUS_SESSION_HEADER } from '@/types/api';
 import type {
   AiSession,
   ChatRequestHumanResponse,
@@ -59,6 +61,9 @@ export async function sendChatMessage(
 ): Promise<ChatSendResponse> {
   const res = await api.post<ChatSendResponse>('/chat/send', payload, {
     timeout: CHAT_SEND_TIMEOUT_MS,
+    headers: payload.seller_journey_id
+      ? { [ANONYMOUS_SESSION_HEADER]: getOrCreateAnonymousSessionToken() }
+      : undefined,
   });
   return res.data;
 }
@@ -107,6 +112,9 @@ export async function streamChatMessage(
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(payload.seller_journey_id
+        ? { [ANONYMOUS_SESSION_HEADER]: getOrCreateAnonymousSessionToken() }
+        : {}),
     },
     body: JSON.stringify(payload),
   });

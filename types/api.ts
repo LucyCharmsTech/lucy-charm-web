@@ -230,7 +230,8 @@ export type UserPrivacyPreferences = {
   product_updates_enabled: boolean;
 };
 
-export type UserDataRequestType = 'access' | 'correction' | 'deletion' | 'portability';
+export type UserDataRequestType =
+  'access' | 'correction' | 'deletion' | 'portability';
 
 /** Stored user info (persisted in localStorage alongside tokens) */
 export type AuthUser = {
@@ -257,17 +258,16 @@ export function userMeToAuthUser(me: UserMe): AuthUser {
 // Signup onboarding
 // ---------------------------------------------------------------------------
 
-export type OnboardingPrimaryIntent = 'buyer' | 'seller' | 'investor' | 'exploring';
-export type OnboardingTimeline = 'asap' | '1_3_months' | '3_6_months' | '6_plus_months';
-export type OnboardingPropertyType = 'house' | 'condo' | 'townhome' | 'multi_family' | 'other';
-export type OnboardingFinancingStatus = 'pre_approved' | 'not_yet' | 'cash' | 'prefer_not_to_say';
+export type OnboardingPrimaryIntent =
+  'buyer' | 'seller' | 'investor' | 'exploring';
+export type OnboardingTimeline =
+  'asap' | '1_3_months' | '3_6_months' | '6_plus_months';
+export type OnboardingPropertyType =
+  'house' | 'condo' | 'townhome' | 'multi_family' | 'other';
+export type OnboardingFinancingStatus =
+  'pre_approved' | 'not_yet' | 'cash' | 'prefer_not_to_say';
 export type OnboardingMainPriority =
-  | 'price'
-  | 'location'
-  | 'size'
-  | 'schools'
-  | 'investment'
-  | 'lifestyle';
+  'price' | 'location' | 'size' | 'schools' | 'investment' | 'lifestyle';
 
 export type UserOnboardingSubmitRequest = {
   primary_intent?: OnboardingPrimaryIntent;
@@ -505,6 +505,8 @@ export type ChatSendRequest = {
   message_text: string;
   email?: string;
   listing_id?: string;
+  /** Private Seller Journey context; activates the Seller Journey compliance gate. */
+  seller_journey_id?: string;
   /** Browser URL from which the message was sent — stored for the audit log. */
   page_url?: string;
 };
@@ -539,7 +541,11 @@ export type ChatSendResponse = {
   ui_actions?: string[] | null;
   /** Optional listing cards for search-like responses. */
   place_cards?: ChatPlaceCard[] | null;
-  response_type: 'general_information' | 'professional_advice' | 'clarification' | 'data_unavailable';
+  response_type:
+    | 'general_information'
+    | 'professional_advice'
+    | 'clarification'
+    | 'data_unavailable';
   assumptions: string[];
   sources: ChatResponseSource[];
 };
@@ -560,11 +566,14 @@ export type ChatRequestHumanResponse = {
 // Showing requests
 // ---------------------------------------------------------------------------
 
-export type ShowingRequestStatus = 'pending' | 'confirmed' | 'rescheduled' | 'cancelled' | 'completed';
+export type ShowingRequestStatus =
+  'pending' | 'confirmed' | 'rescheduled' | 'cancelled' | 'completed';
 export type ShowingType = 'in_person' | 'virtual' | 'open_house';
-export type ShowingIdVerificationStatus = 'not_requested' | 'pending' | 'verified';
+export type ShowingIdVerificationStatus =
+  'not_requested' | 'pending' | 'verified';
 export type ShowingFeedbackInterestLevel = 'low' | 'medium' | 'high';
-export type ShowingFeedbackPriceFit = 'below_budget' | 'on_target' | 'above_budget';
+export type ShowingFeedbackPriceFit =
+  'below_budget' | 'on_target' | 'above_budget';
 
 /** Mirrors ShowingRequestRead from the API */
 export type ShowingRequest = {
@@ -673,9 +682,12 @@ export type DocumentCategory =
   | 'other';
 
 export type DocumentVisibility = 'client_visible' | 'internal_only';
-export type DocumentScanStatus = 'pending' | 'clean' | 'infected' | 'error' | 'skipped';
-export type DocumentResourceType = 'showing_request' | 'user';
-export type DocumentReviewOutcome = 'accepted' | 'rejected' | 'replacement_needed';
+export type DocumentScanStatus =
+  'pending' | 'clean' | 'infected' | 'error' | 'skipped';
+export type DocumentResourceType =
+  'showing_request' | 'user' | 'seller_transaction';
+export type DocumentReviewOutcome =
+  'accepted' | 'rejected' | 'replacement_needed';
 
 /**
  * What the document's owner sees. All file fields are null while status is
@@ -737,15 +749,15 @@ export type DocumentAuditEntry = {
   document_id: string;
   actor_user_id: string | null; // null for system actions (expiry, purge)
   action:
-  | 'requested'
-  | 'uploaded'
-  | 'viewed'
-  | 'downloaded'
-  | 'replaced'
-  | 'reviewed'
-  | 'deleted'
-  | 'expired'
-  | 'purged';
+    | 'requested'
+    | 'uploaded'
+    | 'viewed'
+    | 'downloaded'
+    | 'replaced'
+    | 'reviewed'
+    | 'deleted'
+    | 'expired'
+    | 'purged';
   document_status: string | null;
   detail_json: Record<string, unknown> | null;
   ip_address: string | null;
@@ -893,25 +905,26 @@ export type RealtimeEvent<P = Record<string, unknown>> = {
 };
 
 export type RealtimeReplayStatus = 'current' | 'replayed' | 'refetch_required';
-export type RealtimeRejectReason = 'not_authorized' | 'unknown_channel' | 'channel_limit';
+export type RealtimeRejectReason =
+  'not_authorized' | 'unknown_channel' | 'channel_limit';
 
 /** Server → client frames — mirrors ServerMessageType and the shapes in resource.py. */
 export type RealtimeServerFrame =
   | {
-    type: 'welcome';
-    v: number;
-    connection_id: string;
-    user_id: string;
-    channels: string[];
-    heartbeat_interval: number;
-    max_connection_seconds: number;
-  }
+      type: 'welcome';
+      v: number;
+      connection_id: string;
+      user_id: string;
+      channels: string[];
+      heartbeat_interval: number;
+      max_connection_seconds: number;
+    }
   | {
-    type: 'subscribed';
-    channels: string[];
-    rejected: { channel: string; reason: RealtimeRejectReason | string }[];
-    replay: Record<string, RealtimeReplayStatus>;
-  }
+      type: 'subscribed';
+      channels: string[];
+      rejected: { channel: string; reason: RealtimeRejectReason | string }[];
+      replay: Record<string, RealtimeReplayStatus>;
+    }
   | { type: 'unsubscribed'; channels: string[]; reason?: string }
   | { type: 'event'; event: RealtimeEvent; replayed?: boolean }
   | { type: 'ping' }
@@ -1020,6 +1033,83 @@ export type SellerLeadStatus =
 
 export type SellerRepresentationType = 'brokerage' | 'designated';
 
+export type SellerJourneyStatus =
+  | 'exploring'
+  | 'details_in_progress'
+  | 'plan_ready'
+  | 'professional_review_requested'
+  | 'professional_follow_up'
+  | 'converted_to_client'
+  | 'paused_inactive';
+
+export type SellerJourneyPropertyRelationship =
+  'owner' | 'researching' | 'curious';
+
+export type SellerJourney = {
+  id: string;
+  user_id: string | null;
+  anonymous_session_id: string | null;
+  property_id: string;
+  property_address: string;
+  property_unit: string | null;
+  property_city: string;
+  property_region: string;
+  property_postal_code: string;
+  property_country: 'CA' | 'US';
+  relationship_to_property: SellerJourneyPropertyRelationship | null;
+  selling_timeline: string | null;
+  property_condition: string | null;
+  renovations_upgrades: string | null;
+  primary_goal: string | null;
+  home_value_request_id: string | null;
+  home_value_result_id: string | null;
+  status: SellerJourneyStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SellerJourneyCreateRequest = {
+  property_id?: string;
+  property_address?: string;
+  property_unit?: string;
+  property_city?: string;
+  property_region?: string;
+  property_postal_code?: string;
+  property_country?: 'CA' | 'US';
+  relationship_to_property?: SellerJourneyPropertyRelationship;
+  selling_timeline?: string;
+  property_condition?: string;
+  renovations_upgrades?: string;
+  primary_goal?: string;
+  home_value_request_id?: string;
+  home_value_result_id?: string;
+};
+
+export type SellerJourneyUpdateRequest = Omit<
+  SellerJourneyCreateRequest,
+  'property_country'
+> & {
+  property_country?: 'CA' | 'US';
+};
+
+export type ProfessionalReviewCreateRequest = {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  request: string;
+};
+
+export type ProfessionalReview = {
+  seller_lead_id: string;
+  seller_journey_id: string;
+  property_id: string;
+  status: string;
+  assigned_agent_id: string | null;
+  representation_status: string;
+  created_at: string;
+};
+
 export type SellerLead = {
   id: string;
   user_id: string | null;
@@ -1067,6 +1157,12 @@ export type SellerLeadUpdateRequest = {
   status?: Exclude<SellerLeadStatus, 'converted'>;
   notes?: string;
   inquiry_type?: string;
+};
+
+/** Explicit staff attestation required to activate an offline seller client. */
+export type SellerLeadConvertRequest = {
+  representation_type: SellerRepresentationType;
+  compliance_approved: true;
 };
 
 export type SellerTransaction = {

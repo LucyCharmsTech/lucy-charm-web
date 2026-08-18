@@ -12,6 +12,7 @@ import {
   LayoutGridIcon,
   ShieldIcon,
   HeartIcon,
+  BriefcaseBusinessIcon,
 } from 'lucide-react';
 
 import { useShallow } from 'zustand/react/shallow';
@@ -24,6 +25,7 @@ import {
 import { useAuthStore } from '@/stores/authStore';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { logout } from '@/services/authService';
+import { fetchMySellerPortals, type SellerPortalAccess } from '@/services/sellerService';
 
 const NAV_LINKS = [
   { label: 'Home', href: '/' },
@@ -48,6 +50,7 @@ export default function NavBar() {
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sellerPortals, setSellerPortals] = useState<SellerPortalAccess[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -63,6 +66,13 @@ export default function NavBar() {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated || user?.role !== 'client') {
+      return;
+    }
+    fetchMySellerPortals().then(setSellerPortals).catch(() => setSellerPortals([]));
+  }, [isAuthenticated, user?.role]);
 
 
   async function handleLogout() {
@@ -120,6 +130,14 @@ export default function NavBar() {
               className="text-sm font-medium text-zinc-600 transition hover:text-primarycolor focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:text-zinc-300"
             >
               Agent workspace
+            </Link>
+          )}
+          {sellerPortals.length === 1 && (
+            <Link
+              href={`/seller-portal/${sellerPortals[0].transaction_id}`}
+              className="text-sm font-medium text-zinc-600 transition hover:text-primarycolor focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:text-zinc-300"
+            >
+              Seller portal
             </Link>
           )}
           {isAuthenticated && user?.role === 'superadmin' && (
@@ -185,6 +203,17 @@ export default function NavBar() {
                     <UserIcon className="size-4 text-zinc-400" aria-hidden="true" />
                     My profile
                   </Link>
+                  {sellerPortals.length > 0 && (
+                    <Link
+                      href="/seller-portal"
+                      role="menuitem"
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-zinc-700 transition hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      <BriefcaseBusinessIcon className="size-4 text-primarycolor" aria-hidden="true" />
+                      Seller portal
+                    </Link>
+                  )}
                   <Link
                     href="/profile#saved-homes"
                     role="menuitem"
@@ -304,6 +333,18 @@ export default function NavBar() {
                 </Link>
               </li>
             )}
+            {sellerPortals.length > 0 && (
+              <li>
+                <Link
+                  href="/seller-portal"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-primarycolor/5 hover:text-primarycolor dark:text-zinc-200"
+                >
+                  <BriefcaseBusinessIcon className="size-4 text-primarycolor" aria-hidden="true" />
+                  Seller portal
+                </Link>
+              </li>
+            )}
             {isAuthenticated && user?.role === 'superadmin' && (
               <li>
                 <Link
@@ -314,6 +355,16 @@ export default function NavBar() {
                   <ShieldIcon className="size-4 text-zinc-400" aria-hidden="true" />
                   Admin console
                 </Link>
+                {sellerPortals.length > 0 && (
+                  <Link
+                    href="/seller-portal"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-primarycolor/5 hover:text-primarycolor dark:text-zinc-200"
+                  >
+                    <BriefcaseBusinessIcon className="size-4 text-primarycolor" aria-hidden="true" />
+                    Seller portal
+                  </Link>
+                )}
               </li>
             )}
             <li>
