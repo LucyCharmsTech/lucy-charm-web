@@ -24,6 +24,7 @@ import { fetchCurrentUser } from '@/services/userService';
 import { useAuthStore } from '@/stores/authStore';
 import { userMeToAuthUser } from '@/types/api';
 import { getPostLoginPath } from '@/lib/postLoginRedirect';
+import { getAccountStatusPath, getInactiveAccountDetails } from '@/lib/accountStatus';
 
 interface GoogleLoginButtonProps {
   /** Optional ?redirect= param to honour after successful login */
@@ -70,6 +71,11 @@ export function GoogleLoginButton({
 
       router.push(getPostLoginPath(me.role, redirectParam ?? null, me.onboarding_completed));
     } catch (err: unknown) {
+      const inactiveDetails = getInactiveAccountDetails(err);
+      if (inactiveDetails) {
+        router.push(getAccountStatusPath(inactiveDetails));
+        return;
+      }
       const msg =
         (err as { response?: { data?: { detail?: string } } })?.response?.data
           ?.detail ?? 'Google sign-in failed. Please try again.';

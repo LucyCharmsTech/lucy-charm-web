@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { DownloadIcon, LoaderIcon, ShieldAlertIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { getApiErrorMessage } from '@/lib/apiErrorMessage';
 import {
   deactivateCurrentAccount,
@@ -31,6 +32,8 @@ export default function AccountDataSection() {
   const [submittingRequest, setSubmittingRequest] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -74,10 +77,6 @@ export default function AccountDataSection() {
   }
 
   async function handleDeactivate() {
-    const confirmed = window.confirm(
-      'Deactivate your account? You will be signed out and will need support to reactivate.',
-    );
-    if (!confirmed) return;
     setDeactivating(true);
     setError(null);
     setMessage(null);
@@ -87,6 +86,7 @@ export default function AccountDataSection() {
       router.replace('/');
       setMessage(res.detail);
     } catch (err: unknown) {
+      setDeactivateDialogOpen(false);
       setError(getApiErrorMessage(err, 'Could not deactivate your account.'));
     } finally {
       setDeactivating(false);
@@ -94,10 +94,6 @@ export default function AccountDataSection() {
   }
 
   async function handleDelete() {
-    const confirmed = window.confirm(
-      'Permanently delete your account? This soft-deletes your profile, revokes sessions, and disables notifications.',
-    );
-    if (!confirmed) return;
     setDeleting(true);
     setError(null);
     setMessage(null);
@@ -107,6 +103,7 @@ export default function AccountDataSection() {
       router.replace('/');
       setMessage(res.detail);
     } catch (err: unknown) {
+      setDeleteDialogOpen(false);
       setError(getApiErrorMessage(err, 'Could not delete your account.'));
     } finally {
       setDeleting(false);
@@ -194,8 +191,8 @@ export default function AccountDataSection() {
             type="button"
             variant="outline"
             className="rounded-xl border-amber-300 text-amber-800 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-200 dark:hover:bg-amber-950/30"
-            disabled={deactivating}
-            onClick={() => void handleDeactivate()}
+            disabled={deactivating || deleting}
+            onClick={() => setDeactivateDialogOpen(true)}
           >
             {deactivating ? 'Deactivating…' : 'Deactivate account'}
           </Button>
@@ -203,8 +200,8 @@ export default function AccountDataSection() {
             type="button"
             variant="outline"
             className="rounded-xl border-red-300 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950/30"
-            disabled={deleting}
-            onClick={() => void handleDelete()}
+            disabled={deleting || deactivating}
+            onClick={() => setDeleteDialogOpen(true)}
           >
             {deleting ? 'Deleting…' : 'Delete account'}
           </Button>
@@ -221,6 +218,34 @@ export default function AccountDataSection() {
           </p>
         )}
       </div>
+
+      <ConfirmDialog
+        open={deactivateDialogOpen}
+        title="Deactivate your account?"
+        description="You will be signed out immediately. Your account will remain stored, but you will need support to reactivate it."
+        confirmLabel={deactivating ? 'Deactivating…' : 'Deactivate account'}
+        cancelLabel="Keep account"
+        tone="danger"
+        busy={deactivating}
+        onConfirm={() => void handleDeactivate()}
+        onCancel={() => {
+          if (!deactivating) setDeactivateDialogOpen(false);
+        }}
+      />
+
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        title="Delete your account?"
+        description="This soft-deletes your profile, disables notifications, revokes all sessions, and signs you out. Your account record is retained for required data-handling and audit purposes."
+        confirmLabel={deleting ? 'Deleting…' : 'Delete account'}
+        cancelLabel="Keep account"
+        tone="danger"
+        busy={deleting}
+        onConfirm={() => void handleDelete()}
+        onCancel={() => {
+          if (!deleting) setDeleteDialogOpen(false);
+        }}
+      />
     </section>
   );
 }

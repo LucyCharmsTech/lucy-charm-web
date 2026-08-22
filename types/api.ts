@@ -198,6 +198,19 @@ export type MagicLinkRequestResponse = {
   detail: string;
 };
 
+export type AccountRecoveryRequestBody = {
+  email: string;
+  redirect_path?: string;
+};
+
+export type InactiveAccountDetails = {
+  code: 'ACCOUNT_INACTIVE';
+  status: 'deleted' | 'deactivated';
+  recoverable: boolean;
+  message: string;
+  recovery_window_days?: number;
+};
+
 export type MagicLinkVerifyBody = {
   token: string;
 };
