@@ -18,6 +18,7 @@ const SKIP_REFRESH_PATHS = [
   '/auth/signup',
   '/auth/google',
   '/auth/magic-link',
+  '/auth/account-recovery',
   '/auth/mfa',
 ];
 

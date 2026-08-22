@@ -6,6 +6,7 @@ import api from '@/lib/axios';
 import { requestTokenRefresh } from '@/lib/tokenRefresh';
 import type {
   AuthToken,
+  AccountRecoveryRequestBody,
   MagicLinkRequestBody,
   MagicLinkRequestResponse,
   MagicLinkVerifyBody,
@@ -26,6 +27,20 @@ export async function verifyMagicLink(
   payload: MagicLinkVerifyBody,
 ): Promise<AuthToken> {
   const res = await api.post<AuthToken>('/auth/magic-link/verify', payload);
+  return res.data;
+}
+
+export async function requestAccountRecovery(
+  payload: AccountRecoveryRequestBody,
+): Promise<MagicLinkRequestResponse> {
+  const res = await api.post<MagicLinkRequestResponse>('/auth/account-recovery/request', payload);
+  return res.data;
+}
+
+export async function verifyAccountRecovery(
+  payload: MagicLinkVerifyBody,
+): Promise<AuthToken> {
+  const res = await api.post<AuthToken>('/auth/account-recovery/verify', payload);
   return res.data;
 }
 
