@@ -82,6 +82,9 @@ export type ApiListing = {
   baths: number | null;
   sqft: number | null;
   lot_size: number | null;
+  lot_size_units: string | null;
+  lot_size_range: string | null;
+  building_area_units: string | null;
   year_built: number | null;
   parking_spaces: number | null;
   taxes: number | null;
@@ -115,6 +118,24 @@ export type ApiListing = {
   agent?: ApiListingAgentSummary | null;
   idx_member_key: string | null;
   idx_office_key: string | null;
+  /** Brokerage name as it arrived on the listing record; display obligation. */
+  idx_office_name: string | null;
+  neighbourhood: string | null;
+  cross_street: string | null;
+  directions: string | null;
+  cooling: string | null;
+  heating_type: string | null;
+  garage_type: string | null;
+  sewer: string | null;
+  basement: string | null;
+  has_basement: boolean | null;
+  property_features: string | null;
+  lot_width: number | null;
+  lot_depth: number | null;
+  tax_year: number | null;
+  kitchens: number | null;
+  /** YearBuilt is never populated on this feed; this is a band ("6-15", "New"). */
+  approximate_age: string | null;
   idx_agent?: ApiIdxAgentSummary | null;
   idx_office?: ApiIdxOfficeSummary | null;
 };

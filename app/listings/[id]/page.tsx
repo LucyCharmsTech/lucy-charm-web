@@ -14,6 +14,7 @@ import ListingDetailLocationSection from '@/components/listings/detail/ListingDe
 import ListingDetailInteractiveShell from '@/components/listings/detail/ListingDetailInteractiveShell';
 import ListingDetailLiveUpdates from '@/components/listings/detail/ListingDetailLiveUpdates';
 import ListingDetailSidebar from '@/components/listings/detail/ListingDetailSidebar';
+import { ListingDisclaimer } from '@/components/listings/ListingDisclaimer';
 import {
   getListingDetailMetrics,
   getListingMapUrls,
@@ -224,6 +225,9 @@ export default async function ListingDetailPage({ params }: PageProps) {
                   label="Year built"
                   value={listing.yearBuilt}
                 />
+                {/* This feed never populates YearBuilt, so the band is the only
+                    age signal there is. */}
+                <ListingDetailFactCell label="Age" value={listing.approximateAge} />
                 <ListingDetailFactCell
                   label="Parking"
                   value={`${listing.parking} space`}
@@ -237,7 +241,29 @@ export default async function ListingDetailPage({ params }: PageProps) {
                   label="Country"
                   value={listing.country}
                 />
+                <ListingDetailFactCell label="Neighbourhood" value={listing.neighbourhood} />
+                <ListingDetailFactCell label="Cross street" value={listing.crossStreet} />
+                <ListingDetailFactCell label="Heating" value={listing.heatingType} />
+                <ListingDetailFactCell label="Cooling" value={listing.cooling} />
+                <ListingDetailFactCell label="Garage" value={listing.garageType} />
+                <ListingDetailFactCell label="Basement" value={listing.basement} />
+                <ListingDetailFactCell label="Kitchens" value={listing.kitchens} />
+                <ListingDetailFactCell label="Lot" value={listing.lotDimensions} />
+                <ListingDetailFactCell label="Sewer" value={listing.sewer} />
+                <ListingDetailFactCell label="Tax year" value={listing.taxYear} />
               </div>
+              {listing.propertyFeatures ? (
+                <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-300">
+                  <span className="font-semibold text-zinc-800 dark:text-zinc-100">Nearby: </span>
+                  {listing.propertyFeatures}
+                </p>
+              ) : null}
+              {listing.directions ? (
+                <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
+                  <span className="font-semibold text-zinc-800 dark:text-zinc-100">Directions: </span>
+                  {listing.directions}
+                </p>
+              ) : null}
             </section>
 
             {/* Location — embedded map + coordinates + external maps link. */}
@@ -251,6 +277,12 @@ export default async function ListingDetailPage({ params }: PageProps) {
           {/* Sidebar — financials, agent placeholder, primary conversion CTA. */}
           <ListingDetailSidebar listing={listing} />
         </div>
+
+        {/* Attribution and feed terms have to travel with the data itself. */}
+        <ListingDisclaimer
+          disclaimer={listing.sourceDisclaimer}
+          brokerage={listing.attribution}
+        />
       </div>
       </ListingDetailInteractiveShell>
     </div>

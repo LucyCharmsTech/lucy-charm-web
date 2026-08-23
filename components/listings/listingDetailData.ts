@@ -30,6 +30,21 @@ export type ListingDetail = ListingItem & {
   agent: ListingAgentSummary | null;
   idxAgent: ListingIdxAgentSummary | null;
   idxOffice: ListingIdxOfficeSummary | null;
+  /** Feed terms of use. Must appear wherever feed data is displayed. */
+  sourceDisclaimer: string | null;
+  neighbourhood: string | null;
+  crossStreet: string | null;
+  directions: string | null;
+  cooling: string | null;
+  heatingType: string | null;
+  garageType: string | null;
+  sewer: string | null;
+  basement: string | null;
+  propertyFeatures: string | null;
+  lotDimensions: string | null;
+  taxYear: string | null;
+  kitchens: string | null;
+  approximateAge: string | null;
 };
 
 const DEFAULT_DETAIL_FIELDS: Omit<ListingDetail, keyof ListingItem> = {
@@ -52,6 +67,20 @@ const DEFAULT_DETAIL_FIELDS: Omit<ListingDetail, keyof ListingItem> = {
   agent: null,
   idxAgent: null,
   idxOffice: null,
+  sourceDisclaimer: null,
+  neighbourhood: null,
+  crossStreet: null,
+  directions: null,
+  cooling: null,
+  heatingType: null,
+  garageType: null,
+  sewer: null,
+  basement: null,
+  propertyFeatures: null,
+  lotDimensions: null,
+  taxYear: null,
+  kitchens: null,
+  approximateAge: null,
 };
 
 /** Richer mock copy for listing `1` to match marketing screenshots */

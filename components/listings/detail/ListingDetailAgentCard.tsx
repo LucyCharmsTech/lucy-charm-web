@@ -3,6 +3,8 @@
 import React from 'react';
 import { MailIcon, PhoneIcon, UserRoundIcon } from 'lucide-react';
 
+import { ListingAttribution } from '@/components/listings/ListingAttribution';
+
 import type {
   ListingAgentSummary,
   ListingIdxAgentSummary,
@@ -58,8 +60,6 @@ export default function ListingDetailAgentCard({
     );
   }
 
-  const officeLabel = idxOffice?.office_name || 'IDX office';
-
   return (
     <section
       className="rounded-xl border border-zinc-300/80 bg-white px-4 py-5 text-left shadow-sm dark:border-zinc-600 dark:bg-zinc-900/30"
@@ -110,7 +110,13 @@ export default function ListingDetailAgentCard({
       ) : null}
       {idxOffice ? (
         <div className="mt-4 border-t border-zinc-200/80 pt-3 text-sm dark:border-zinc-700">
-          <p className="font-semibold text-zinc-800 dark:text-zinc-100">{officeLabel}</p>
+          {/*
+            The brokerage has to read as whose listing it is, not as an
+            anonymous bold line. The previous fallback rendered the literal
+            words "IDX office" here, which credited no one while looking like
+            attribution.
+          */}
+          <ListingAttribution brokerage={idxOffice.office_name} variant="detail" />
           {idxOffice.address || idxOffice.city || idxOffice.province ? (
             <p className="mt-1 text-zinc-500 dark:text-zinc-400">
               {[idxOffice.address, idxOffice.city, idxOffice.province, idxOffice.postal_code]

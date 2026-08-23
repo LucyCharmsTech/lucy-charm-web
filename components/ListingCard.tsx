@@ -5,6 +5,7 @@ import { useState } from 'react';
 
 import { BathIcon, BedDoubleIcon, MapPinIcon, RulerIcon } from 'lucide-react';
 
+import { ListingAttribution } from '@/components/listings/ListingAttribution';
 import SaveListingButton from '@/components/listings/SaveListingButton';
 import { fetchListingMedia } from '@/services/listingsService';
 
@@ -122,6 +123,8 @@ type ListingCardProps = {
   saveListingId?: string | null;
   /** Notified after a successful save or unsave from the card. */
   onSaveChange?: (next: { saved: boolean; listingId: string }) => void;
+  /** Listing brokerage. Board rules require it wherever the listing appears. */
+  attribution?: string | null;
 };
 
 export default function ListingCard({
@@ -143,6 +146,7 @@ export default function ListingCard({
   view = 'grid',
   saveListingId,
   onSaveChange,
+  attribution,
 }: ListingCardProps) {
   if (view === 'list') {
     return (
@@ -202,6 +206,7 @@ export default function ListingCard({
               </span>
             )}
           </div>
+          <ListingAttribution brokerage={attribution} className="mt-1.5" />
         </div>
         <div className="flex flex-col items-stretch justify-center gap-2 pr-4">
           {saveListingId ? (
@@ -287,6 +292,8 @@ export default function ListingCard({
             {locationText}
           </div>
         )}
+
+        <ListingAttribution brokerage={attribution} className="mt-1.5" />
 
         <div className="mt-3 flex flex-col gap-2">
           {saveListingId ? (
