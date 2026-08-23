@@ -31,6 +31,12 @@ type FilterPanelProps = {
   setBeds: (v: string) => void;
   baths: string;
   setBaths: (v: string) => void;
+  priceMin: string;
+  priceMax: string;
+  setPriceRange: (min: string, max: string) => void;
+  sqftMin: string;
+  sqftMax: string;
+  setSqftRange: (min: string, max: string) => void;
 };
 
 function toggleItem<T>(value: T, arr: T[]): T[] {
@@ -62,6 +68,12 @@ export default function FilterPanel({
   setBeds,
   baths,
   setBaths,
+  priceMin,
+  priceMax,
+  setPriceRange,
+  sqftMin,
+  sqftMax,
+  setSqftRange,
 }: FilterPanelProps) {
   const [open, setOpen] = useState(true);
   const [cityDraft, setCityDraft] = useState(city);
@@ -76,6 +88,46 @@ export default function FilterPanel({
     }, 400);
     return () => window.clearTimeout(timer);
   }, [cityDraft, city, setCity]);
+
+  // Ranges are typed, so they debounce like the city field rather than
+  // re-querying on every digit.
+  const [priceDraft, setPriceDraft] = useState({ min: priceMin, max: priceMax });
+  const [sqftDraft, setSqftDraft] = useState({ min: sqftMin, max: sqftMax });
+
+  useEffect(() => {
+    setPriceDraft({ min: priceMin, max: priceMax });
+  }, [priceMin, priceMax]);
+
+  useEffect(() => {
+    setSqftDraft({ min: sqftMin, max: sqftMax });
+  }, [sqftMin, sqftMax]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      if (priceDraft.min !== priceMin || priceDraft.max !== priceMax) {
+        setPriceRange(priceDraft.min, priceDraft.max);
+      }
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [priceDraft, priceMin, priceMax, setPriceRange]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      if (sqftDraft.min !== sqftMin || sqftDraft.max !== sqftMax) {
+        setSqftRange(sqftDraft.min, sqftDraft.max);
+      }
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [sqftDraft, sqftMin, sqftMax, setSqftRange]);
+
+  // A max below the min returns nothing and looks like a broken search, so say
+  // so where it happened instead of showing an empty grid.
+  const priceInverted =
+    Boolean(priceDraft.min && priceDraft.max) &&
+    Number(priceDraft.max) < Number(priceDraft.min);
+  const sqftInverted =
+    Boolean(sqftDraft.min && sqftDraft.max) &&
+    Number(sqftDraft.max) < Number(sqftDraft.min);
 
   return (
     <div className="m-4 rounded-2xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-800/80 dark:bg-zinc-950/30">
@@ -277,22 +329,103 @@ export default function FilterPanel({
 
           <hr className="border-zinc-100 dark:border-zinc-800" />
 
+          {/*
+            Price has been supported by the API since the first version of the
+            search — price_min and price_max — and has never had a control. It
+            is the filter shoppers reach for first.
+          */}
           <div className="space-y-2">
-            <Label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+            <Label
+              htmlFor="filter-price-min"
+              className="text-[10px] font-bold uppercase tracking-widest text-zinc-400"
+            >
+              Price
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                id="filter-price-min"
+                aria-label="Minimum price"
+                placeholder="Min price"
+                type="number"
+                min={0}
+                step={10000}
+                inputMode="numeric"
+                value={priceDraft.min}
+                onChange={(event) =>
+                  setPriceDraft((current) => ({ ...current, min: event.target.value }))
+                }
+                className="h-9 rounded-full text-xs"
+              />
+              <Input
+                aria-label="Maximum price"
+                placeholder="Max price"
+                type="number"
+                min={0}
+                step={10000}
+                inputMode="numeric"
+                value={priceDraft.max}
+                onChange={(event) =>
+                  setPriceDraft((current) => ({ ...current, max: event.target.value }))
+                }
+                aria-invalid={priceInverted}
+                className="h-9 rounded-full text-xs"
+              />
+            </div>
+            {priceInverted && (
+              <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400" role="alert">
+                Maximum price is below the minimum, so nothing can match.
+              </p>
+            )}
+          </div>
+
+          <hr className="border-zinc-100 dark:border-zinc-800" />
+
+          {/*
+            These two inputs already existed and were wired to nothing — no
+            value, no handler — so typing in them changed the search not at all.
+          */}
+          <div className="space-y-2">
+            <Label
+              htmlFor="filter-sqft-min"
+              className="text-[10px] font-bold uppercase tracking-widest text-zinc-400"
+            >
               Square Footage
             </Label>
             <div className="flex gap-2">
               <Input
+                id="filter-sqft-min"
+                aria-label="Minimum square footage"
                 placeholder="Min sqft"
                 type="number"
+                min={0}
+                step={100}
+                inputMode="numeric"
+                value={sqftDraft.min}
+                onChange={(event) =>
+                  setSqftDraft((current) => ({ ...current, min: event.target.value }))
+                }
                 className="h-9 rounded-full text-xs"
               />
               <Input
+                aria-label="Maximum square footage"
                 placeholder="Max sqft"
                 type="number"
+                min={0}
+                step={100}
+                inputMode="numeric"
+                value={sqftDraft.max}
+                onChange={(event) =>
+                  setSqftDraft((current) => ({ ...current, max: event.target.value }))
+                }
+                aria-invalid={sqftInverted}
                 className="h-9 rounded-full text-xs"
               />
             </div>
+            {sqftInverted && (
+              <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400" role="alert">
+                Maximum area is below the minimum, so nothing can match.
+              </p>
+            )}
           </div>
         </div>
       )}

@@ -9,9 +9,10 @@ import { matchListingsToPreferences } from '@/lib/listingMatching';
 import { isProptxLive } from '@/lib/proptxMode';
 import { Button } from '@/components/ui/button';
 import { apiListingToItem } from '@/lib/listingAdapter';
+import { ListingDisclaimer } from '@/components/listings/ListingDisclaimer';
 import { listMockSavedListingIds, unsaveMockListing } from '@/services/mockSavedListingsService';
 import { fetchStoredUserPreferences } from '@/services/userPreferencesService';
-import { fetchListingById } from '@/services/listingsService';
+import { fetchListingsByIds } from '@/services/listingsService';
 import {
   listMySavedListings,
   unsaveListing,
@@ -52,24 +53,26 @@ export default function SavedListingsSection() {
       }
 
       const saved = await listMySavedListings();
-      const results = await Promise.all(
-        saved.map(async (row) => {
-          try {
-            const apiListing: ApiListing = await fetchListingById(row.listing_id);
-            return { ok: true as const, row, item: apiListingToItem(apiListing) };
-          } catch {
-            return { ok: false as const, row };
-          }
-        }),
+      // One request for the whole set. Per-row fetches meant any single slow or
+      // failed response cost that listing its card — and, worse, relabelled a
+      // live property "no longer on the market". A request that fails now fails
+      // as a whole and lands in the catch below as an error the user can retry,
+      // which is the truthful outcome.
+      const listings = await fetchListingsByIds(saved.map((row) => row.listing_id));
+      const byId = new Map<string, ApiListing>(
+        listings.map((listing) => [listing.id, listing]),
       );
 
       const nextCards: LoadedCard[] = [];
       const nextOrphans: SavedListingsRead[] = [];
-      for (const r of results) {
-        if (r.ok) {
-          nextCards.push({ savedRowId: r.row.id, item: r.item });
+      for (const row of saved) {
+        const listing = byId.get(row.listing_id);
+        // Absent from a response that did succeed means the listing is genuinely
+        // gone or no longer displayable — that is an orphan, not a failure.
+        if (listing) {
+          nextCards.push({ savedRowId: row.id, item: apiListingToItem(listing) });
         } else {
-          nextOrphans.push(r.row);
+          nextOrphans.push(row);
         }
       }
 
@@ -197,6 +200,10 @@ export default function SavedListingsSection() {
             />
           ))}
         </div>
+      )}
+
+      {!loading && cards.length > 0 && isProptxLive() && (
+        <ListingDisclaimer disclaimer={null} variant="results" />
       )}
     </div>
   );

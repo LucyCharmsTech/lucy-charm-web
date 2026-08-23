@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+
+import { ListingPhotoPlaceholder } from '@/components/listings/ListingPhotoPlaceholder';
 import { useMemo, useState } from "react";
 
 import type { ApiListingMedia } from "@/types/api";
@@ -17,9 +19,6 @@ type CarouselImage = {
   alt: string;
 };
 
-// The IDX feed returns five near-identical variants for each photo position.
-const MEDIA_BATCH_SIZE = 5;
-
 export default function ListingMediaCarousel({
   primaryImage,
   imageAlt,
@@ -28,9 +27,14 @@ export default function ListingMediaCarousel({
   const images = useMemo<CarouselImage[]>(() => {
     const candidates = [
       { url: primaryImage, alt: imageAlt },
+      // Every row here is already one distinct photo. AMPRE used to send five
+      // near-identical size variants per position, which this component worked
+      // around by keeping every fifth row; ingest now collapses them (migration
+      // y7z8a9b0c1) and a unique index on (listing_id, lower(btrim(media_url)))
+      // makes a duplicate impossible. The workaround outlived the problem and
+      // was discarding four fifths of every gallery.
       ...media
         .filter((item) => !item.media_type || item.media_type.startsWith("image/"))
-        .filter((_, index) => index % MEDIA_BATCH_SIZE === 0)
         .map((item, index) => ({
           url: item.media_url,
           alt: item.caption || `${imageAlt} photo ${index + 2}`,
@@ -67,9 +71,7 @@ export default function ListingMediaCarousel({
 
   if (!availableImages.length) {
     return (
-      <div className="flex aspect-16/10 items-center justify-center rounded-2xl border border-zinc-200/80 bg-zinc-100 text-sm text-zinc-500 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900 dark:text-zinc-400">
-        Listing images are unavailable
-      </div>
+      <ListingPhotoPlaceholder className="aspect-16/10 rounded-2xl border border-zinc-200/80 shadow-sm dark:border-zinc-800/80" />
     );
   }
 
@@ -97,12 +99,29 @@ export default function ListingMediaCarousel({
       className="w-full min-w-0 overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:border-zinc-800/80 dark:bg-zinc-900/40"
     >
       <div className="relative aspect-16/10 sm:aspect-21/9">
+        {/*
+          `unoptimized`: board photos are served straight from the feed's CDN
+          rather than proxied through our own image optimiser. Two reasons, and
+          both matter.
+
+          Compliance: these URLs already carry the brokerage watermark, burned
+          in by the board's own imgproxy — the `wm:`/`wmt:` segments encode
+          "…Realty Inc., Brokerage". Re-encoding and downscaling that is an
+          alteration of an attributed image, and at small widths it renders the
+          attribution illegible.
+
+          Reliability: the optimiser fetches the remote file server-side, so a
+          slow or unreachable CDN became a 500 from our own origin for every
+          photo on the page. Served directly, a failure is one broken image the
+          browser reports to `onError`, which is what the fallback below is for.
+        */}
         <Image
           key={availableImages[safeIndex].url}
           src={availableImages[safeIndex].url}
           alt={availableImages[safeIndex].alt}
           onError={() => handleImageError(availableImages[safeIndex].url)}
           fill
+          unoptimized
           priority={safeIndex === 0}
           sizes="(min-width: 1024px) 66vw, 100vw"
           className="object-cover"

@@ -5,10 +5,10 @@ import { useState } from 'react';
 
 import { BathIcon, BedDoubleIcon, MapPinIcon, RulerIcon } from 'lucide-react';
 
+import { ListingAttribution } from '@/components/listings/ListingAttribution';
+import { ListingPhotoPlaceholder } from '@/components/listings/ListingPhotoPlaceholder';
 import SaveListingButton from '@/components/listings/SaveListingButton';
 import { fetchListingMedia } from '@/services/listingsService';
-
-const MEDIA_BATCH_SIZE = 5;
 
 function ListingCardImage({
   src,
@@ -16,6 +16,7 @@ function ListingCardImage({
   className,
   listingId,
 }: {
+  /** Empty when the listing has no photograph. */
   src: string;
   alt: string;
   className: string;
@@ -56,7 +57,6 @@ function ListingCardImage({
                 item.media_url,
             )
             .sort((a, b) => a.display_order - b.display_order)
-            .filter((_, index) => index % MEDIA_BATCH_SIZE === 0)
             .map((item) => item.media_url)
             .filter((url) => url !== currentSrc),
         ),
@@ -75,15 +75,20 @@ function ListingCardImage({
     }
   };
 
+  // No URL is a different thing from a URL that would not load, and the two
+  // deserve different words. Checked before `failed` so a listing that never
+  // had a photo does not report one as broken.
+  if (!currentSrc) {
+    return <ListingPhotoPlaceholder className={className} compact />;
+  }
+
   if (failed) {
     return (
-      <div
-        className={`flex items-center justify-center bg-zinc-100 text-xs text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500 ${className}`}
-        role="img"
-        aria-label={`${alt} image unavailable`}
-      >
-        Image unavailable
-      </div>
+      <ListingPhotoPlaceholder
+        className={className}
+        label="Photo could not be loaded"
+        compact
+      />
     );
   }
 
@@ -122,6 +127,8 @@ type ListingCardProps = {
   saveListingId?: string | null;
   /** Notified after a successful save or unsave from the card. */
   onSaveChange?: (next: { saved: boolean; listingId: string }) => void;
+  /** Listing brokerage. Board rules require it wherever the listing appears. */
+  attribution?: string | null;
 };
 
 export default function ListingCard({
@@ -143,6 +150,7 @@ export default function ListingCard({
   view = 'grid',
   saveListingId,
   onSaveChange,
+  attribution,
 }: ListingCardProps) {
   if (view === 'list') {
     return (
@@ -202,6 +210,7 @@ export default function ListingCard({
               </span>
             )}
           </div>
+          <ListingAttribution brokerage={attribution} className="mt-1.5" />
         </div>
         <div className="flex flex-col items-stretch justify-center gap-2 pr-4">
           {saveListingId ? (
@@ -287,6 +296,8 @@ export default function ListingCard({
             {locationText}
           </div>
         )}
+
+        <ListingAttribution brokerage={attribution} className="mt-1.5" />
 
         <div className="mt-3 flex flex-col gap-2">
           {saveListingId ? (

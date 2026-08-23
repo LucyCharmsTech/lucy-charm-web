@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+
+import { ListingPhotoPlaceholder } from '@/components/listings/ListingPhotoPlaceholder';
 import { ExternalLinkIcon, MapPinIcon } from 'lucide-react';
 import ListingInsightsSection from '@/components/portals/ListingInsightsSection';
 import { fetchListingById } from '@/services/listingsService';
@@ -66,7 +68,7 @@ export default function AgentListingDetailPage({ params }: Props) {
     return <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading listing…</p>;
   }
 
-  const img = listing.primary_image_url || 'https://picsum.photos/seed/agent-detail/900/600';
+  const img = listing.primary_image_url;
   const addr = listing.display_address || `${listing.address}, ${listing.city}`;
 
   return (
@@ -78,7 +80,19 @@ export default function AgentListingDetailPage({ params }: Props) {
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="space-y-4">
           <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900">
-            <Image src={img} alt="" fill className="object-cover" sizes="(max-width: 1024px) 100vw, 50vw" />
+            {img ? (
+              <Image
+                src={img}
+                alt=""
+                fill
+                // Served straight from the board's CDN — see ListingMediaCarousel.
+                unoptimized
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 50vw"
+              />
+            ) : (
+              <ListingPhotoPlaceholder className="absolute inset-0" />
+            )}
           </div>
           <div>
             <h1 className="text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">

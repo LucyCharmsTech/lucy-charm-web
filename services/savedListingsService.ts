@@ -46,6 +46,26 @@ export async function unsaveListing(savedListingId: string): Promise<SavedListin
   return res.data;
 }
 
+/**
+ * Adopt this device's anonymous saves into the account that just signed in.
+ *
+ * Without it, a shopper who saves half a dozen homes and then registers lands
+ * on an empty favourites page — the rows are still there under the session
+ * token, and this browser still holds that token, but nothing claimed them.
+ *
+ * Returns the account's full save list, so the caller can render immediately.
+ */
+export async function claimAnonymousSaves(): Promise<SavedListingsRead[]> {
+  const token = getOrCreateAnonymousSessionToken();
+  if (!token) return [];
+  const res = await api.post<SavedListingsRead[]>(
+    '/saved_listings/claim',
+    null,
+    { headers: { [ANONYMOUS_SESSION_HEADER]: token } },
+  );
+  return res.data;
+}
+
 /** All saves for the current user or anonymous session (see GET /saved_listings/mine). */
 export async function listMySavedListings(): Promise<SavedListingsRead[]> {
   const res = await api.get<SavedListingsRead[]>('/saved_listings/mine', {

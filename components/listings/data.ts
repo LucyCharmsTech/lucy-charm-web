@@ -12,6 +12,8 @@ export type ListingItem = {
   areaText: string;
   locationText: string;
   detailsHref: string;
+  /** Listing brokerage. Required on IDX listings, absent on our own. */
+  attribution?: string | null;
 };
 
 export const MOCK_LISTINGS: ListingItem[] = [

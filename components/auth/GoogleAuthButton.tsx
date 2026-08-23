@@ -23,6 +23,7 @@ import { googleLogin } from '@/services/authService';
 import { fetchCurrentUser } from '@/services/userService';
 import { useAuthStore } from '@/stores/authStore';
 import { userMeToAuthUser } from '@/types/api';
+import { completeSignIn } from '@/lib/completeSignIn';
 import { getPostLoginPath } from '@/lib/postLoginRedirect';
 import { getAccountStatusPath, getInactiveAccountDetails } from '@/lib/accountStatus';
 
@@ -68,6 +69,8 @@ export function GoogleLoginButton({
 
       const me = await fetchCurrentUser();
       setAuth(tokens.access_token, tokens.refresh_token, userMeToAuthUser(me));
+
+      await completeSignIn();
 
       router.push(getPostLoginPath(me.role, redirectParam ?? null, me.onboarding_completed));
     } catch (err: unknown) {

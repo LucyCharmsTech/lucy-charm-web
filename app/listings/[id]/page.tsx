@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
@@ -14,6 +15,7 @@ import ListingDetailLocationSection from '@/components/listings/detail/ListingDe
 import ListingDetailInteractiveShell from '@/components/listings/detail/ListingDetailInteractiveShell';
 import ListingDetailLiveUpdates from '@/components/listings/detail/ListingDetailLiveUpdates';
 import ListingDetailSidebar from '@/components/listings/detail/ListingDetailSidebar';
+import { ListingDisclaimer } from '@/components/listings/ListingDisclaimer';
 import {
   getListingDetailMetrics,
   getListingMapUrls,
@@ -25,13 +27,70 @@ import ListingMediaCarousel from '@/components/listings/detail/ListingMediaCarou
 // Data sources
 import { getListingDetail } from '@/components/listings/listingDetailData';
 import { apiListingToDetail } from '@/lib/listingAdapter';
-import { serverFetch, isUuid } from '@/lib/serverFetch';
+import { serverFetchResult, isUuid } from '@/lib/serverFetch';
+import ListingUnavailable from '@/components/listings/ListingUnavailable';
+import ShareSearchButton from '@/components/listings/ShareSearchButton';
 import type { ApiListing, ApiListingMedia } from '@/types/api';
 import type { ListingDetail } from '@/components/listings/listingDetailData';
 
 type PageProps = {
   params: Promise<{ id: string }>;
 };
+
+/**
+ * What a shared link previews as.
+ *
+ * The route had no metadata at all, so every listing shared into a message or
+ * posted anywhere previewed with the site-wide default — same title, same
+ * image, for every property. The brokerage credit goes in the description
+ * because attribution obligations do not stop at the page boundary.
+ */
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  if (!isUuid(id)) return {};
+
+  const result = await serverFetchResult<ApiListing>(`/listings/${id}`, {
+    revalidate: 60,
+  });
+  if (!result.ok) return {};
+
+  const listing = result.data;
+  const price = listing.price
+    ? `$${listing.price.toLocaleString('en-CA')} ${listing.currency}`
+    : null;
+  const where = listing.display_address || `${listing.city}, ${listing.state}`;
+  const title = [price, where].filter(Boolean).join(' — ') || listing.title;
+  const brokerage = listing.idx_office?.office_name || listing.idx_office_name;
+
+  const description = [
+    [
+      listing.beds != null ? `${listing.beds} bed` : null,
+      listing.baths != null ? `${listing.baths} bath` : null,
+      listing.property_type,
+    ]
+      .filter(Boolean)
+      .join(' · '),
+    brokerage ? `Listed by ${brokerage}.` : null,
+  ]
+    .filter(Boolean)
+    .join('. ');
+
+  return {
+    title,
+    description: description || undefined,
+    openGraph: {
+      title,
+      description: description || undefined,
+      type: 'website',
+      images: listing.primary_image_url ? [listing.primary_image_url] : undefined,
+    },
+    twitter: {
+      card: listing.primary_image_url ? 'summary_large_image' : 'summary',
+      title,
+      description: description || undefined,
+    },
+  };
+}
 
 export default async function ListingDetailPage({ params }: PageProps) {
   const { id } = await params;
@@ -44,14 +103,24 @@ export default async function ListingDetailPage({ params }: PageProps) {
     // Uncached (`revalidate: 0`): ListingDetailLiveUpdates uses router.refresh()
     // on change events and must not be served a stale pre-change value.
     const [apiListing, media] = await Promise.all([
-      serverFetch<ApiListing>(`/listings/${id}`, { revalidate: 0 }),
-      serverFetch<ApiListingMedia[]>(`/listings/${id}/media`, { revalidate: 0 }),
+      serverFetchResult<ApiListing>(`/listings/${id}`, { revalidate: 0 }),
+      serverFetchResult<ApiListingMedia[]>(`/listings/${id}/media`, { revalidate: 0 }),
     ]);
-    if (apiListing) {
-      listing = apiListingToDetail(apiListing);
-      listingMedia = media ?? [];
+
+    // A listing that is genuinely gone is a 404. A listing we could not reach
+    // is not — rendering "not found" for an API restart tells the visitor, and
+    // any crawler, that a live property was removed.
+    if (!apiListing.ok) {
+      if (apiListing.kind === 'not_found') {
+        notFound();
+      }
+      return <ListingUnavailable />;
     }
-    // If API returned nothing for a valid UUID, 404 below
+
+    listing = apiListingToDetail(apiListing.data);
+    // Media is secondary: a gallery that failed to load should not take the
+    // page down with it, and the carousel already handles an empty list.
+    listingMedia = media.ok ? media.data : [];
   } else {
     // Legacy mock ID (e.g. '1', '2') — use local mock data
     listing = getListingDetail(id);
@@ -83,6 +152,7 @@ export default async function ListingDetailPage({ params }: PageProps) {
           >
             <span aria-hidden="true">&lt;</span> All listings
           </Link>
+          <ShareSearchButton label="Share listing" />
         </div>
 
         {/* Two-column layout: narrative + map on the left; financials & CTA on the right (sticky on large screens via sidebar component). */}
@@ -224,6 +294,9 @@ export default async function ListingDetailPage({ params }: PageProps) {
                   label="Year built"
                   value={listing.yearBuilt}
                 />
+                {/* This feed never populates YearBuilt, so the band is the only
+                    age signal there is. */}
+                <ListingDetailFactCell label="Age" value={listing.approximateAge} />
                 <ListingDetailFactCell
                   label="Parking"
                   value={`${listing.parking} space`}
@@ -237,7 +310,29 @@ export default async function ListingDetailPage({ params }: PageProps) {
                   label="Country"
                   value={listing.country}
                 />
+                <ListingDetailFactCell label="Neighbourhood" value={listing.neighbourhood} />
+                <ListingDetailFactCell label="Cross street" value={listing.crossStreet} />
+                <ListingDetailFactCell label="Heating" value={listing.heatingType} />
+                <ListingDetailFactCell label="Cooling" value={listing.cooling} />
+                <ListingDetailFactCell label="Garage" value={listing.garageType} />
+                <ListingDetailFactCell label="Basement" value={listing.basement} />
+                <ListingDetailFactCell label="Kitchens" value={listing.kitchens} />
+                <ListingDetailFactCell label="Lot" value={listing.lotDimensions} />
+                <ListingDetailFactCell label="Sewer" value={listing.sewer} />
+                <ListingDetailFactCell label="Tax year" value={listing.taxYear} />
               </div>
+              {listing.propertyFeatures ? (
+                <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-300">
+                  <span className="font-semibold text-zinc-800 dark:text-zinc-100">Nearby: </span>
+                  {listing.propertyFeatures}
+                </p>
+              ) : null}
+              {listing.directions ? (
+                <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
+                  <span className="font-semibold text-zinc-800 dark:text-zinc-100">Directions: </span>
+                  {listing.directions}
+                </p>
+              ) : null}
             </section>
 
             {/* Location — embedded map + coordinates + external maps link. */}
@@ -251,6 +346,13 @@ export default async function ListingDetailPage({ params }: PageProps) {
           {/* Sidebar — financials, agent placeholder, primary conversion CTA. */}
           <ListingDetailSidebar listing={listing} />
         </div>
+
+        {/* Attribution and feed terms have to travel with the data itself. */}
+        <ListingDisclaimer
+          disclaimer={listing.sourceDisclaimer}
+          brokerage={listing.attribution}
+          updatedAt={listing.updatedAt}
+        />
       </div>
       </ListingDetailInteractiveShell>
     </div>

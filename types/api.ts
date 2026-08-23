@@ -71,6 +71,7 @@ export type ApiListing = {
   id: string; // UUID
   source_system: string;
   source_id: string | null;
+  mls_number: string | null;
   status: string;
   market: string;
   currency: string;
@@ -82,6 +83,9 @@ export type ApiListing = {
   baths: number | null;
   sqft: number | null;
   lot_size: number | null;
+  lot_size_units: string | null;
+  lot_size_range: string | null;
+  building_area_units: string | null;
   year_built: number | null;
   parking_spaces: number | null;
   taxes: number | null;
@@ -115,6 +119,24 @@ export type ApiListing = {
   agent?: ApiListingAgentSummary | null;
   idx_member_key: string | null;
   idx_office_key: string | null;
+  /** Brokerage name as it arrived on the listing record; display obligation. */
+  idx_office_name: string | null;
+  neighbourhood: string | null;
+  cross_street: string | null;
+  directions: string | null;
+  cooling: string | null;
+  heating_type: string | null;
+  garage_type: string | null;
+  sewer: string | null;
+  basement: string | null;
+  has_basement: boolean | null;
+  property_features: string | null;
+  lot_width: number | null;
+  lot_depth: number | null;
+  tax_year: number | null;
+  kitchens: number | null;
+  /** YearBuilt is never populated on this feed; this is a band ("6-15", "New"). */
+  approximate_age: string | null;
   idx_agent?: ApiIdxAgentSummary | null;
   idx_office?: ApiIdxOfficeSummary | null;
 };
@@ -134,6 +156,21 @@ export type ListingSearchParams = {
   baths_min?: number;
   sqft_min?: number;
   sqft_max?: number;
+  /**
+   * Map viewport bounds. Sent only from map view; listings whose coordinates
+   * are withheld (address suppressed by the board) can never match these, which
+   * is why the map reports how many results it cannot place.
+   */
+  lat_min?: number;
+  lat_max?: number;
+  lng_min?: number;
+  lng_max?: number;
+  /**
+   * `false` asks for the listings a map can never place — the board suppressed
+   * the address, so there are no coordinates. The map view counts them so they
+   * are reported rather than silently missing from the result total.
+   */
+  has_coordinates?: boolean;
   sort_by?: string;
   sort_order?: string;
   page?: number;

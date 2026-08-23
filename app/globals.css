@@ -136,3 +136,67 @@
     @apply font-sans;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Results map (components/listings/ListingsMap.tsx)
+
+   Leaflet renders pins and popups outside React's tree, so their styling lives
+   here rather than in the component. Kept token-driven so the map reads as part
+   of the site in both themes rather than as an embedded widget.
+   --------------------------------------------------------------------------- */
+
+.listing-pin > span {
+  display: inline-block;
+  transform: translate(-50%, -100%);
+  white-space: nowrap;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--primarycolor);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 30%);
+}
+
+.leaflet-container {
+  background: var(--background);
+  font: inherit;
+}
+
+.listing-popup {
+  min-width: 170px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.listing-popup__price {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--primarycolor);
+}
+
+.listing-popup__address {
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.listing-popup__specs {
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+/* The brokerage credit follows the listing onto the map. */
+.listing-popup__attribution {
+  color: #6b7280;
+  margin-top: 4px;
+  font-size: 11px;
+}
+
+.listing-popup__link {
+  display: inline-block;
+  margin-top: 8px;
+  font-weight: 700;
+  color: var(--primarycolor);
+  text-decoration: underline;
+}

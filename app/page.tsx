@@ -10,10 +10,13 @@ import { MOCK_LISTINGS } from '@/components/listings/data';
 import { apiListingToItem } from '@/lib/listingAdapter';
 import { isProptxLive } from '@/lib/proptxMode';
 import { serverFetch, buildQuery } from '@/lib/serverFetch';
+import { ListingDisclaimer } from '@/components/listings/ListingDisclaimer';
 import type { ApiListing, PaginatedItems } from '@/types/api';
 
 // ---------------------------------------------------------------------------
-// Static fallback — shown when the API is unreachable (e.g. local dev cold start)
+// PROPTX preview cards. Used only when NEXT_PUBLIC_PROPTX_LIVE=false, where the
+// page carries a banner saying so — never as a fallback for a failed fetch,
+// because these are invented addresses over stock photography.
 // ---------------------------------------------------------------------------
 const FALLBACK_FEATURED: FeaturedListing[] = [
   {
@@ -144,6 +147,10 @@ export default async function Home() {
     { revalidate: 120 },
   );
 
+  // No fallback to invented properties. FALLBACK_FEATURED is stock photography
+  // over made-up addresses; showing it when the feed is unreachable presents
+  // fabricated inventory as real listings on the site's front door. An absent
+  // strip is the honest outcome — the section renders nothing when empty.
   const featuredListings: FeaturedListing[] =
     data && data.items.length > 0
       ? data.items.slice(0, 4).map((l) => {
@@ -160,7 +167,17 @@ export default async function Home() {
             detailsHref: item.detailsHref,
           };
         })
-      : FALLBACK_FEATURED;
+      : [];
+
+  // Attribution and the terms notice travel with the data, including here.
+  const featuredBrokerages = Array.from(
+    new Set(
+      (data?.items ?? [])
+        .slice(0, 4)
+        .map((l) => l.idx_office?.office_name || l.idx_office_name)
+        .filter((name): name is string => Boolean(name)),
+    ),
+  );
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -212,7 +229,18 @@ export default async function Home() {
           </div>
         </section>
         <CitySearchSection />
-        <FeaturedListingsSection listings={[...featuredListings]} />
+        {featuredListings.length > 0 && (
+          <>
+            <FeaturedListingsSection listings={[...featuredListings]} />
+            <div className="mx-auto max-w-6xl px-6 sm:px-10">
+              <ListingDisclaimer
+                disclaimer={null}
+                variant="results"
+                brokerage={featuredBrokerages.length === 1 ? featuredBrokerages[0] : null}
+              />
+            </div>
+          </>
+        )}
         <AiPoweredSection />
       </main>
 
