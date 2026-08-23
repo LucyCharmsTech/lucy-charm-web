@@ -92,6 +92,30 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
+/**
+ * The date the listing was first entered on the board.
+ *
+ * The feed sends no DaysOnMarket, so this is the only listing-age signal there
+ * is. Rendered as a plain date rather than a derived "N days on market": a
+ * relist carries a fresh entry timestamp, so the elapsed figure would be
+ * confidently wrong on exactly the listings where it matters most.
+ *
+ * Locale and time zone are pinned because this runs on the server and the
+ * result is serialised into the HTML -- an unpinned format would render
+ * differently depending on where the server happens to be.
+ */
+function formatListedOn(iso: string | null): string | null {
+  if (!iso) return null;
+  const when = new Date(iso);
+  if (Number.isNaN(when.getTime())) return null;
+  return when.toLocaleDateString('en-CA', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
 export default async function ListingDetailPage({ params }: PageProps) {
   const { id } = await params;
 
@@ -174,6 +198,20 @@ export default async function ListingDetailPage({ params }: PageProps) {
                 <span className="inline-flex items-center rounded-full bg-violet-600/90 px-3 py-1 text-[11px] font-semibold text-white">
                   {metrics.typeDisplay}
                 </span>
+                {/* Sale and lease prices are not on the same scale; the page
+                    has to say which one the number above it is. */}
+                {listing.transactionLabel ? (
+                  <span className="inline-flex items-center rounded-full bg-zinc-900/85 px-3 py-1 text-[11px] font-semibold text-white dark:bg-zinc-100/90 dark:text-zinc-900">
+                    {listing.transactionLabel}
+                  </span>
+                ) : null}
+                {/* The board's own wording. "Price Change" is the kind of
+                    movement the collapsed internal status throws away. */}
+                {listing.mlsStatus ? (
+                  <span className="inline-flex items-center rounded-full border border-zinc-300 px-3 py-1 text-[11px] font-semibold text-zinc-700 dark:border-zinc-600 dark:text-zinc-200">
+                    {listing.mlsStatus}
+                  </span>
+                ) : null}
               </div>
               <h1 className="mt-4 text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-3xl">
                 {listing.title}
@@ -194,7 +232,25 @@ export default async function ListingDetailPage({ params }: PageProps) {
                 <span>Postal Code: {listing.postalCode}</span>
                 <span className="hidden sm:inline">·</span>
                 <span>Country: {listing.country}</span>
+                {listing.mlsNumber ? (
+                  <>
+                    <span className="hidden sm:inline">·</span>
+                    <span>MLS&reg;#: {listing.mlsNumber}</span>
+                  </>
+                ) : null}
               </p>
+              {/* The feed carries a tour on a minority of listings, and it was
+                  being fetched and discarded on all of them. */}
+              {listing.virtualTourUrl ? (
+                <a
+                  href={listing.virtualTourUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 inline-flex h-9 items-center justify-center rounded-full border border-primarycolor/35 px-4 text-sm font-semibold text-primarycolor transition hover:bg-primarycolor/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2"
+                >
+                  View virtual tour
+                </a>
+              ) : null}
             </section>
             {/* Property specs — quick-scan pills (beds, baths, area, lot, year, parking). */}
             <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/40 sm:p-6">
@@ -301,9 +357,20 @@ export default async function ListingDetailPage({ params }: PageProps) {
                   label="Parking"
                   value={`${listing.parking} space`}
                 />
+                {/* The chip above already shows the subtype, so this cell
+                    carries the broad board bucket rather than repeating it. */}
                 <ListingDetailFactCell
                   label="Property type"
-                  value={metrics.typeDisplay}
+                  value={listing.propertyTypeLabel ?? metrics.typeDisplay}
+                />
+                <ListingDetailFactCell
+                  label="Style"
+                  value={listing.propertySubtypeLabel}
+                />
+                <ListingDetailFactCell label="MLS®#" value={listing.mlsNumber} />
+                <ListingDetailFactCell
+                  label="Listed"
+                  value={formatListedOn(listing.listedAt)}
                 />
                 <ListingDetailFactCell label="Market" value={listing.market} />
                 <ListingDetailFactCell

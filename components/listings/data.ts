@@ -14,6 +14,11 @@ export type ListingItem = {
   detailsHref: string;
   /** Listing brokerage. Required on IDX listings, absent on our own. */
   attribution?: string | null;
+  /**
+   * "For Sale" / "For Lease". Sale and lease listings share one grid and their
+   * prices are not on the same scale, so the card has to say which it is.
+   */
+  transactionLabel?: string | null;
 };
 
 export const MOCK_LISTINGS: ListingItem[] = [

@@ -47,6 +47,17 @@ export type ListingDetail = ListingItem & {
   approximateAge: string | null;
   /** When the listing information itself last changed, ISO-8601. */
   updatedAt?: string | null;
+  /** The board's listing number, as shoppers and agents quote it. */
+  mlsNumber: string | null;
+  virtualTourUrl: string | null;
+  /** Broad board bucket, e.g. "Residential Freehold". */
+  propertyTypeLabel: string | null;
+  /** Specific type, e.g. "Detached". Also what the header chip shows. */
+  propertySubtypeLabel: string | null;
+  /** Board status wording ("Price Change"), richer than the collapsed status. */
+  mlsStatus: string | null;
+  /** When the listing was first entered on the board, ISO-8601. */
+  listedAt: string | null;
 };
 
 const DEFAULT_DETAIL_FIELDS: Omit<ListingDetail, keyof ListingItem> = {
@@ -83,6 +94,12 @@ const DEFAULT_DETAIL_FIELDS: Omit<ListingDetail, keyof ListingItem> = {
   taxYear: null,
   kitchens: null,
   approximateAge: null,
+  mlsNumber: null,
+  virtualTourUrl: null,
+  propertyTypeLabel: null,
+  propertySubtypeLabel: null,
+  mlsStatus: null,
+  listedAt: null,
 };
 
 /** Richer mock copy for listing `1` to match marketing screenshots */

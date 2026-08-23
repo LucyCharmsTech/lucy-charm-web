@@ -13,12 +13,53 @@ function humaniseType(raw: string | null): string {
   if (!raw) return 'Property';
   return raw
     .replace(/_/g, ' ')
+    // The subtype vocabulary is partly camel-cased ("MobileTrailer"), which
+    // renders as one word unless the boundary is opened up.
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-/** Format a numeric price into "$1,234,000" */
-function formatPrice(price: number): string {
-  return `$${price.toLocaleString('en-CA')}`;
+/**
+ * Lease rates the feed quotes a price *per*, lower-cased for lookup.
+ *
+ * Deliberately a whitelist. ListPriceUnit also carries values that describe the
+ * deal rather than the denominator -- "For Sale", "Net Lease" -- and suffixing
+ * those produces "$899,000 /For Sale". Anything unrecognised gets no suffix,
+ * which is the pre-existing behaviour and never states a unit that is wrong.
+ */
+const PRICE_RATE_SUFFIX: Record<string, string> = {
+  month: '/month',
+  'per sq ft': '/sq ft',
+  // A net rate has the extras billed on top, so the word carries real money.
+  // Dropping it quotes a gross rent the tenant will not actually pay.
+  'sq ft net': '/sq ft net',
+  'per acre': '/acre',
+};
+
+/**
+ * Format a price into "$1,234,000", carrying the feed's rate unit when it
+ * quotes one.
+ *
+ * Commercial leases arrive priced per square foot -- ListPrice 18.0 with
+ * ListPriceUnit "Sq Ft Net" -- and rendering that bare showed "$18" beside
+ * sale prices in the millions.
+ */
+function formatPrice(listing: ApiListing): string {
+  const base = `$${listing.price.toLocaleString('en-CA')}`;
+  const suffix = PRICE_RATE_SUFFIX[listing.price_unit?.trim().toLowerCase() ?? ''];
+  return suffix ? `${base}${suffix}` : base;
+}
+
+/**
+ * "For Sale" / "For Lease", as the feed states it.
+ *
+ * Nothing else on a card separates a lease rate from a purchase price, and the
+ * two sit in the same grid.
+ */
+function transactionLabelOf(listing: ApiListing): string | null {
+  const raw = listing.transaction_type?.trim();
+  if (!raw) return null;
+  return raw.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 /**
@@ -88,11 +129,16 @@ export function apiListingToItem(listing: ApiListing): ListingItem {
     id: listing.id,
     statusLabel:
       listing.status.charAt(0).toUpperCase() + listing.status.slice(1),
-    typeLabel: humaniseType(listing.property_type),
+    // The subtype is the specific one ("Detached", "Condo Apartment",
+    // "Locker") and the feed populates it on every record; property_type is the
+    // board's top-level bucket, which labels a locker and a two-bedroom condo
+    // alike as "Residential Condo & Other".
+    typeLabel: humaniseType(listing.property_subtype || listing.property_type),
     // Empty rather than a stand-in: the card renders a panel that says so.
     imageSrc: listing.primary_image_url || '',
     imageAlt: listing.title,
-    priceText: formatPrice(listing.price),
+    priceText: formatPrice(listing),
+    transactionLabel: transactionLabelOf(listing),
     title: listing.title,
     address: listing.display_address || locationText,
     bedsText: listing.beds != null ? `${listing.beds} bd` : '—',
@@ -163,5 +209,21 @@ export function apiListingToDetail(listing: ApiListing): ListingDetail {
     // When the listing data itself last changed. Falls back to the feed's own
     // modification stamp for rows written before last_updated_at was populated.
     updatedAt: listing.last_updated_at ?? listing.source_modified_at ?? null,
+    // The board's own listing number. Shoppers arrive quoting it and it was
+    // fetched on every request without ever being rendered.
+    mlsNumber: listing.mls_number ?? null,
+    // Only ever an unbranded-then-branded tour URL from the mapper.
+    virtualTourUrl: listing.virtual_tour_url ?? null,
+    // The broad bucket, kept alongside the subtype now shown on the chip.
+    propertyTypeLabel: listing.property_type ? humaniseType(listing.property_type) : null,
+    propertySubtypeLabel: listing.property_subtype
+      ? humaniseType(listing.property_subtype)
+      : null,
+    // "New", "Price Change", "Extension" -- the movement a shopper cares about,
+    // which the internal status collapses away to plain "active".
+    mlsStatus: listing.mls_status ?? null,
+    // The feed sends no DaysOnMarket, so this timestamp is the only listing-age
+    // signal available. Raw ISO: the page formats it, as with updatedAt.
+    listedAt: listing.original_entry_at ?? null,
   };
 }

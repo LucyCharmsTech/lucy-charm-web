@@ -76,6 +76,15 @@ export type ApiListing = {
   market: string;
   currency: string;
   property_type: string | null;
+  /** RESO PropertySubType — "Detached", "Condo Apartment", "Locker", "Office". */
+  property_subtype: string | null;
+  /** "For Sale" / "For Lease". */
+  transaction_type: string | null;
+  /** Denominator the price is quoted in ("Month", "Sq Ft Net", "Per Acre"). */
+  price_unit: string | null;
+  standard_status: string | null;
+  mls_status: string | null;
+  contract_status: string | null;
   title: string;
   description: string | null;
   price: number;
@@ -104,6 +113,9 @@ export type ApiListing = {
   ai_summary: string | null;
   source_attribution: string | null;
   source_disclaimer: string | null;
+  /** NULL means the feed stated no preference; only an explicit false opts out. */
+  is_internet_displayable: boolean | null;
+  is_address_displayable: boolean | null;
   last_updated_at: string | null;
   original_entry_at: string | null;
   source_modified_at: string | null;

@@ -129,6 +129,11 @@ type ListingCardProps = {
   onSaveChange?: (next: { saved: boolean; listingId: string }) => void;
   /** Listing brokerage. Board rules require it wherever the listing appears. */
   attribution?: string | null;
+  /**
+   * "For Sale" / "For Lease". A lease rate and a purchase price look alike in a
+   * grid until one of them says which it is.
+   */
+  transactionLabel?: string | null;
 };
 
 export default function ListingCard({
@@ -151,6 +156,7 @@ export default function ListingCard({
   saveListingId,
   onSaveChange,
   attribution,
+  transactionLabel,
 }: ListingCardProps) {
   if (view === 'list') {
     return (
@@ -168,6 +174,11 @@ export default function ListingCard({
           {typeLabel && (
             <span className="absolute left-2 top-8 inline-flex items-center rounded-full bg-primarycolor/90 px-2 py-0.5 text-[11px] font-semibold text-white">
               {typeLabel}
+            </span>
+          )}
+          {transactionLabel && (
+            <span className="absolute left-2 top-14 inline-flex items-center rounded-full bg-zinc-900/85 px-2 py-0.5 text-[11px] font-semibold text-white">
+              {transactionLabel}
             </span>
           )}
         </div>
@@ -256,6 +267,11 @@ export default function ListingCard({
           {typeLabel && (
             <span className="inline-flex items-center rounded-full bg-primarycolor/90 px-2.5 py-0.5 text-[11px] font-semibold text-white shadow-sm">
               {typeLabel}
+            </span>
+          )}
+          {transactionLabel && (
+            <span className="inline-flex items-center rounded-full bg-zinc-900/85 px-2.5 py-0.5 text-[11px] font-semibold text-white shadow-sm">
+              {transactionLabel}
             </span>
           )}
         </div>
