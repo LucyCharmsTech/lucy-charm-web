@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import ListingCard from '@/components/ListingCard';
+import IdxFeedHealth from '@/components/admin/IdxFeedHealth';
 import { apiListingToItem } from '@/lib/listingAdapter';
 import { fetchAllListingsAdmin } from '@/services/portalService';
 import type { ApiListing, ApiPaginated } from '@/types/api';
@@ -46,6 +47,10 @@ export default function AdminListingsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Whether the feed is actually moving — graded by the API, unrendered
+          until now. */}
+      <IdxFeedHealth />
+
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">

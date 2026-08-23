@@ -72,6 +72,23 @@ export async function fetchListingById(id: string): Promise<ApiListing> {
   return res.data;
 }
 
+/**
+ * Resolves many listings in one request.
+ *
+ * Saved homes used to issue one GET per row — twenty saves meant twenty-one
+ * round trips, and any single failure cost that listing its card. Ids the
+ * viewer may not see come back absent rather than as an error, which is how the
+ * caller tells a removed listing from a failed request.
+ */
+export async function fetchListingsByIds(ids: string[]): Promise<ApiListing[]> {
+  if (ids.length === 0) return [];
+  const res = await api.get<ApiListing[]>('/listings/batch', {
+    params: { ids },
+    paramsSerializer: { indexes: null },
+  });
+  return res.data;
+}
+
 /** Fetches ordered media for a listing, used as an image fallback. */
 export async function fetchListingMedia(id: string): Promise<ApiListingMedia[]> {
   const res = await api.get<ApiListingMedia[]>(`/listings/${id}/media`);

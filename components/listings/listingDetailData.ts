@@ -45,6 +45,8 @@ export type ListingDetail = ListingItem & {
   taxYear: string | null;
   kitchens: string | null;
   approximateAge: string | null;
+  /** When the listing information itself last changed, ISO-8601. */
+  updatedAt?: string | null;
 };
 
 const DEFAULT_DETAIL_FIELDS: Omit<ListingDetail, keyof ListingItem> = {

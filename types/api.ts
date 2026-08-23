@@ -71,6 +71,7 @@ export type ApiListing = {
   id: string; // UUID
   source_system: string;
   source_id: string | null;
+  mls_number: string | null;
   status: string;
   market: string;
   currency: string;
@@ -155,6 +156,21 @@ export type ListingSearchParams = {
   baths_min?: number;
   sqft_min?: number;
   sqft_max?: number;
+  /**
+   * Map viewport bounds. Sent only from map view; listings whose coordinates
+   * are withheld (address suppressed by the board) can never match these, which
+   * is why the map reports how many results it cannot place.
+   */
+  lat_min?: number;
+  lat_max?: number;
+  lng_min?: number;
+  lng_max?: number;
+  /**
+   * `false` asks for the listings a map can never place — the board suppressed
+   * the address, so there are no coordinates. The map view counts them so they
+   * are reported rather than silently missing from the result total.
+   */
+  has_coordinates?: boolean;
   sort_by?: string;
   sort_order?: string;
   page?: number;

@@ -51,15 +51,6 @@ function formatArea(listing: ApiListing): string {
   return formatLotSize(listing) ?? '—';
 }
 
-/**
- * Returns a deterministic placeholder image for listings that have no
- * primary_image_url — uses the UUID as a stable seed so the same listing
- * always shows the same picsum image.
- */
-function placeholderImage(id: string): string {
-  // Use first 8 chars of UUID as seed (stable, short)
-  return `https://picsum.photos/seed/${id.slice(0, 8)}/900/700`;
-}
 
 // ---------------------------------------------------------------------------
 // Public adapters
@@ -98,7 +89,8 @@ export function apiListingToItem(listing: ApiListing): ListingItem {
     statusLabel:
       listing.status.charAt(0).toUpperCase() + listing.status.slice(1),
     typeLabel: humaniseType(listing.property_type),
-    imageSrc: listing.primary_image_url || placeholderImage(listing.id),
+    // Empty rather than a stand-in: the card renders a panel that says so.
+    imageSrc: listing.primary_image_url || '',
     imageAlt: listing.title,
     priceText: formatPrice(listing.price),
     title: listing.title,
@@ -168,5 +160,8 @@ export function apiListingToDetail(listing: ApiListing): ListingDetail {
     taxYear: listing.tax_year ? String(listing.tax_year) : null,
     kitchens: listing.kitchens != null ? String(listing.kitchens) : null,
     approximateAge: listing.approximate_age ?? null,
+    // When the listing data itself last changed. Falls back to the feed's own
+    // modification stamp for rows written before last_updated_at was populated.
+    updatedAt: listing.last_updated_at ?? listing.source_modified_at ?? null,
   };
 }

@@ -11,6 +11,7 @@ import { verifyAccountRecovery, verifyMagicLink } from '@/services/authService';
 import { fetchCurrentUser } from '@/services/userService';
 import { useAuthStore } from '@/stores/authStore';
 import { userMeToAuthUser } from '@/types/api';
+import { completeSignIn } from '@/lib/completeSignIn';
 import { getPostLoginPath } from '@/lib/postLoginRedirect';
 
 export function MagicLinkCallback() {
@@ -47,6 +48,7 @@ export function MagicLinkCallback() {
         if (isRecovery) {
           setRecoveryComplete(true);
         } else {
+          await completeSignIn();
           router.replace(getPostLoginPath(me.role, redirectParam, me.onboarding_completed));
         }
       })

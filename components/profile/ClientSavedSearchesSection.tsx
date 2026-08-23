@@ -13,6 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { fetchListingFacetOptions } from '@/services/listingsService';
+import { DEFAULT_FILTERS, paramsFromFilters } from '@/lib/listingFilters';
 
 function toTitleCase(value: string): string {
   return value
@@ -23,13 +24,23 @@ function toTitleCase(value: string): string {
     .join(' ');
 }
 
+/**
+ * Build the link a saved search opens.
+ *
+ * Goes through the shared filter serialiser rather than hand-writing keys. The
+ * hand-written version emitted `propertyType`, `price_min` and `price_max` into
+ * a URL the listings page only read `country` and `city` from, so opening
+ * "Downtown condos under 800k" quietly returned every listing in that city at
+ * any price.
+ */
 function buildQuery(city: string, type: string, minPrice: string, maxPrice: string): string {
-  const params = new URLSearchParams();
-  if (city.trim()) params.set('city', city.trim());
-  if (type.trim()) params.set('propertyType', type.trim().toLowerCase());
-  if (minPrice.trim()) params.set('price_min', minPrice.trim());
-  if (maxPrice.trim()) params.set('price_max', maxPrice.trim());
-  return params.toString();
+  return paramsFromFilters({
+    ...DEFAULT_FILTERS,
+    city: city.trim(),
+    propertyTypes: type.trim() ? [type.trim().toLowerCase()] : [],
+    priceMin: minPrice.trim(),
+    priceMax: maxPrice.trim(),
+  }).toString();
 }
 
 export default function ClientSavedSearchesSection() {

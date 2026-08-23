@@ -13,31 +13,65 @@ type FetchOptions = RequestInit & {
 };
 
 /**
- * Fetches `path` from the backend API and returns the parsed JSON body, or
- * `null` when the request fails (network error, non-2xx status).  Never
- * throws — callers should handle the null case gracefully.
+ * The outcome of a server-side fetch.
+ *
+ * `not_found` and `error` are kept apart deliberately. Collapsing both to null
+ * meant the detail page called `notFound()` for a perfectly live listing
+ * whenever the API was restarting — telling the visitor, and any crawler
+ * reading the 404, that a real property had been removed. "We could not reach
+ * the server" and "this does not exist" are different sentences and the page
+ * has to be able to say the right one.
+ */
+export type FetchResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; kind: 'not_found' | 'error' };
+
+/**
+ * Fetches `path` from the backend API. Never throws — the result says what
+ * happened, and callers decide what each outcome means for their page.
+ */
+export async function serverFetchResult<T>(
+  path: string,
+  { revalidate = 60, ...init }: FetchOptions = {},
+): Promise<FetchResult<T>> {
+  const url = `${API_BASE}${path}`;
+  let res: Response;
+
+  try {
+    res = await fetch(url, { next: { revalidate }, ...init });
+  } catch (err) {
+    console.warn('[serverFetch] network error:', err);
+    return { ok: false, kind: 'error' };
+  }
+
+  if (res.status === 404 || res.status === 410) {
+    return { ok: false, kind: 'not_found' };
+  }
+  if (!res.ok) {
+    console.warn(`[serverFetch] ${res.status} ${res.statusText} — ${url}`);
+    return { ok: false, kind: 'error' };
+  }
+
+  try {
+    return { ok: true, data: (await res.json()) as T };
+  } catch (err) {
+    // A 200 whose body will not parse is a broken server, not a missing row.
+    console.warn('[serverFetch] unparseable body:', err);
+    return { ok: false, kind: 'error' };
+  }
+}
+
+/**
+ * `serverFetchResult` for callers that genuinely cannot act on the difference —
+ * a marketing strip that renders nothing either way. Do not reach for this on a
+ * page whose whole content is the fetched resource.
  */
 export async function serverFetch<T>(
   path: string,
-  { revalidate = 60, ...init }: FetchOptions = {},
+  options: FetchOptions = {},
 ): Promise<T | null> {
-  try {
-    const url = `${API_BASE}${path}`;
-    const res = await fetch(url, {
-      next: { revalidate },
-      ...init,
-    });
-
-    if (!res.ok) {
-      console.warn(`[serverFetch] ${res.status} ${res.statusText} — ${url}`);
-      return null;
-    }
-
-    return (await res.json()) as T;
-  } catch (err) {
-    console.warn('[serverFetch] network error:', err);
-    return null;
-  }
+  const result = await serverFetchResult<T>(path, options);
+  return result.ok ? result.data : null;
 }
 
 /** Builds a URL-encoded query string from a plain object (omits null/undefined). */

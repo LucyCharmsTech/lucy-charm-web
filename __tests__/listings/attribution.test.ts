@@ -119,3 +119,26 @@ describe('detail facts', () => {
     ).toBe('6-15');
   });
 });
+
+describe('missing photographs', () => {
+  it('reports no photo rather than inventing one', () => {
+    // This used to return a real photo of an unrelated property from a stock
+    // service, which reads as a picture of the home beside a genuine address.
+    expect(apiListingToItem(listing({ primary_image_url: null })).imageSrc).toBe('');
+  });
+
+  it('still uses the listing photo when there is one', () => {
+    expect(
+      apiListingToItem(listing({ primary_image_url: 'https://trreb-image.ampre.ca/x.jpg' }))
+        .imageSrc,
+    ).toBe('https://trreb-image.ampre.ca/x.jpg');
+  });
+
+  it('never points a listing at a stock photo host', () => {
+    const item = apiListingToItem(listing({ primary_image_url: null }));
+    const detail = apiListingToDetail(listing({ primary_image_url: null }));
+
+    expect(item.imageSrc).not.toContain('picsum');
+    expect(detail.imageSrc).not.toContain('picsum');
+  });
+});
