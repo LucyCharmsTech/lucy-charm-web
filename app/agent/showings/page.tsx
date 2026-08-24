@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import ShowingDocumentsDialog from '@/components/documents/ShowingDocumentsDialog';
 import ShowingRescheduleDialog from '@/components/agent/ShowingRescheduleDialog';
+import ClientFlaggedQuestionsDialog from '@/components/showings/ClientFlaggedQuestionsDialog';
 import { useLiveShowingRequests } from '@/lib/useLiveShowingRequests';
 import { showingAnchorId, useShowingDeepLink } from '@/lib/useShowingDeepLink';
 import { fetchMyAgentProfile } from '@/services/portalService';
@@ -60,6 +61,7 @@ function AgentShowingsPageContent() {
   const [rescheduleRequest, setRescheduleRequest] = useState<ShowingRequest | null>(null);
   const [rescheduleValue, setRescheduleValue] = useState('');
   const [reviewRequest, setReviewRequest] = useState<ShowingRequest | null>(null);
+  const [flaggedRequest, setFlaggedRequest] = useState<ShowingRequest | null>(null);
   const highlightedShowingId = useShowingDeepLink(!loading);
 
   const load = useCallback(async () => {
@@ -166,6 +168,7 @@ function AgentShowingsPageContent() {
             onChangeStatus={changeStatus}
             onReschedule={openReschedule}
             onReviewDocuments={setReviewRequest}
+            onViewFlagged={setFlaggedRequest}
             agentId={agent?.id}
             highlightId={highlightedShowingId}
           />
@@ -183,6 +186,7 @@ function AgentShowingsPageContent() {
             onChangeStatus={changeStatus}
             onReschedule={openReschedule}
             onReviewDocuments={setReviewRequest}
+            onViewFlagged={setFlaggedRequest}
             agentId={agent?.id}
             highlightId={highlightedShowingId}
           />
@@ -202,6 +206,12 @@ function AgentShowingsPageContent() {
         onClose={() => setReviewRequest(null)}
         onChanged={() => void load()}
       />
+      <ClientFlaggedQuestionsDialog
+        open={Boolean(flaggedRequest)}
+        buyerName={flaggedRequest ? `${flaggedRequest.first_name} ${flaggedRequest.last_name}` : ''}
+        questions={flaggedRequest?.checkup_questions ?? []}
+        onClose={() => setFlaggedRequest(null)}
+      />
     </div>
   );
 }
@@ -212,6 +222,7 @@ function ShowingTable({
   onChangeStatus,
   onReschedule,
   onReviewDocuments,
+  onViewFlagged,
   highlightId,
 }: {
   rows: ShowingRequest[];
@@ -219,6 +230,7 @@ function ShowingTable({
   onChangeStatus: (id: string, status: ShowingRequestStatus) => void;
   onReschedule: (request: ShowingRequest) => void;
   onReviewDocuments: (request: ShowingRequest) => void;
+  onViewFlagged: (request: ShowingRequest) => void;
   agentId?: string;
   /** Row a notification deep link points at, tinted so it is findable in a long queue. */
   highlightId?: string | null;
@@ -359,6 +371,15 @@ function ShowingTable({
                   <p className="mt-1.5 max-w-[200px] truncate text-xs text-zinc-500 dark:text-zinc-400" title={r.message}>
                     &ldquo;{r.message}&rdquo;
                   </p>
+                )}
+                {r.checkup_questions.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onViewFlagged(r)}
+                    className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-amber-600 hover:underline dark:text-amber-400"
+                  >
+                    Client flagged {r.checkup_questions.length === 1 ? 'this' : `${r.checkup_questions.length} things`}
+                  </button>
                 )}
               </td>
             </tr>

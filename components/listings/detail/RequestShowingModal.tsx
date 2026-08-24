@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { CalendarIcon, XIcon } from 'lucide-react';
+import { CalendarIcon, CircleCheckIcon, XIcon } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +12,11 @@ import RequestShowingIdUploadStep from '@/components/listings/detail/RequestShow
 import { useListingChatSession } from '@/components/listings/detail/ListingChatSessionContext';
 import { track } from '@/lib/analytics';
 import { submitShowingRequest } from '@/services/showingService';
-import type { ShowingRequest, ShowingType } from '@/types/api';
+import {
+  deletePropertyCheckupQuestion,
+  fetchShowingQuestions,
+} from '@/services/propertyCheckupService';
+import type { PropertyCheckupQuestion, ShowingRequest, ShowingType } from '@/types/api';
 
 type Props = {
   open: boolean;
@@ -37,7 +41,17 @@ const DURATIONS = [
 
 export default function RequestShowingModal({ open, listingId, listingTitle, onClose }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const { user } = useAuthStore(useShallow((s) => ({ user: s.user })));
+  const { user, accessToken } = useAuthStore(
+    useShallow((s) => ({ user: s.user, accessToken: s.accessToken })),
+  );
+
+  // Property Checkup items the buyer already flagged for this listing via
+  // "Add to showing questions" (see PropertyCheckupPanel). Shown here so the
+  // buyer knows what is about to be sent, with a chance to remove any before
+  // submitting — the attach itself happens server-side once the request is
+  // created (ShowingRequestsService.create), not from this list directly.
+  const [checkupQuestions, setCheckupQuestions] = useState<PropertyCheckupQuestion[]>([]);
+  const [removingQuestionId, setRemovingQuestionId] = useState<string | null>(null);
   const { aiSessionId } = useListingChatSession();
 
   // Pre-fill from auth store when signed in
@@ -86,6 +100,40 @@ export default function RequestShowingModal({ open, listingId, listingTitle, onC
       setEmail((v) => v || (user.email ?? ''));
     }
   }, [user]);
+
+  // Load the buyer's pending "showing questions" for this listing each time
+  // the modal opens, so the list here always reflects what would actually
+  // be attached right now — including anything removed via the panel since
+  // the modal was last open.
+  useEffect(() => {
+    if (!open || !accessToken) {
+      setCheckupQuestions([]);
+      return;
+    }
+    let cancelled = false;
+    fetchShowingQuestions(listingId)
+      .then((items) => {
+        if (!cancelled) setCheckupQuestions(items);
+      })
+      .catch(() => {
+        // Non-fatal — the list is a preview, not a requirement to book.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, accessToken, listingId]);
+
+  async function handleRemoveCheckupQuestion(questionId: string) {
+    setRemovingQuestionId(questionId);
+    try {
+      await deletePropertyCheckupQuestion(questionId);
+      setCheckupQuestions((items) => items.filter((q) => q.id !== questionId));
+    } catch {
+      // Leave it in the list on failure — the buyer can try again.
+    } finally {
+      setRemovingQuestionId(null);
+    }
+  }
 
   function toIso(date: string, time: string): string | undefined {
     if (!date || !time) return undefined;
@@ -391,6 +439,43 @@ export default function RequestShowingModal({ open, listingId, listingTitle, onC
                   className="resize-none"
                 />
               </div>
+
+              {checkupQuestions.length > 0 && (
+                <div className="space-y-2 rounded-xl border border-zinc-200/80 bg-zinc-50 p-4 dark:border-zinc-800/80 dark:bg-zinc-900/40">
+                  <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">
+                    Sending these questions to the agent with your request
+                  </p>
+                  <ul className="space-y-1.5">
+                    {checkupQuestions.map((q) => (
+                      <li
+                        key={q.id}
+                        className="flex items-start justify-between gap-2 text-xs text-zinc-600 dark:text-zinc-300"
+                      >
+                        <span className="flex items-start gap-1.5">
+                          <CircleCheckIcon
+                            className="mt-0.5 size-3.5 shrink-0 text-primarycolor"
+                            aria-hidden="true"
+                          />
+                          {q.question_text}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveCheckupQuestion(q.id)}
+                          disabled={removingQuestionId === q.id}
+                          aria-label={`Remove "${q.question_text}" from this request`}
+                          className="shrink-0 text-[11px] font-semibold text-zinc-400 hover:text-red-600 disabled:opacity-50 dark:hover:text-red-400"
+                        >
+                          {removingQuestionId === q.id ? 'Removing…' : 'Remove'}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-[11px] text-zinc-400">
+                    From Property Checkup — you can add more from the listing
+                    page, or remove any of these before sending.
+                  </p>
+                </div>
+              )}
 
               {error && (
                 <div

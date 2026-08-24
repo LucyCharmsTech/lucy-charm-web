@@ -11,6 +11,7 @@ const NAV_LINKS = [
   { href: '/admin/chat-logs', label: 'Chat logs' },
   { href: '/admin/listings', label: 'All listings' },
   { href: '/admin/showings', label: 'Showings' },
+  { href: '/admin/property-reviews', label: 'Property reviews' },
   { href: '/admin/sellers', label: 'Seller pipeline' },
 ];
 
