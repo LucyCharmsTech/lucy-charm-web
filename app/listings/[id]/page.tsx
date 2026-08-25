@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 
 import ListingDetailLocationSection from '@/components/listings/detail/ListingDetailLocationSection';
+import PropertyCheckupCard from '@/components/listings/detail/PropertyCheckupCard';
 import ListingDetailInteractiveShell from '@/components/listings/detail/ListingDetailInteractiveShell';
 import ListingDetailLiveUpdates from '@/components/listings/detail/ListingDetailLiveUpdates';
 import ListingDetailSidebar from '@/components/listings/detail/ListingDetailSidebar';
@@ -334,6 +335,11 @@ export default async function ListingDetailPage({ params }: PageProps) {
                 </p>
               ) : null}
             </section>
+
+            {/* Property Checkup — quiet, always-available buyer intelligence
+                card. Real (UUID) listings only; mock listings have no backing
+                DB row for the rules engine to read. */}
+            {isUuid(id) && <PropertyCheckupCard listingId={id} />}
 
             {/* Location — embedded map + coordinates + external maps link. */}
             <ListingDetailLocationSection

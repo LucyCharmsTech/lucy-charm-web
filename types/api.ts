@@ -662,6 +662,10 @@ export type ShowingRequest = {
   feedback_comment: string | null;
   feedback_would_offer: boolean | null;
   feedback_ai_profile_consent: boolean;
+  /** Property Checkup items the buyer picked "Add to showing questions" on,
+   * attached when this showing request was submitted. Approved rule copy
+   * only — see PropertyCheckupItem. */
+  checkup_questions: string[];
   created_at: string;
   updated_at: string;
 };
@@ -870,12 +874,18 @@ export type NotificationEventType =
   | 'showing.requested'
   | 'showing.confirmed'
   | 'showing.rescheduled'
+  | 'showing.cancelled'
+  | 'showing.completed'
+  | 'showing.withdrawn'
   | 'report.status_updated'
   | 'document.requested'
   | 'document.reminder'
   | 'document.uploaded'
   | 'document.reviewed'
-  | 'document.expired';
+  | 'document.expired'
+  | 'property_review.requested'
+  | 'property_review.assigned'
+  | 'property_review.response_ready';
 
 /**
  * Mirrors NotificationRead from the API.
@@ -1227,4 +1237,86 @@ export type SellerTransaction = {
   closed_at: string | null;
   created_at: string;
   updated_at: string;
+};
+
+// ---------------------------------------------------------------------------
+// Property Checkup
+// ---------------------------------------------------------------------------
+
+/** Mirrors PropertyCheckupItemRead in lucy-charm-api */
+export type PropertyCheckupItem = {
+  rule_id: string;
+  listing_states: string;
+  worth_verifying: string;
+  why_it_matters: string;
+  /** Internal ranking only (1/2/3). Never render as a severity/defect score. */
+  priority: number;
+};
+
+/** Mirrors PropertyCheckupRead. GET /property_checkup/listing/{listing_id} — public, no auth. */
+export type PropertyCheckup = {
+  listing_id: string;
+  items: PropertyCheckupItem[];
+  first_view_limit: number;
+  zero_match: boolean;
+  generated_at: string;
+  rules_version: string;
+};
+
+export type PropertyCheckupQuestionKind = 'saved' | 'showing_question';
+export type PropertyCheckupQuestionStatus = 'open' | 'answered';
+
+/** Mirrors PropertyCheckupQuestionCreate. POST /property_checkup/questions — signed-in only. */
+export type PropertyCheckupQuestionCreateRequest = {
+  listing_id: string;
+  source_rule_id: string;
+  kind: PropertyCheckupQuestionKind;
+};
+
+/** Mirrors PropertyCheckupQuestionRead */
+export type PropertyCheckupQuestion = {
+  id: string;
+  listing_id: string;
+  source_rule_id: string;
+  question_text: string;
+  kind: string;
+  showing_request_id: string | null;
+  status: PropertyCheckupQuestionStatus | null;
+  created_at: string;
+};
+
+export type PropertyReviewRequestStatus = 'requested' | 'under_review' | 'response_ready';
+
+/** Mirrors PropertyReviewRequestCreate. POST /property_checkup/review_requests — signed-in only. */
+export type PropertyReviewRequestCreateRequest = {
+  listing_id: string;
+  questions?: string;
+};
+
+/** Mirrors PropertyReviewRequestRead — the buyer's own view. */
+export type PropertyReviewRequest = {
+  id: string;
+  listing_id: string;
+  status: PropertyReviewRequestStatus;
+  response_summary: string | null;
+  assigned_agent_id: string | null;
+  created_at: string;
+  responded_at: string | null;
+};
+
+/** Mirrors PropertyReviewRequestStaffRead — adds fields a client must never see. */
+export type PropertyReviewRequestStaff = PropertyReviewRequest & {
+  user_id: string;
+  questions: string | null;
+  internal_notes: string | null;
+  compliance_cleared_at: string | null;
+  compliance_cleared_by_user_id: string | null;
+};
+
+export type PropertyReviewRequestAssignRequest = {
+  assigned_agent_id: string;
+};
+
+export type PropertyReviewRequestRespondRequest = {
+  response_summary: string;
 };

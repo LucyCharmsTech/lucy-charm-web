@@ -9,6 +9,7 @@ import {
   RefreshCcwIcon,
 } from 'lucide-react';
 import ShowingDocumentsDialog from '@/components/documents/ShowingDocumentsDialog';
+import ClientFlaggedQuestionsDialog from '@/components/showings/ClientFlaggedQuestionsDialog';
 import { fetchAllShowingRequestsAdmin, updateShowingRequest } from '@/services/showingService';
 import { fetchAllAgents } from '@/services/portalService';
 import type { AgentProfile, ApiPaginated, ShowingRequest, ShowingRequestStatus } from '@/types/api';
@@ -47,6 +48,7 @@ export default function AdminShowingsPage() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
   const [reviewRequest, setReviewRequest] = useState<ShowingRequest | null>(null);
+  const [flaggedRequest, setFlaggedRequest] = useState<ShowingRequest | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -259,6 +261,15 @@ export default function AdminShowingsPage() {
                           &ldquo;{r.message}&rdquo;
                         </p>
                       )}
+                      {r.checkup_questions.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setFlaggedRequest(r)}
+                          className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-amber-600 hover:underline dark:text-amber-400"
+                        >
+                          Client flagged {r.checkup_questions.length === 1 ? 'this' : `${r.checkup_questions.length} things`}
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -272,6 +283,12 @@ export default function AdminShowingsPage() {
         request={reviewRequest}
         onClose={() => setReviewRequest(null)}
         onChanged={() => void load()}
+      />
+      <ClientFlaggedQuestionsDialog
+        open={Boolean(flaggedRequest)}
+        buyerName={flaggedRequest ? `${flaggedRequest.first_name} ${flaggedRequest.last_name}` : ''}
+        questions={flaggedRequest?.checkup_questions ?? []}
+        onClose={() => setFlaggedRequest(null)}
       />
     </div>
   );

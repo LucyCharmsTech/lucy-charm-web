@@ -9,6 +9,7 @@ import PrivacyPreferencesSection from '@/components/profile/PrivacyPreferencesSe
 import ClientChatHistorySection from '@/components/profile/ClientChatHistorySection';
 import ClientDocumentsSection from '@/components/profile/ClientDocumentsSection';
 import ClientNextStepsChecklistSection from '@/components/profile/ClientNextStepsChecklistSection';
+import ClientPropertyReviewsSection from '@/components/profile/ClientPropertyReviewsSection';
 import ClientSavedSearchesSection from '@/components/profile/ClientSavedSearchesSection';
 import ClientShowingScheduleSection from '@/components/profile/ClientShowingScheduleSection';
 import SavedListingsSection from '@/components/saved/SavedListingsSection';
@@ -169,6 +170,12 @@ export default function ProfilePageView() {
             <Suspense fallback={<ShowingScheduleFallback />}>
               <ClientShowingScheduleSection />
             </Suspense>
+          </div>
+        )}
+
+        {accessToken && (
+          <div className="mb-10">
+            <ClientPropertyReviewsSection />
           </div>
         )}
 
