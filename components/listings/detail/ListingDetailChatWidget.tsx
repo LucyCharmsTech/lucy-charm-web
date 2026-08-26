@@ -40,7 +40,11 @@ export default function ListingDetailChatWidget({
   );
   const isAuthenticated = Boolean(accessToken);
 
-  const { setAiSessionId } = useListingChatSession();
+  const {
+    setAiSessionId,
+    pendingRepresentativeMessage,
+    clearPendingRepresentativeMessage,
+  } = useListingChatSession();
   const { openModal: openShowingModal } = useShowingRequestModal();
   const [open, setOpen] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -177,22 +181,43 @@ export default function ListingDetailChatWidget({
     [email, inputValue, sessionId, sending, listingId, openShowingModal],
   );
 
+  const sendHumanRequest = useCallback(
+    async (message?: string) => {
+      if (!sessionId || humanRequestPending || humanRequested) return;
+      setHumanRequestPending(true);
+      try {
+        await requestHumanAgent({
+          sessionId,
+          listingId: listingId,
+          email: email ?? undefined,
+          message,
+        });
+        setHumanRequested(true);
+      } catch {
+        // best-effort — silently ignore; user can retry
+      } finally {
+        setHumanRequestPending(false);
+      }
+    },
+    [email, sessionId, listingId, humanRequestPending, humanRequested],
+  );
+
   const handleRequestHuman = useCallback(async () => {
-    if (!sessionId || humanRequestPending || humanRequested) return;
-    setHumanRequestPending(true);
-    try {
-      await requestHumanAgent({
-        sessionId,
-        listingId: listingId,
-        email: email ?? undefined,
-      });
-      setHumanRequested(true);
-    } catch {
-      // best-effort — silently ignore; user can retry
-    } finally {
-      setHumanRequestPending(false);
-    }
-  }, [email, sessionId, listingId, humanRequestPending, humanRequested]);
+    await sendHumanRequest();
+  }, [sendHumanRequest]);
+
+  // "Ask a Lucy representative" on a Checkup item — open the panel and, once
+  // a session exists, escalate straight to a human with that item's text.
+  useEffect(() => {
+    if (pendingRepresentativeMessage) setOpen(true);
+  }, [pendingRepresentativeMessage]);
+
+  useEffect(() => {
+    if (!pendingRepresentativeMessage || !sessionId) return;
+    const message = pendingRepresentativeMessage;
+    clearPendingRepresentativeMessage();
+    void sendHumanRequest(message);
+  }, [pendingRepresentativeMessage, sessionId, clearPendingRepresentativeMessage, sendHumanRequest]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
