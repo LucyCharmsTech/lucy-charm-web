@@ -1320,3 +1320,165 @@ export type PropertyReviewRequestAssignRequest = {
 export type PropertyReviewRequestRespondRequest = {
   response_summary: string;
 };
+
+// ---------------------------------------------------------------------------
+// Smart Living Benefits
+// ---------------------------------------------------------------------------
+//
+// Note the one-character gap that will trip you up: the API prefix is
+// snake_case (`/smart_living/plans`) because every router in the backend is,
+// while the Next.js pages are kebab (`/smart-living/plan`) because every route
+// here is. Both are deliberate; neither is a typo.
+
+/** Mirrors PlanStatus in the API's constants.py. */
+export type SmartLivingPlanStatus =
+  | 'estimated'
+  | 'under_review'
+  | 'confirmed'
+  | 'ready_for_fulfilment'
+  | 'completed';
+
+/** Mirrors PurchaseBasisSource. `accepted_purchase_price` is set only by a
+ *  staff workflow — no buyer route can produce it, and the client never sends
+ *  this field at all. */
+export type PurchaseBasisSource =
+  | 'exact_amount'
+  | 'range_midpoint'
+  | 'accepted_purchase_price'
+  | 'none';
+
+export type SmartLivingHomeType = 'house' | 'condo' | 'townhouse' | 'not_sure';
+
+/**
+ * How a band behaves when tapped. The picker branches on this and nothing else:
+ *
+ *   closed      a bounded band; the server takes its midpoint
+ *   exact       "Enter my own amount" — show the amount field
+ *   branch      not an answer; open the follow-up list named by `branch`
+ *   open_ended  unbounded on one side; invite an amount rather than guess one
+ *   no_basis    "Not sure" — accept it and show the non-dollar preview
+ *
+ * `under_300k` and `3m_plus` are `open_ended`, not `closed`, because a midpoint
+ * needs two finite edges. The client must never synthesise one.
+ */
+export type PurchaseBandKind =
+  | 'closed'
+  | 'exact'
+  | 'branch'
+  | 'open_ended'
+  | 'no_basis';
+
+/** Mirrors PurchaseRangeBandRead. Carries edges but never a midpoint — the
+ *  server decides what figure a band implies, so there is only ever one copy
+ *  of that arithmetic. */
+export type PurchaseRangeBand = {
+  key: string;
+  kind: PurchaseBandKind;
+  min_cents: number | null;
+  max_cents: number | null;
+  branch: string | null;
+};
+
+/** Mirrors SmartLivingPublicConfigRead — GET /smart_living/public-config.
+ *  Contains no rates, shares or internal fields, by construction on the server. */
+export type SmartLivingPublicConfig = {
+  range_config_version: string;
+  bands: PurchaseRangeBand[];
+  branches: Record<string, PurchaseRangeBand[]>;
+  service_area_key: string | null;
+  categories: unknown[];
+  catalogue_available: boolean;
+};
+
+/** Mirrors SmartLivingPlanRead.
+ *
+ *  `estimated_benefit_cents === null` is a real, common state — "Not sure", or
+ *  an open-ended band with nothing typed. It is not zero, and rendering it as
+ *  $0 would tell a buyer their benefit is nothing when the truth is that we do
+ *  not know yet. */
+export type SmartLivingPlan = {
+  id: string;
+  status: SmartLivingPlanStatus;
+
+  location_query: string | null;
+  location_city: string | null;
+  location_region: string | null;
+  service_area_key: string | null;
+
+  purchase_range_key: string | null;
+  purchase_basis_cents: number | null;
+  purchase_basis_source: PurchaseBasisSource;
+
+  buying_timeline: string | null;
+  home_type: SmartLivingHomeType | null;
+
+  estimated_benefit_cents: number | null;
+  cash_benefit_cents: number | null;
+  confirmed_benefit_cents: number | null;
+
+  benefit_choice: 'smart_living' | 'cash' | null;
+  benefit_choice_locked_at: string | null;
+
+  high_value_review_required: boolean;
+  terms_version_accepted: string | null;
+  terms_accepted_at: string | null;
+
+  last_calculated_at: string | null;
+  created_at: string;
+  updated_at: string | null;
+};
+
+/**
+ * The §7.1 allow-list, and the whole of it.
+ *
+ * The API rejects any field outside this shape with a 422 (`extra="forbid"`),
+ * so adding a property here without adding it there is a runtime failure, not
+ * a silently ignored field. Notably absent and unreachable: any accepted price,
+ * `purchase_basis_source`, any benefit amount, and `status`.
+ *
+ * `purchase_amount` is the raw string the buyer typed — "$750,000", "750k".
+ * Do not parse it client-side. `money.py` on the server is the only parser,
+ * and a second one here would eventually disagree with it about a rounding
+ * edge, in a way nobody would notice until a figure was wrong.
+ */
+export type SmartLivingPlanWriteRequest = {
+  location_query?: string | null;
+  location_city?: string | null;
+  location_region?: string | null;
+  purchase_range_key?: string | null;
+  purchase_amount?: string | null;
+  buying_timeline?: string | null;
+  home_type?: SmartLivingHomeType | null;
+};
+
+/**
+ * Mirrors SmartLivingIntakeCandidateRead — POST /smart_living/intake/parse.
+ *
+ * What Lucy heard in one sentence, **not** what the plan says. Nothing is
+ * saved by the parse call; the buyer's answers only exist once the client
+ * writes them to a plan.
+ *
+ * The split between `prefill` and the amount fields is the whole contract, and
+ * it is not stylistic. `prefill` holds answers that land in visible, editable
+ * form fields — a misheard city is obvious and a buyer fixes it in a second.
+ * The amount is held out separately because a misheard one is *invisible*: it
+ * flows through three rate steps into a figure the buyer then plans against.
+ * So it arrives as text to confirm, never as a value to apply.
+ */
+export type SmartLivingIntakeCandidate = {
+  /** Keys are a subset of SmartLivingPlanWriteRequest's: `location_city`,
+   *  `location_region`, `buying_timeline`, `home_type`. Never an amount. */
+  prefill: Partial<Record<string, string>>;
+
+  /** The buyer's own words — "$750K" — so a confirmation control echoes what
+   *  they typed rather than a normalised rendering they never wrote. */
+  purchase_amount_text: string | null;
+  purchase_amount_cents: number | null;
+  /** "under $500K" is a ceiling they named, not a price they intend to pay.
+   *  Reported so we can ask; never proposed as the amount. */
+  amount_is_upper_bound: boolean;
+  requires_amount_confirmation: boolean;
+  /** Nothing usable was heard — ask the four questions normally rather than
+   *  presenting an empty confirmation. */
+  is_empty: boolean;
+};

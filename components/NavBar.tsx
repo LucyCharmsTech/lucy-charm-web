@@ -31,6 +31,9 @@ const NAV_LINKS = [
   { label: 'Home', href: '/' },
   { label: 'Buy', href: '/listings' },
   { label: 'Sell', href: '/sell' },
+  // Kebab in the browser, snake_case on the API (`/smart_living/plans`). Both
+  // match their own namespace's convention; the gap is deliberate.
+  { label: 'Smart Living', href: '/smart-living' },
 ];
 
 export default function NavBar() {
