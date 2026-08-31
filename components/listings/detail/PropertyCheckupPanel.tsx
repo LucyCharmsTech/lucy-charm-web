@@ -254,17 +254,28 @@ function CheckupItemRow({
     () => existing?.showingId ?? null,
   );
   const [busy, setBusy] = useState<'save' | 'unsave' | 'showing' | 'unshowing' | null>(null);
-  const [askedRep, setAskedRep] = useState(false);
-  const { requestRepresentative } = useListingChatSession();
+  const {
+    requestRepresentative,
+    pendingRepresentativeRequest,
+    representativeRequestStatus,
+    askedRepresentativeRuleIds,
+  } = useListingChatSession();
+
+  // Never optimistic — reflects what the shared chat widget actually
+  // reports back, not just that a click happened.
+  const askedRep = askedRepresentativeRuleIds.has(item.rule_id);
+  const isThisItemPending =
+    pendingRepresentativeRequest?.ruleId === item.rule_id && representativeRequestStatus === 'pending';
+  const isThisItemErrored =
+    pendingRepresentativeRequest?.ruleId === item.rule_id && representativeRequestStatus === 'error';
 
   function handleAskRepresentative() {
-    if (askedRep) return;
-    setAskedRep(true);
+    if (askedRep || isThisItemPending) return;
     // Reuses the same approved-copy composition as "Add to showing
     // questions" — never invented wording (Clarifications Part 2 §8's
     // principle applies here too), just attached automatically instead of
     // the buyer having to retype the property and the question.
-    requestRepresentative(`${item.listing_states}: ${item.worth_verifying}?`);
+    requestRepresentative(item.rule_id, `${item.listing_states}: ${item.worth_verifying}?`);
     track('property_checkup_ask_representative', {
       listing_id: listingId,
       rule_id: item.rule_id,
@@ -396,7 +407,7 @@ function CheckupItemRow({
         <button
           type="button"
           onClick={handleAskRepresentative}
-          disabled={askedRep}
+          disabled={askedRep || isThisItemPending}
           aria-pressed={askedRep}
           className={askedRep ? ACTION_PILL.done : ACTION_PILL.idle}
         >
@@ -405,6 +416,10 @@ function CheckupItemRow({
               <CheckCircle2Icon className="size-3.5" aria-hidden="true" />
               Asked a Lucy representative
             </>
+          ) : isThisItemPending ? (
+            'Asking…'
+          ) : isThisItemErrored ? (
+            'Could not reach a representative — Retry'
           ) : (
             'Ask a Lucy representative'
           )}

@@ -72,9 +72,11 @@ beforeEach(() => {
   mockUseListingChatSession.mockReturnValue({
     aiSessionId: null,
     setAiSessionId: jest.fn(),
-    pendingRepresentativeMessage: null,
+    pendingRepresentativeRequest: null,
+    representativeRequestStatus: 'idle',
+    askedRepresentativeRuleIds: new Set(),
     requestRepresentative: mockRequestRepresentative,
-    clearPendingRepresentativeMessage: jest.fn(),
+    resolveRepresentativeRequest: jest.fn(),
   });
 });
 
@@ -235,7 +237,7 @@ describe('"Ask a Lucy representative"', () => {
     screen.getByRole('button', { name: /^ask a lucy representative$/i });
   });
 
-  it('escalates with the property and the exact checkup question attached, no retyping', async () => {
+  it('queues the request with the rule id and the property + question attached, no retyping', async () => {
     mockFetch.mockResolvedValue(checkupWithItems());
     render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
     await screen.findByText(/Listing states: Private septic system/);
@@ -243,21 +245,70 @@ describe('"Ask a Lucy representative"', () => {
     fireEvent.click(screen.getByRole('button', { name: /^ask a lucy representative$/i }));
 
     expect(mockRequestRepresentative).toHaveBeenCalledWith(
+      'septic_system',
       'Private septic system: System age, service and inspection history?',
     );
-    await screen.findByRole('button', { name: /asked a lucy representative/i });
   });
 
-  it('cannot be clicked twice for the same item', async () => {
+  it('shows "Asking…" and is disabled while this item\'s request is pending, not marked done optimistically', async () => {
     mockFetch.mockResolvedValue(checkupWithItems());
+    mockUseListingChatSession.mockReturnValue({
+      aiSessionId: null,
+      setAiSessionId: jest.fn(),
+      pendingRepresentativeRequest: { ruleId: 'septic_system', message: 'anything' },
+      representativeRequestStatus: 'pending',
+      askedRepresentativeRuleIds: new Set(),
+      requestRepresentative: mockRequestRepresentative,
+      resolveRepresentativeRequest: jest.fn(),
+    });
     render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
     await screen.findByText(/Listing states: Private septic system/);
 
-    const button = screen.getByRole('button', { name: /^ask a lucy representative$/i });
-    fireEvent.click(button);
-    fireEvent.click(await screen.findByRole('button', { name: /asked a lucy representative/i }));
+    const button = screen.getByRole('button', { name: /asking…/i });
+    expect(button.hasAttribute('disabled')).toBe(true);
+    expect(screen.queryByText(/^asked a lucy representative$/i)).toBeNull();
+  });
 
-    expect(mockRequestRepresentative).toHaveBeenCalledTimes(1);
+  it('only shows "Asked" once the widget actually reports success for this item\'s rule', async () => {
+    mockFetch.mockResolvedValue(checkupWithItems());
+    mockUseListingChatSession.mockReturnValue({
+      aiSessionId: null,
+      setAiSessionId: jest.fn(),
+      pendingRepresentativeRequest: null,
+      representativeRequestStatus: 'idle',
+      askedRepresentativeRuleIds: new Set(['septic_system']),
+      requestRepresentative: mockRequestRepresentative,
+      resolveRepresentativeRequest: jest.fn(),
+    });
+    render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
+    await screen.findByText(/Listing states: Private septic system/);
+
+    const button = screen.getByRole('button', { name: /asked a lucy representative/i });
+    expect(button.hasAttribute('disabled')).toBe(true);
+  });
+
+  it('offers a retry, not a dead end, when the escalation fails', async () => {
+    mockFetch.mockResolvedValue(checkupWithItems());
+    mockUseListingChatSession.mockReturnValue({
+      aiSessionId: null,
+      setAiSessionId: jest.fn(),
+      pendingRepresentativeRequest: { ruleId: 'septic_system', message: 'Private septic system: System age, service and inspection history?' },
+      representativeRequestStatus: 'error',
+      askedRepresentativeRuleIds: new Set(),
+      requestRepresentative: mockRequestRepresentative,
+      resolveRepresentativeRequest: jest.fn(),
+    });
+    render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
+    await screen.findByText(/Listing states: Private septic system/);
+
+    const button = screen.getByRole('button', { name: /could not reach a representative.*retry/i });
+    expect(button.hasAttribute('disabled')).toBe(false);
+
+    fireEvent.click(button);
+    expect(mockRequestRepresentative).toHaveBeenCalledWith(
+      'septic_system',
+      'Private septic system: System age, service and inspection history?',
+    );
   });
 });
 

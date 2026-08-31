@@ -308,8 +308,9 @@ function RequestRow({
           />
           {!item.compliance_cleared_at && (
             <p className="text-[11px] text-amber-600 dark:text-amber-400">
-              Compliance must be cleared before this can be published — you can still save it as a
-              draft.
+              {item.status === 'response_ready'
+                ? 'Compliance must be cleared before an update can be published.'
+                : 'Compliance must be cleared before this can be published — you can still save it as a draft.'}
             </p>
           )}
           <div className="flex justify-end gap-2">
@@ -320,14 +321,16 @@ function RequestRow({
             >
               Cancel
             </button>
-            <button
-              type="button"
-              onClick={handleSaveDraft}
-              disabled={busy || !responseText.trim()}
-              className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-            >
-              {busy ? 'Saving…' : 'Save draft'}
-            </button>
+            {item.status !== 'response_ready' && (
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                disabled={busy || !responseText.trim()}
+                className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                {busy ? 'Saving…' : 'Save draft'}
+              </button>
+            )}
             <button
               type="button"
               onClick={handlePublish}
