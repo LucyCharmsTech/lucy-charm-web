@@ -14,19 +14,6 @@ import {
 import { fetchMyAgentProfile } from '@/services/portalService';
 import type { LeadRead, LeadTagRead } from '@/types/api';
 
-const TEMPERATURE_STYLES: Record<string, string> = {
-  hot: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-  warm: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-  cold: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-};
-
-function temperatureTone(temperature: string): string {
-  return (
-    TEMPERATURE_STYLES[temperature] ??
-    'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
-  );
-}
-
 /** Tag chips with inline add/remove. Tags are universal (admin sees the same). */
 function LeadTagsCell({ leadId, onError }: { leadId: string; onError: (m: string) => void }) {
   const [tags, setTags] = useState<LeadTagRead[]>([]);
@@ -88,7 +75,7 @@ function LeadTagsCell({ leadId, onError }: { leadId: string; onError: (m: string
             onClick={() => void handleRemove(tag.id)}
             disabled={busy}
             aria-label={`Remove tag ${tag.tag_label}`}
-            className="rounded-full text-zinc-400 transition hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:hover:text-red-400"
+            className="rounded-full text-zinc-500 dark:text-zinc-400 transition hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:hover:text-red-400"
           >
             <XIcon className="size-3" aria-hidden="true" />
           </button>
@@ -113,7 +100,7 @@ function LeadTagsCell({ leadId, onError }: { leadId: string; onError: (m: string
           onClick={() => void handleAdd()}
           disabled={busy || !draft.trim()}
           aria-label="Add tag"
-          className="rounded-full border border-zinc-200 p-0.5 text-zinc-500 transition hover:border-primarycolor/40 hover:text-primarycolor disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:border-zinc-700 dark:text-zinc-400"
+          className="rounded-full border border-zinc-200 p-0.5 text-zinc-500 transition hover:border-primarycolor/40 hover:text-primarycolor-text disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:border-zinc-700 dark:text-zinc-400"
         >
           <PlusIcon className="size-3.5" aria-hidden="true" />
         </button>
@@ -197,12 +184,6 @@ export default function AgentLeadsView() {
                   Stage
                 </th>
                 <th scope="col" className="px-4 py-3">
-                  Temperature
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  Score
-                </th>
-                <th scope="col" className="px-4 py-3">
                   Source
                 </th>
                 <th scope="col" className="px-4 py-3">
@@ -236,16 +217,6 @@ export default function AgentLeadsView() {
                   <td className="px-4 py-3">
                     <LeadStageSelect lead={lead} onError={setActionError} />
                   </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${temperatureTone(lead.lead_temperature)}`}
-                    >
-                      {lead.lead_temperature}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 tabular-nums text-zinc-700 dark:text-zinc-300">
-                    {lead.lead_score}
-                  </td>
                   <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
                     {lead.source ?? '—'}
                   </td>
@@ -253,7 +224,7 @@ export default function AgentLeadsView() {
                     {lead.listing_id ? (
                       <Link
                         href={`/listings/${lead.listing_id}`}
-                        className="text-primarycolor hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                        className="text-primarycolor-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
                       >
                         {lead.listing_id.slice(0, 8)}…
                       </Link>

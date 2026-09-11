@@ -96,7 +96,7 @@ export default function PropertyCheckupCard({ listingId }: Props) {
           }
         >
           <SearchCheckIcon
-            className="size-5 shrink-0 text-primarycolor"
+            className="size-5 shrink-0 text-primarycolor-text"
             aria-hidden="true"
           />
           <span>

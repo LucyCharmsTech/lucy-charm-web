@@ -117,12 +117,16 @@ export default function PropertyCheckupPanel({ listingId, onClose }: Props) {
           <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
             What stands out, and what may be worth verifying.
           </p>
+          <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+            A Checkup is not an inspection, a legal conclusion or a safety
+            guarantee.
+          </p>
         </div>
         <button
           type="button"
           onClick={onClose}
           aria-label="Close Property Checkup"
-          className="rounded-full p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+          className="rounded-full p-1.5 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
         >
           <XIcon className="size-4" aria-hidden="true" />
         </button>
@@ -132,7 +136,7 @@ export default function PropertyCheckupPanel({ listingId, onClose }: Props) {
         {state === 'loading' && <CheckupLoading />}
         {state === 'unavailable' && <CheckupUnavailable />}
         {state === 'ready' && updatedSinceLastVisit && (
-          <p className="mb-3 rounded-lg bg-primarycolor/10 px-3 py-2 text-xs font-semibold text-primarycolor">
+          <p className="mb-3 rounded-lg bg-primarycolor/10 px-3 py-2 text-xs font-semibold text-primarycolor-text">
             Property Checkup updated since your last visit
           </p>
         )}
@@ -185,10 +189,16 @@ function CheckupResult({
 
   if (checkup.zero_match) {
     return (
-      <p className="rounded-xl bg-zinc-50 p-4 text-sm text-zinc-600 dark:bg-zinc-800/40 dark:text-zinc-300">
-        Nothing additional stands out from the listing information available
-        right now.
-      </p>
+      <div className="rounded-xl bg-zinc-50 p-4 dark:bg-zinc-800/40">
+        <p className="text-sm text-zinc-600 dark:text-zinc-300">
+          Nothing additional stands out from the listing information available
+          right now.
+        </p>
+        <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+          This does not mean the property passed — only that the listing
+          information we can check did not raise anything.
+        </p>
+      </div>
     );
   }
 
@@ -217,7 +227,7 @@ function CheckupResult({
             setShowAll(true);
             track('property_checkup_view_full', { listing_id: listingId });
           }}
-          className="text-xs font-semibold text-primarycolor hover:underline"
+          className="text-xs font-semibold text-primarycolor-text hover:underline"
         >
           View full checkup
         </button>
@@ -426,7 +436,7 @@ function CheckupItemRow({
         </button>
       </div>
       {!authed && savedId && (
-        <p className="mt-2 text-[11px] text-zinc-400">
+        <p className="mt-2 text-[11px] text-zinc-500 dark:text-zinc-400">
           Sign in to keep it across devices.
         </p>
       )}
@@ -463,7 +473,7 @@ function DeeperReviewCta({ listingId, authed }: { listingId: string; authed: boo
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="w-full rounded-xl border border-primarycolor/30 bg-primarycolor/5 px-4 py-3 text-left text-sm font-semibold text-primarycolor hover:bg-primarycolor/10"
+        className="w-full rounded-xl border border-primarycolor/30 bg-primarycolor/5 px-4 py-3 text-left text-sm font-semibold text-primarycolor-text hover:bg-primarycolor/10"
       >
         Interested in this property? Want us to look deeper? Request a Deeper
         Property Review.
@@ -513,7 +523,7 @@ function DeeperReviewCta({ listingId, authed }: { listingId: string; authed: boo
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-lg bg-primarycolor px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+          className="rounded-lg bg-primarycolor px-3 py-1.5 text-xs font-semibold text-primarycolor-foreground disabled:opacity-60"
         >
           {submitting ? 'Sending…' : 'Send request'}
         </button>

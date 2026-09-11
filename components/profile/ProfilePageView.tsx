@@ -8,7 +8,9 @@ import ProfileAccountForm from '@/components/profile/ProfileAccountForm';
 import PrivacyPreferencesSection from '@/components/profile/PrivacyPreferencesSection';
 import ClientChatHistorySection from '@/components/profile/ClientChatHistorySection';
 import ClientDocumentsSection from '@/components/profile/ClientDocumentsSection';
-import ClientNextStepsChecklistSection from '@/components/profile/ClientNextStepsChecklistSection';
+import { JourneyNextActionCard } from '@/components/journey/JourneyNextActionCard';
+import { PreferencePromptCard } from '@/components/journey/PreferencePromptCard';
+import ClientHomeValueSection from '@/components/profile/ClientHomeValueSection';
 import ClientPropertyReviewsSection from '@/components/profile/ClientPropertyReviewsSection';
 import ClientSavedSearchesSection from '@/components/profile/ClientSavedSearchesSection';
 import ClientShowingScheduleSection from '@/components/profile/ClientShowingScheduleSection';
@@ -18,6 +20,7 @@ import { fetchCurrentUser } from '@/services/userService';
 import { useAuthStore } from '@/stores/authStore';
 import type { UserMe } from '@/types/api';
 import { userMeToAuthUser } from '@/types/api';
+import { useVisibleModules } from '@/lib/useVisibleModules';
 
 function ShowingScheduleFallback() {
   return (
@@ -29,6 +32,8 @@ function ShowingScheduleFallback() {
 }
 
 export default function ProfilePageView() {
+  const { isVisible } = useVisibleModules('buyer');
+
   const accessToken = useAuthStore((s) => s.accessToken);
   const updateUser = useAuthStore((s) => s.updateUser);
   const [me, setMe] = useState<UserMe | null>(null);
@@ -80,7 +85,7 @@ export default function ProfilePageView() {
         <div className="mb-8">
           <Link
             href="/listings"
-            className="text-sm font-semibold text-primarycolor hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+            className="text-sm font-semibold text-primarycolor-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
           >
             ← Back to listings
           </Link>
@@ -96,7 +101,7 @@ export default function ProfilePageView() {
           <div className="mb-8 overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-sm ring-1 ring-zinc-900/5 dark:border-zinc-800/80 dark:bg-zinc-900/60 dark:ring-white/10">
             <div className="border-b border-zinc-100 bg-linear-to-r from-primarycolor/8 via-[#fef6f9]/60 to-transparent px-5 py-4 dark:border-zinc-800 dark:from-primarycolor/15 dark:via-zinc-900/80 dark:to-transparent">
               <div className="flex items-start gap-3">
-                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-primarycolor/10 text-base font-extrabold text-primarycolor">
+                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-primarycolor/10 text-base font-extrabold text-primarycolor-text">
                   L
                 </span>
                 <div>
@@ -113,7 +118,7 @@ export default function ProfilePageView() {
               <Button
                 asChild
                 size="sm"
-                className="rounded-xl bg-primarycolor font-semibold text-white hover:bg-primarycolor/90 focus-visible:ring-primarycolor"
+                className="rounded-xl bg-primarycolor font-semibold text-primarycolor-foreground hover:bg-primarycolor/90 focus-visible:ring-primarycolor"
               >
                 <Link href="/login?redirect=%2Fprofile">Sign in</Link>
               </Button>
@@ -162,20 +167,34 @@ export default function ProfilePageView() {
         )}
 
         {accessToken && (
-          <div className="mb-10 grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <ClientSavedSearchesSection />
-            <ClientNextStepsChecklistSection />
-            <ClientDocumentsSection />
-            {/* Reads `?showing=` from a notification deep link, so it needs a boundary. */}
-            <Suspense fallback={<ShowingScheduleFallback />}>
-              <ClientShowingScheduleSection />
-            </Suspense>
+          <div className="mb-6 space-y-4">
+            <JourneyNextActionCard />
+            <PreferencePromptCard />
           </div>
         )}
 
         {accessToken && (
+          <div className="mb-10 grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {isVisible('saved_searches') && <ClientSavedSearchesSection />}
+            {isVisible('documents') && <ClientDocumentsSection />}
+            {/* Reads `?showing=` from a notification deep link, so it needs a boundary. */}
+            {isVisible('showings') && (
+              <Suspense fallback={<ShowingScheduleFallback />}>
+                <ClientShowingScheduleSection />
+              </Suspense>
+            )}
+          </div>
+        )}
+
+        {accessToken && isVisible('property_checkup') && (
           <div className="mb-10">
             <ClientPropertyReviewsSection />
+          </div>
+        )}
+
+        {accessToken && isVisible('home_value') && (
+          <div className="mb-10">
+            <ClientHomeValueSection />
           </div>
         )}
 
@@ -185,6 +204,7 @@ export default function ProfilePageView() {
           </div>
         )}
 
+        {isVisible('saved_homes') && (
         <section
           id="saved-homes"
           className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/40"
@@ -195,6 +215,7 @@ export default function ProfilePageView() {
           </span>
           <SavedListingsSection />
         </section>
+        )}
       </div>
     </div>
   );

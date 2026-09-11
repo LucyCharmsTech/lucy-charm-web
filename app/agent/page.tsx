@@ -63,7 +63,7 @@ export default function AgentDashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
           <div className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-primarycolor/10 text-primarycolor">
+            <span className="flex size-10 items-center justify-center rounded-xl bg-primarycolor/10 text-primarycolor-text">
               <LayoutGridIcon className="size-5" aria-hidden="true" />
             </span>
             <div>
@@ -75,7 +75,7 @@ export default function AgentDashboardPage() {
           </div>
           <Link
             href="/agent/listings"
-            className="mt-4 inline-flex text-sm font-semibold text-primarycolor hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+            className="mt-4 inline-flex text-sm font-semibold text-primarycolor-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
           >
             View all →
           </Link>
@@ -83,7 +83,7 @@ export default function AgentDashboardPage() {
 
         <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
           <div className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-primarycolor/10 text-primarycolor">
+            <span className="flex size-10 items-center justify-center rounded-xl bg-primarycolor/10 text-primarycolor-text">
               <UsersIcon className="size-5" aria-hidden="true" />
             </span>
             <div>

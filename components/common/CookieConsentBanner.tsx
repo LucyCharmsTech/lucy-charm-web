@@ -7,6 +7,7 @@ import {
   setAnalyticsConsent,
   subscribeToConsent,
 } from '@/lib/analytics';
+import { PrivacyLink } from '@/components/common/PrivacyLink';
 
 /**
  * Cookie consent for visitor analytics (Task 17). Gates PostHog ONLY —
@@ -38,7 +39,8 @@ export default function CookieConsentBanner() {
         <p className="text-sm text-zinc-700 dark:text-zinc-300">
           We use cookies to understand how visitors use the site — pages viewed and features used.
           No personal details are collected. You can decline and everything still works.
-        </p>
+                <PrivacyLink />
+      </p>
         <div className="flex shrink-0 gap-2">
           <button
             type="button"
@@ -50,7 +52,7 @@ export default function CookieConsentBanner() {
           <button
             type="button"
             onClick={() => choose('accepted')}
-            className="rounded-xl bg-primarycolor px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2"
+            className="rounded-xl bg-primarycolor px-4 py-2 text-sm font-semibold text-primarycolor-foreground shadow-sm transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2"
           >
             Accept
           </button>

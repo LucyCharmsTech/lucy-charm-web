@@ -27,10 +27,16 @@ import { useNotificationStore } from '@/stores/notificationStore';
 import { logout } from '@/services/authService';
 import { fetchMySellerPortals, type SellerPortalAccess } from '@/services/sellerService';
 
-const NAV_LINKS = [
+// Rendered by both the desktop nav and the mobile menu, so a page added here
+// becomes reachable on every viewport at once. About and Contact are in this
+// list rather than the footer alone because the About page carries the RECO
+// registration details — a disclosure nothing links to is not published.
+export const NAV_LINKS = [
   { label: 'Home', href: '/' },
   { label: 'Buy', href: '/listings' },
   { label: 'Sell', href: '/sell' },
+  { label: 'About', href: '/about' },
+  { label: 'Contact', href: '/contact' },
 ];
 
 export default function NavBar() {
@@ -101,10 +107,10 @@ export default function NavBar() {
 
         {/* ── Logo ── */}
         <Link href="/" className="flex flex-col items-center leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor">
-          <span className="text-xl font-extrabold tracking-tight text-primarycolor">
+          <span className="text-xl font-extrabold tracking-tight text-primarycolor-text">
             Lucycharms
           </span>
-          <span className="text-[10px] font-medium uppercase tracking-widest text-zinc-400">
+          <span className="text-[10px] font-medium uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
             Realty. Brokerage
           </span>
         </Link>
@@ -115,9 +121,9 @@ export default function NavBar() {
             <Link
               key={link.href}
               href={link.href}
-              className={`text-sm font-medium transition hover:text-primarycolor focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor ${
+              className={`text-sm font-medium transition hover:text-primarycolor-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor ${
                 pathname === link.href
-                  ? 'text-primarycolor'
+                  ? 'text-primarycolor-text'
                   : 'text-zinc-600 dark:text-zinc-300'
               }`}
             >
@@ -127,7 +133,7 @@ export default function NavBar() {
           {isAuthenticated && user?.role === 'agent' && (
             <Link
               href="/agent"
-              className="text-sm font-medium text-zinc-600 transition hover:text-primarycolor focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:text-zinc-300"
+              className="text-sm font-medium text-zinc-600 transition hover:text-primarycolor-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:text-zinc-300"
             >
               Agent workspace
             </Link>
@@ -135,7 +141,7 @@ export default function NavBar() {
           {sellerPortals.length === 1 && (
             <Link
               href={`/seller-portal/${sellerPortals[0].transaction_id}`}
-              className="text-sm font-medium text-zinc-600 transition hover:text-primarycolor focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:text-zinc-300"
+              className="text-sm font-medium text-zinc-600 transition hover:text-primarycolor-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:text-zinc-300"
             >
               Seller portal
             </Link>
@@ -143,7 +149,7 @@ export default function NavBar() {
           {isAuthenticated && user?.role === 'superadmin' && (
             <Link
               href="/admin"
-              className="text-sm font-medium text-zinc-600 transition hover:text-primarycolor focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:text-zinc-300"
+              className="text-sm font-medium text-zinc-600 transition hover:text-primarycolor-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:text-zinc-300"
             >
               Admin console
             </Link>
@@ -166,14 +172,14 @@ export default function NavBar() {
                 className="flex items-center gap-2 rounded-full border border-zinc-200/80 bg-white py-1.5 pl-1.5 pr-3 text-sm font-medium text-zinc-700 shadow-sm transition hover:border-primarycolor/40 hover:bg-primarycolor/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
               >
                 {/* Avatar circle */}
-                <span className="inline-flex size-7 items-center justify-center rounded-full bg-primarycolor text-xs font-bold text-white">
+                <span className="inline-flex size-7 items-center justify-center rounded-full bg-primarycolor text-xs font-bold text-primarycolor-foreground">
                   {initials}
                 </span>
                 <span className="hidden max-w-[120px] truncate sm:block">
                   {shortLabel}
                 </span>
                 <ChevronDownIcon
-                  className={`size-3.5 text-zinc-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`}
+                  className={`size-3.5 text-zinc-500 dark:text-zinc-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`}
                   aria-hidden="true"
                 />
               </button>
@@ -200,7 +206,7 @@ export default function NavBar() {
                     className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-zinc-700 transition hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
                     onClick={() => setDropdownOpen(false)}
                   >
-                    <UserIcon className="size-4 text-zinc-400" aria-hidden="true" />
+                    <UserIcon className="size-4 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
                     My profile
                   </Link>
                   {sellerPortals.length > 0 && (
@@ -210,7 +216,7 @@ export default function NavBar() {
                       className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-zinc-700 transition hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
                       onClick={() => setDropdownOpen(false)}
                     >
-                      <BriefcaseBusinessIcon className="size-4 text-primarycolor" aria-hidden="true" />
+                      <BriefcaseBusinessIcon className="size-4 text-primarycolor-text" aria-hidden="true" />
                       Seller portal
                     </Link>
                   )}
@@ -220,8 +226,25 @@ export default function NavBar() {
                     className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-zinc-700 transition hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
                     onClick={() => setDropdownOpen(false)}
                   >
-                    <HeartIcon className="size-4 text-primarycolor" aria-hidden="true" />
+                    <HeartIcon className="size-4 text-primarycolor-text" aria-hidden="true" />
                     Saved homes
+                  </Link>
+                  {/*
+                    `/security` was reachable only involuntarily: the axios
+                    interceptor redirects here when the API demands enrolment,
+                    but nothing let a person choose to come. That stranded two
+                    cases — a client turning two-step verification on (optional
+                    for them, and the code honours the opt-in), and anyone
+                    wanting to see or regenerate their recovery codes.
+                  */}
+                  <Link
+                    href="/security"
+                    role="menuitem"
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-zinc-700 transition hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
+                    onClick={() => setDropdownOpen(false)}
+                  >
+                    <ShieldIcon className="size-4 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
+                    Security
                   </Link>
 
                   {user?.role === 'agent' && (
@@ -262,20 +285,20 @@ export default function NavBar() {
             <div className="hidden md:flex items-center gap-2">
               <Link
                 href="/profile#saved-homes"
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:text-primarycolor focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:text-zinc-300"
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:text-primarycolor-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:text-zinc-300"
               >
-                <HeartIcon className="size-3.5 text-primarycolor" aria-hidden="true" />
+                <HeartIcon className="size-3.5 text-primarycolor-text" aria-hidden="true" />
                 Saved homes
               </Link>
               <Link
                 href="/login"
-                className="rounded-full px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:text-primarycolor focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:text-zinc-300"
+                className="rounded-full px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:text-primarycolor-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:text-zinc-300"
               >
                 Sign in
               </Link>
               <Link
                 href="/register"
-                className="rounded-full bg-primarycolor px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primarycolor/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                className="rounded-full bg-primarycolor px-4 py-2 text-sm font-semibold text-primarycolor-foreground shadow-sm transition hover:bg-primarycolor/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
               >
                 Get started
               </Link>
@@ -285,7 +308,7 @@ export default function NavBar() {
           {/* ── Mobile hamburger ── */}
           <button
             type="button"
-            className="rounded-md p-2 text-zinc-600 hover:text-primarycolor focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor md:hidden dark:text-zinc-300"
+            className="rounded-md p-2 text-zinc-600 hover:text-primarycolor-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor md:hidden dark:text-zinc-300"
             onClick={() => setMobileOpen((v) => !v)}
             aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={mobileOpen}
@@ -311,9 +334,9 @@ export default function NavBar() {
                 <Link
                   href={link.href}
                   onClick={() => setMobileOpen(false)}
-                  className={`block rounded-xl px-4 py-2.5 text-sm font-medium transition hover:bg-primarycolor/5 hover:text-primarycolor ${
+                  className={`block rounded-xl px-4 py-2.5 text-sm font-medium transition hover:bg-primarycolor/5 hover:text-primarycolor-text ${
                     pathname === link.href
-                      ? 'bg-primarycolor/5 text-primarycolor'
+                      ? 'bg-primarycolor/5 text-primarycolor-text'
                       : 'text-zinc-700 dark:text-zinc-200'
                   }`}
                 >
@@ -326,9 +349,9 @@ export default function NavBar() {
                 <Link
                   href="/agent"
                   onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-primarycolor/5 hover:text-primarycolor dark:text-zinc-200"
+                  className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-primarycolor/5 hover:text-primarycolor-text dark:text-zinc-200"
                 >
-                  <LayoutGridIcon className="size-4 text-zinc-400" aria-hidden="true" />
+                  <LayoutGridIcon className="size-4 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
                   Agent workspace
                 </Link>
               </li>
@@ -338,9 +361,9 @@ export default function NavBar() {
                 <Link
                   href="/seller-portal"
                   onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-primarycolor/5 hover:text-primarycolor dark:text-zinc-200"
+                  className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-primarycolor/5 hover:text-primarycolor-text dark:text-zinc-200"
                 >
-                  <BriefcaseBusinessIcon className="size-4 text-primarycolor" aria-hidden="true" />
+                  <BriefcaseBusinessIcon className="size-4 text-primarycolor-text" aria-hidden="true" />
                   Seller portal
                 </Link>
               </li>
@@ -350,39 +373,30 @@ export default function NavBar() {
                 <Link
                   href="/admin"
                   onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-primarycolor/5 hover:text-primarycolor dark:text-zinc-200"
+                  className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-primarycolor/5 hover:text-primarycolor-text dark:text-zinc-200"
                 >
-                  <ShieldIcon className="size-4 text-zinc-400" aria-hidden="true" />
+                  <ShieldIcon className="size-4 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
                   Admin console
                 </Link>
                 {sellerPortals.length > 0 && (
                   <Link
                     href="/seller-portal"
                     onClick={() => setMobileOpen(false)}
-                    className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-primarycolor/5 hover:text-primarycolor dark:text-zinc-200"
+                    className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-primarycolor/5 hover:text-primarycolor-text dark:text-zinc-200"
                   >
-                    <BriefcaseBusinessIcon className="size-4 text-primarycolor" aria-hidden="true" />
+                    <BriefcaseBusinessIcon className="size-4 text-primarycolor-text" aria-hidden="true" />
                     Seller portal
                   </Link>
                 )}
               </li>
             )}
-            <li>
-              <Link
-                href="/contact"
-                onClick={() => setMobileOpen(false)}
-                className="block rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-primarycolor/5 hover:text-primarycolor dark:text-zinc-200"
-              >
-                Contact Us
-              </Link>
-            </li>
           </ul>
 
           <div className="mt-4 border-t border-zinc-100 pt-4 dark:border-zinc-800">
             {isAuthenticated ? (
               <div className="space-y-1">
                 <div className="flex items-center gap-3 rounded-xl px-4 py-2.5">
-                  <span className="inline-flex size-8 items-center justify-center rounded-full bg-primarycolor text-sm font-bold text-white">
+                  <span className="inline-flex size-8 items-center justify-center rounded-full bg-primarycolor text-sm font-bold text-primarycolor-foreground">
                     {initials}
                   </span>
                   <div className="min-w-0">
@@ -395,26 +409,34 @@ export default function NavBar() {
                 <Link
                   href="/profile"
                   onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-primarycolor/5 hover:text-primarycolor dark:text-zinc-200"
+                  className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-primarycolor/5 hover:text-primarycolor-text dark:text-zinc-200"
                 >
-                  <UserIcon className="size-4 text-zinc-400" aria-hidden="true" />
+                  <UserIcon className="size-4 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
                   My profile
                 </Link>
                 <Link
                   href="/profile#saved-homes"
                   onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-primarycolor/5 hover:text-primarycolor dark:text-zinc-200"
+                  className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-primarycolor/5 hover:text-primarycolor-text dark:text-zinc-200"
                 >
-                  <HeartIcon className="size-4 text-primarycolor" aria-hidden="true" />
+                  <HeartIcon className="size-4 text-primarycolor-text" aria-hidden="true" />
                   Saved homes
+                </Link>
+                <Link
+                  href="/security"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-primarycolor/5 hover:text-primarycolor-text dark:text-zinc-200"
+                >
+                  <ShieldIcon className="size-4 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
+                  Security
                 </Link>
                 {user?.role === 'agent' && (
                   <Link
                     href="/agent"
                     onClick={() => setMobileOpen(false)}
-                    className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-primarycolor/5 hover:text-primarycolor dark:text-zinc-200"
+                    className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-primarycolor/5 hover:text-primarycolor-text dark:text-zinc-200"
                   >
-                    <LayoutGridIcon className="size-4 text-zinc-400" aria-hidden="true" />
+                    <LayoutGridIcon className="size-4 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
                     Agent workspace
                   </Link>
                 )}
@@ -422,9 +444,9 @@ export default function NavBar() {
                   <Link
                     href="/admin"
                     onClick={() => setMobileOpen(false)}
-                    className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-primarycolor/5 hover:text-primarycolor dark:text-zinc-200"
+                    className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-primarycolor/5 hover:text-primarycolor-text dark:text-zinc-200"
                   >
-                    <ShieldIcon className="size-4 text-zinc-400" aria-hidden="true" />
+                    <ShieldIcon className="size-4 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
                     Admin console
                   </Link>
                 )}
@@ -442,7 +464,7 @@ export default function NavBar() {
                 <Link
                   href="/profile#saved-homes"
                   onClick={() => setMobileOpen(false)}
-                  className="flex items-center justify-center gap-2 rounded-xl border border-primarycolor/25 bg-primarycolor/6 px-4 py-2.5 text-center text-sm font-semibold text-primarycolor transition hover:bg-primarycolor/10 dark:border-primarycolor/30 dark:bg-primarycolor/10"
+                  className="flex items-center justify-center gap-2 rounded-xl border border-primarycolor/25 bg-primarycolor/6 px-4 py-2.5 text-center text-sm font-semibold text-primarycolor-text transition hover:bg-primarycolor/10 dark:border-primarycolor/30 dark:bg-primarycolor/10"
                 >
                   <HeartIcon className="size-4 shrink-0" aria-hidden="true" />
                   Saved homes
@@ -455,7 +477,7 @@ export default function NavBar() {
                 </Link>
                 <Link
                   href="/register"
-                  className="block rounded-xl bg-primarycolor px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-primarycolor/90"
+                  className="block rounded-xl bg-primarycolor px-4 py-2.5 text-center text-sm font-semibold text-primarycolor-foreground transition hover:bg-primarycolor/90"
                 >
                   Get started
                 </Link>

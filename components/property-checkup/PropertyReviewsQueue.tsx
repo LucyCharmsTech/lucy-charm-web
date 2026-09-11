@@ -268,7 +268,7 @@ function RequestRow({
             type="button"
             onClick={() => setResponding(true)}
             disabled={busy}
-            className="rounded-lg bg-primarycolor px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+            className="rounded-lg bg-primarycolor px-3 py-1.5 text-xs font-semibold text-primarycolor-foreground disabled:opacity-60"
           >
             {item.response_summary ? 'Edit response' : 'Write response'}
           </button>
@@ -285,7 +285,7 @@ function RequestRow({
             </p>
           ) : (
             <>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                 Draft — not visible to the buyer yet
               </p>
               <p className="mt-1 bg-zinc-50 rounded-lg p-2.5 text-zinc-700 dark:bg-zinc-800/40 dark:text-zinc-300">
@@ -340,7 +340,7 @@ function RequestRow({
                   ? undefined
                   : 'Clear compliance first — the backend refuses to publish without it'
               }
-              className="rounded-lg bg-primarycolor px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+              className="rounded-lg bg-primarycolor px-3 py-1.5 text-xs font-semibold text-primarycolor-foreground disabled:opacity-60"
             >
               {busy ? 'Publishing…' : 'Publish response'}
             </button>

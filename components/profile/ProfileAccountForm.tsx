@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { updateCurrentUser } from '@/services/userService';
 import type { UserMe } from '@/types/api';
+import { isRecoverable, serverMessage } from '@/lib/formStates';
 
 type ProfileAccountFormProps = {
   email: string;
@@ -40,8 +41,15 @@ export default function ProfileAccountForm({
       });
       onUpdated(me);
       setMessage('Profile updated.');
-    } catch {
-      setError('Could not save changes. Please try again.');
+    } catch (err: unknown) {
+      setError(
+        serverMessage(
+          err,
+          isRecoverable(err)
+            ? 'Could not save changes just now. Your details are still here — please try again.'
+            : 'Those changes could not be saved. Please check the fields and try again.',
+        ),
+      );
     } finally {
       setSaving(false);
     }

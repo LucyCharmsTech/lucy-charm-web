@@ -9,9 +9,14 @@ const NAV_LINKS = [
   { href: '/admin/insights', label: 'Insights' },
   { href: '/admin/inquiries', label: 'Inquiries' },
   { href: '/admin/chat-logs', label: 'Chat logs' },
+  { href: '/admin/escalations', label: 'AI escalations' },
+  { href: '/admin/failed-submissions', label: 'Failed submissions' },
+  { href: '/admin/feed', label: 'Property feed' },
   { href: '/admin/listings', label: 'All listings' },
   { href: '/admin/showings', label: 'Showings' },
   { href: '/admin/property-reviews', label: 'Property reviews' },
+  { href: '/admin/home-value', label: 'Home Value' },
+  { href: '/admin/staff', label: 'Staff' },
   { href: '/admin/sellers', label: 'Seller pipeline' },
 ];
 

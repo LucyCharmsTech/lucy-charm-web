@@ -57,7 +57,7 @@ export default function AgentListingDetailPage({ params }: Props) {
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300" role="alert">
           {error}
         </div>
-        <Link href="/agent/listings" className="text-sm font-semibold text-primarycolor hover:underline">
+        <Link href="/agent/listings" className="text-sm font-semibold text-primarycolor-text hover:underline">
           ← Back to my listings
         </Link>
       </div>
@@ -73,7 +73,7 @@ export default function AgentListingDetailPage({ params }: Props) {
 
   return (
     <div className="space-y-8">
-      <Link href="/agent/listings" className="text-sm font-semibold text-primarycolor hover:underline">
+      <Link href="/agent/listings" className="text-sm font-semibold text-primarycolor-text hover:underline">
         ← My listings
       </Link>
 
@@ -102,13 +102,13 @@ export default function AgentListingDetailPage({ params }: Props) {
               <MapPinIcon className="size-4 shrink-0" aria-hidden="true" />
               {addr}
             </p>
-            <p className="mt-2 text-xl font-bold text-primarycolor">
+            <p className="mt-2 text-xl font-bold text-primarycolor-text">
               ${listing.price.toLocaleString('en-CA')} {listing.currency}
             </p>
           </div>
           <Link
             href={`/listings/${listing.id}`}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-primarycolor hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-primarycolor-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
           >
             View public listing page
             <ExternalLinkIcon className="size-4" aria-hidden="true" />

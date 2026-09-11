@@ -9,6 +9,8 @@
   --font-heading: var(--font-sans);
   --font-sans: var(--font-sans);
   --color-primarycolor: var(--primarycolor);
+  --color-primarycolor-foreground: var(--primarycolor-foreground);
+  --color-primarycolor-text: var(--primarycolor-text);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -83,6 +85,8 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
   --primarycolor: #ff01c0;
+  --primarycolor-foreground: #0a0a0a;
+  --primarycolor-text: #d1019d;
 }
 
 .dark {
@@ -118,6 +122,8 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
   --primarycolor: #eb1da3;
+  --primarycolor-foreground: #0a0a0a;
+  --primarycolor-text: #ff01c0;
 }
 
 .listing-media-scrollbar {

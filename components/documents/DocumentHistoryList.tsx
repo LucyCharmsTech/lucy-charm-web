@@ -100,7 +100,7 @@ export default function DocumentHistoryList({
               <button
                 type="button"
                 onClick={() => void handleDownload(version.id)}
-                className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-primarycolor focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-primarycolor-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
               >
                 <DownloadIcon className="size-3" aria-hidden="true" />
                 Download

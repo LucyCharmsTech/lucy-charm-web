@@ -142,7 +142,7 @@ export default function SaveListingButton({
         variant="secondary"
         size="icon-sm"
         className={cn(
-          'rounded-full border border-zinc-200/90 bg-white/95 text-primarycolor shadow-sm backdrop-blur-sm hover:bg-white dark:border-zinc-600 dark:bg-zinc-900/90 dark:hover:bg-zinc-900',
+          'rounded-full border border-zinc-200/90 bg-white/95 text-primarycolor-text shadow-sm backdrop-blur-sm hover:bg-white dark:border-zinc-600 dark:bg-zinc-900/90 dark:hover:bg-zinc-900',
           className,
         )}
         onClick={toggle}
@@ -164,7 +164,7 @@ export default function SaveListingButton({
       variant="outline"
       size="sm"
       className={cn(
-        'border-primarycolor/30 text-primarycolor hover:bg-primarycolor/5',
+        'border-primarycolor/30 text-primarycolor-text hover:bg-primarycolor/5',
         className,
       )}
       onClick={toggle}

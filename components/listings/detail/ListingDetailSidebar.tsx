@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import RequestShowingModal from '@/components/listings/detail/RequestShowingModal';
 import ListingDetailAgentCard from '@/components/listings/detail/ListingDetailAgentCard';
 import SaveListingButton from '@/components/listings/SaveListingButton';
+import { PropertyReactionButtons } from '@/components/reactions/PropertyReactionButtons';
 import { isUuid } from '@/lib/serverFetch';
 import { useShowingRequestModal } from '@/components/listings/detail/ShowingRequestModalContext';
 
@@ -31,6 +32,13 @@ export default function ListingDetailSidebar({ listing }: ListingDetailSidebarPr
             </p>
             <div className="mt-3">
               <SaveListingButton listingId={listing.id} variant="inline" className="w-full" />
+            </div>
+
+            <div className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-700">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-800 dark:text-zinc-200">
+                How do you feel about it?
+              </p>
+              <PropertyReactionButtons listingId={listing.id} className="mt-3" />
             </div>
           </div>
         ) : null}
@@ -62,7 +70,7 @@ export default function ListingDetailSidebar({ listing }: ListingDetailSidebarPr
         <Button
           type="button"
           onClick={openModal}
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primarycolor text-sm font-semibold text-white shadow-md transition hover:bg-primarycolor/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primarycolor text-sm font-semibold text-primarycolor-foreground shadow-md transition hover:bg-primarycolor/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
         >
           <CalendarIcon className="size-4" aria-hidden="true" />
           Request a Showing

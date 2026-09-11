@@ -104,7 +104,7 @@ export default function SuperadminDashboardView({ data }: { data: SuperadminDash
               {pipeline.unassigned_leads > 0 ? (
                 <Link
                   href="/admin/inquiries"
-                  className="mt-2 inline-flex text-xs font-semibold text-primarycolor hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                  className="mt-2 inline-flex text-xs font-semibold text-primarycolor-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
                 >
                   Assign them →
                 </Link>
@@ -256,7 +256,7 @@ export default function SuperadminDashboardView({ data }: { data: SuperadminDash
                   >
                     <Link
                       href={`/admin/listings/${row.listing_id}`}
-                      className="truncate font-mono text-xs text-primarycolor hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                      className="truncate font-mono text-xs text-primarycolor-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
                     >
                       {row.listing_id}
                     </Link>

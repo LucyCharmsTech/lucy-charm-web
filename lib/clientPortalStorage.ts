@@ -15,6 +15,7 @@ export type ClientDocumentItem = {
   updated_at: string;
 };
 
+/** @deprecated Replaced by `components/journey/JourneyNextActionCard`. */
 export type NextStepItem = {
   id: string;
   label: string;

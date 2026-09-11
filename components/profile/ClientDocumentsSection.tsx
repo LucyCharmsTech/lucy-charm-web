@@ -72,7 +72,7 @@ export default function ClientDocumentsSection() {
       className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/40"
     >
       <div className="flex items-start gap-3">
-        <ShieldCheckIcon className="mt-0.5 size-5 text-primarycolor" aria-hidden="true" />
+        <ShieldCheckIcon className="mt-0.5 size-5 text-primarycolor-text" aria-hidden="true" />
         <div>
           <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
             Documents

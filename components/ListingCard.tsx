@@ -166,7 +166,7 @@ export default function ListingCard({
             {statusLabel}
           </span>
           {typeLabel && (
-            <span className="absolute left-2 top-8 inline-flex items-center rounded-full bg-primarycolor/90 px-2 py-0.5 text-[11px] font-semibold text-white">
+            <span className="absolute left-2 top-8 inline-flex items-center rounded-full bg-primarycolor/90 px-2 py-0.5 text-[11px] font-semibold text-primarycolor-foreground">
               {typeLabel}
             </span>
           )}
@@ -175,12 +175,12 @@ export default function ListingCard({
           <div>
             <div className="text-lg font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
               {priceText}{' '}
-              <span className="text-xs font-semibold text-zinc-400">
+              <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
                 {currency}
               </span>
             </div>
             {title && (
-              <div className="mt-0.5 text-sm font-semibold text-primarycolor line-clamp-1">
+              <div className="mt-0.5 text-sm font-semibold text-primarycolor-text line-clamp-1">
                 {title}
               </div>
             )}
@@ -223,7 +223,7 @@ export default function ListingCard({
           ) : null}
           <Link
             href={detailsHref}
-            className="inline-flex h-9 items-center justify-center rounded-full border border-primarycolor/35 bg-white px-4 text-xs font-semibold text-primarycolor transition hover:bg-primarycolor/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2 dark:bg-zinc-950/10"
+            className="inline-flex h-9 items-center justify-center rounded-full border border-primarycolor/35 bg-white px-4 text-xs font-semibold text-primarycolor-text transition hover:bg-primarycolor/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2 dark:bg-zinc-950/10"
           >
             View Details
           </Link>
@@ -254,7 +254,7 @@ export default function ListingCard({
             {statusLabel}
           </span>
           {typeLabel && (
-            <span className="inline-flex items-center rounded-full bg-primarycolor/90 px-2.5 py-0.5 text-[11px] font-semibold text-white shadow-sm">
+            <span className="inline-flex items-center rounded-full bg-primarycolor/90 px-2.5 py-0.5 text-[11px] font-semibold text-primarycolor-foreground shadow-sm">
               {typeLabel}
             </span>
           )}
@@ -264,12 +264,12 @@ export default function ListingCard({
       <div className="px-4 pb-4 pt-3">
         <div className="text-xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
           {priceText}{' '}
-          <span className="text-xs font-semibold text-zinc-400">
+          <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
             {currency}
           </span>
         </div>
         {title && (
-          <div className="mt-0.5 text-sm font-semibold text-primarycolor line-clamp-1">
+          <div className="mt-0.5 text-sm font-semibold text-primarycolor-text line-clamp-1">
             {title}
           </div>
         )}
@@ -291,7 +291,7 @@ export default function ListingCard({
           )}
         </div>
         {locationText && (
-          <div className="mt-1.5 flex items-center gap-1 text-xs text-zinc-400 dark:text-zinc-500">
+          <div className="mt-1.5 flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-500">
             <MapPinIcon className="size-3.5" aria-hidden="true" />
             {locationText}
           </div>
@@ -310,7 +310,7 @@ export default function ListingCard({
           ) : null}
           <Link
             href={detailsHref}
-            className="inline-flex h-9 w-full items-center justify-center rounded-full border border-primarycolor/35 bg-white px-4 text-sm font-semibold text-primarycolor transition hover:border-primarycolor/55 hover:bg-primarycolor/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2 dark:bg-zinc-950/10"
+            className="inline-flex h-9 w-full items-center justify-center rounded-full border border-primarycolor/35 bg-white px-4 text-sm font-semibold text-primarycolor-text transition hover:border-primarycolor/55 hover:bg-primarycolor/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2 dark:bg-zinc-950/10"
           >
             View Details
           </Link>

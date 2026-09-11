@@ -62,7 +62,7 @@ export default function AdminDashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
           <div className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-primarycolor/10 text-primarycolor">
+            <span className="flex size-10 items-center justify-center rounded-xl bg-primarycolor/10 text-primarycolor-text">
               <LayoutGridIcon className="size-5" aria-hidden="true" />
             </span>
             <div>
@@ -74,7 +74,7 @@ export default function AdminDashboardPage() {
           </div>
           <Link
             href="/admin/listings"
-            className="mt-4 inline-flex text-sm font-semibold text-primarycolor hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+            className="mt-4 inline-flex text-sm font-semibold text-primarycolor-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
           >
             View catalog →
           </Link>
@@ -82,7 +82,7 @@ export default function AdminDashboardPage() {
 
         <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
           <div className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-primarycolor/10 text-primarycolor">
+            <span className="flex size-10 items-center justify-center rounded-xl bg-primarycolor/10 text-primarycolor-text">
               <ShieldCheckIcon className="size-5" aria-hidden="true" />
             </span>
             <div>
@@ -104,7 +104,7 @@ export default function AdminDashboardPage() {
             <li>
               <Link
                 href="/admin/insights"
-                className="text-primarycolor hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                className="text-primarycolor-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
               >
                 Insights dashboard
               </Link>
@@ -112,7 +112,7 @@ export default function AdminDashboardPage() {
             <li>
               <Link
                 href="/admin/inquiries"
-                className="text-primarycolor hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                className="text-primarycolor-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
               >
                 All inquiries (leads)
               </Link>
@@ -120,7 +120,7 @@ export default function AdminDashboardPage() {
             <li>
               <Link
                 href="/admin/chat-logs"
-                className="text-primarycolor hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                className="text-primarycolor-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
               >
                 AI chat logs
               </Link>
@@ -128,7 +128,7 @@ export default function AdminDashboardPage() {
             <li>
               <Link
                 href="/admin/showings"
-                className="text-primarycolor hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                className="text-primarycolor-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
               >
                 Showings
               </Link>

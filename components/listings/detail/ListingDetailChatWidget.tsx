@@ -121,7 +121,8 @@ export default function ListingDetailChatWidget({
           email: email ?? undefined,
           listing_id: listingId,
           page_url: typeof window !== 'undefined' ? window.location.href : undefined,
-        });
+        },
+        userId ? null : getOrCreateAnonToken(listingId));
         if (response.escalation_flag) track('chat_escalated', { listing_id: listingId });
 
         const assistantMsg: ChatMessage = {
@@ -178,7 +179,7 @@ export default function ListingDetailChatWidget({
         setSending(false);
       }
     },
-    [email, inputValue, sessionId, sending, listingId, openShowingModal],
+    [email, inputValue, sessionId, sending, listingId, openShowingModal, userId],
   );
 
   // Returns whether the request actually succeeded — callers that need to
@@ -194,6 +195,7 @@ export default function ListingDetailChatWidget({
           listingId: listingId,
           email: email ?? undefined,
           message,
+          sessionToken: userId ? null : getOrCreateAnonToken(listingId),
         });
         setHumanRequested(true);
         return true;
@@ -203,7 +205,7 @@ export default function ListingDetailChatWidget({
         setHumanRequestPending(false);
       }
     },
-    [email, sessionId, listingId, humanRequestPending],
+    [email, sessionId, listingId, humanRequestPending, userId],
   );
 
   // The manual "Request human" button inside the chat panel keeps its own

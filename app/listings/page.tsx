@@ -318,7 +318,16 @@ function ListingsPageContent() {
   const hasResults = listings.length > 0;
 
   return (
-    <div className="flex flex-col md:flex-row gap-6 min-h-screen bg-background m-auto pmd:px-[100px]">
+    <div className="flex flex-col md:flex-row gap-6 min-h-screen bg-background m-auto md:px-[100px]">
+      {/*
+        The design has no visible page heading — the filter panel and the
+        results grid are the whole page. A document still needs one `h1`:
+        without it a screen-reader user lands on a page that never says what it
+        is, and the results list is the largest public page on the site. It
+        matches the route's own metadata title rather than inventing a second
+        name for the page.
+      */}
+      <h1 className="sr-only">Homes for sale</h1>
       <aside className="w-full md:w-72 shrink-0 border-zinc-200/80 bg-white dark:border-zinc-800/80 dark:bg-zinc-950/30 md:sticky md:top-6 self-start">
         <FilterPanel
           status={filters.status}
@@ -364,21 +373,21 @@ function ListingsPageContent() {
         />
 
         {!isProptxLive() && (
-          <p className="mb-4 rounded-xl border border-primarycolor/20 bg-primarycolor/10 px-4 py-2 text-xs text-primarycolor dark:border-primarycolor/30 dark:bg-primarycolor/15">
+          <p className="mb-4 rounded-xl border border-primarycolor/20 bg-primarycolor/10 px-4 py-2 text-xs text-primarycolor-text dark:border-primarycolor/30 dark:bg-primarycolor/15">
             PROPTX preview mode is enabled. Listing cards and matching currently use mock data.
           </p>
         )}
 
         {(activeCountryLabel || filters.city) && (
           <div className="mb-4 flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+            <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Location
             </span>
             {activeCountryLabel && (
               <button
                 type="button"
                 onClick={() => setFilters({ country: '' })}
-                className="inline-flex items-center rounded-full border border-primarycolor/30 bg-primarycolor/10 px-3 py-1 text-xs font-semibold text-primarycolor transition hover:bg-primarycolor/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                className="inline-flex items-center rounded-full border border-primarycolor/30 bg-primarycolor/10 px-3 py-1 text-xs font-semibold text-primarycolor-text transition hover:bg-primarycolor/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
               >
                 {activeCountryLabel} ×
               </button>
@@ -387,7 +396,7 @@ function ListingsPageContent() {
               <button
                 type="button"
                 onClick={() => setFilters({ city: '' })}
-                className="inline-flex items-center rounded-full border border-primarycolor/30 bg-primarycolor/10 px-3 py-1 text-xs font-semibold text-primarycolor transition hover:bg-primarycolor/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                className="inline-flex items-center rounded-full border border-primarycolor/30 bg-primarycolor/10 px-3 py-1 text-xs font-semibold text-primarycolor-text transition hover:bg-primarycolor/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
               >
                 {filters.city} ×
               </button>
@@ -442,7 +451,7 @@ function ListingsPageContent() {
                 published.{' '}
                 <button
                   type="button"
-                  className="font-semibold text-primarycolor underline"
+                  className="font-semibold text-primarycolor-text underline"
                   onClick={() => setFilters({ view: 'list' }, { keepPage: true })}
                 >
                   See them in the list

@@ -1,10 +1,17 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  description:
+    'Search homes across Ontario, ask Lucy a question, or speak to a Lucy Charms Realty representative.',
+  alternates: { canonical: '/' },
+};
+
 import BlimpIllustration from '@/components/BlimpIllustration';
 import AiPoweredSection from '@/components/AiPoweredSection';
 import CitySearchSection from '@/components/CitySearchSection';
 import FeaturedListingsSection, {
   type FeaturedListing,
 } from '@/components/FeaturedListingsSection';
-import Footer from '@/components/Footer';
 import Link from 'next/link';
 import { MOCK_LISTINGS } from '@/components/listings/data';
 import { apiListingToItem } from '@/lib/listingAdapter';
@@ -94,13 +101,13 @@ export default async function Home() {
             />
 
             <div className="relative mx-auto max-w-6xl px-6 sm:px-10 py-14 sm:py-20">
-              <div className="mb-4 rounded-xl border border-primarycolor/20 bg-primarycolor/10 px-4 py-2 text-xs text-primarycolor dark:border-primarycolor/30 dark:bg-primarycolor/15">
+              <div className="mb-4 rounded-xl border border-primarycolor/20 bg-primarycolor/10 px-4 py-2 text-xs text-primarycolor-text dark:border-primarycolor/30 dark:bg-primarycolor/15">
                 PROPTX preview mode is enabled. Homepage featured cards use mock data.
               </div>
               <div className="grid items-center gap-10 lg:grid-cols-2">
                 <div className="text-left">
                   <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
-                    Real estate <span className="text-primarycolor">without the</span>
+                    Real estate <span className="text-primarycolor-text">without the</span>
                     <br />
                     pressure.
                   </h1>
@@ -135,7 +142,6 @@ export default async function Home() {
           <AiPoweredSection />
         </main>
 
-        <Footer />
       </div>
     );
   }
@@ -198,7 +204,7 @@ export default async function Home() {
               <div className="text-left">
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
                   Real estate{' '}
-                  <span className="text-primarycolor">without the</span>
+                  <span className="text-primarycolor-text">without the</span>
                   <br />
                   pressure.
                 </h1>
@@ -244,7 +250,6 @@ export default async function Home() {
         <AiPoweredSection />
       </main>
 
-      <Footer />
     </div>
   );
 }

@@ -27,7 +27,7 @@ export function ListingPhotoPlaceholder({
 }: ListingPhotoPlaceholderProps) {
   return (
     <div
-      className={`flex flex-col items-center justify-center gap-2 bg-zinc-100 text-zinc-400 dark:bg-zinc-800/70 dark:text-zinc-500 ${className}`}
+      className={`flex flex-col items-center justify-center gap-2 bg-zinc-100 text-zinc-600 dark:bg-zinc-800/70 dark:text-zinc-400 ${className}`}
       role="img"
       aria-label={label}
     >
