@@ -34,7 +34,7 @@ export default function CitySearchSection() {
             <InputGroup className="h-12 rounded-full border-primarycolor/30 bg-white/80 backdrop-blur supports-backdrop-filter:bg-white/70 dark:bg-zinc-950/35 dark:border-primarycolor/25">
               <InputGroupAddon className="pl-4" align="inline-start">
                 <SearchIcon
-                  className="size-4 text-primarycolor"
+                  className="size-4 text-primarycolor-text"
                   aria-hidden="true"
                 />
               </InputGroupAddon>
@@ -48,7 +48,7 @@ export default function CitySearchSection() {
               <div className="pr-1.5">
                 <Button
                   type="submit"
-                  className="h-10 rounded-full px-7 font-semibold bg-primarycolor text-white hover:bg-primarycolor/90 focus-visible:ring-primarycolor"
+                  className="h-10 rounded-full px-7 font-semibold bg-primarycolor text-primarycolor-foreground hover:bg-primarycolor/90 focus-visible:ring-primarycolor"
                 >
                   Search
                 </Button>
@@ -62,7 +62,7 @@ export default function CitySearchSection() {
             <a
               key={city}
               href={`/listings?city=${encodeURIComponent(city)}`}
-              className="inline-flex items-center justify-center rounded-full border border-primarycolor/35 bg-white/70 px-4 py-2 text-sm font-semibold text-primarycolor transition hover:bg-white/95 hover:border-primarycolor/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2 dark:bg-zinc-950/25 dark:hover:bg-zinc-950/45"
+              className="inline-flex items-center justify-center rounded-full border border-primarycolor/35 bg-white/70 px-4 py-2 text-sm font-semibold text-primarycolor-text transition hover:bg-white/95 hover:border-primarycolor/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2 dark:bg-zinc-950/25 dark:hover:bg-zinc-950/45"
             >
               {city}
             </a>

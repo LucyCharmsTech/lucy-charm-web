@@ -51,6 +51,11 @@ export async function createAiSession(options: {
 // Messaging
 // ---------------------------------------------------------------------------
 
+/** The token that authorises access to the session this turn belongs to. */
+function sessionAuthHeaders(sessionToken?: string | null): Record<string, string> {
+  return sessionToken ? { [ANONYMOUS_SESSION_HEADER]: sessionToken } : {};
+}
+
 /**
  * Sends one chat turn to the backend and returns the assistant reply.
  * The full orchestration (intent classification, escalation, persistence)
@@ -58,12 +63,14 @@ export async function createAiSession(options: {
  */
 export async function sendChatMessage(
   payload: ChatSendRequest,
+  /** The token this session was created with. Omit for a signed-in session. */
+  sessionToken?: string | null,
 ): Promise<ChatSendResponse> {
   const res = await api.post<ChatSendResponse>('/chat/send', payload, {
     timeout: CHAT_SEND_TIMEOUT_MS,
     headers: payload.seller_journey_id
       ? { [ANONYMOUS_SESSION_HEADER]: getOrCreateAnonymousSessionToken() }
-      : undefined,
+      : sessionAuthHeaders(sessionToken),
   });
   return res.data;
 }
@@ -78,13 +85,19 @@ export async function requestHumanAgent(options: {
   listingId?: string;
   email?: string;
   message?: string;
+  /** The token this session was created with. Omit for a signed-in session. */
+  sessionToken?: string | null;
 }): Promise<ChatRequestHumanResponse> {
-  const res = await api.post<ChatRequestHumanResponse>('/chat/request_human', {
-    session_id: options.sessionId,
-    listing_id: options.listingId ?? null,
-    email: options.email ?? null,
-    message: options.message ?? null,
-  });
+  const res = await api.post<ChatRequestHumanResponse>(
+    '/chat/request_human',
+    {
+      session_id: options.sessionId,
+      listing_id: options.listingId ?? null,
+      email: options.email ?? null,
+      message: options.message ?? null,
+    },
+    { headers: sessionAuthHeaders(options.sessionToken) },
+  );
   return res.data;
 }
 
@@ -100,6 +113,7 @@ export async function streamChatMessage(
   payload: ChatSendRequest,
   onChunk: (chunk: string) => void,
   onDone: () => void,
+  sessionToken?: string | null,
 ): Promise<void> {
   const baseUrl =
     process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
@@ -114,7 +128,7 @@ export async function streamChatMessage(
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(payload.seller_journey_id
         ? { [ANONYMOUS_SESSION_HEADER]: getOrCreateAnonymousSessionToken() }
-        : {}),
+        : sessionAuthHeaders(sessionToken)),
     },
     body: JSON.stringify(payload),
   });

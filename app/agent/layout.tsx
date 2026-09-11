@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { href: '/agent/leads', label: 'My leads' },
   { href: '/agent/showings', label: 'Showings' },
   { href: '/agent/property-reviews', label: 'Property reviews' },
+  { href: '/agent/home-value', label: 'Home Value' },
 ];
 
 

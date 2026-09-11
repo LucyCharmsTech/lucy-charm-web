@@ -76,7 +76,7 @@ export default function RequestShowingIdUploadStep({
           {isAuthenticated && !uploaded && (
             <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
               You can also upload later from{' '}
-              <Link href="/profile" className="font-semibold text-primarycolor underline-offset-2 hover:underline">
+              <Link href="/profile" className="font-semibold text-primarycolor-text underline-offset-2 hover:underline">
                 your profile
               </Link>
               .

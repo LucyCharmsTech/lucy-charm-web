@@ -202,7 +202,7 @@ export default function ShowingFeedbackDialog({ request, open, onClose, onSubmit
                     onClick={() => setWouldOffer(true)}
                     className={`rounded-full border px-3 py-1.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor ${
                       wouldOffer === true
-                        ? 'border-primarycolor bg-primarycolor/10 text-primarycolor'
+                        ? 'border-primarycolor bg-primarycolor/10 text-primarycolor-text'
                         : 'border-zinc-200 text-zinc-700 dark:border-zinc-700 dark:text-zinc-200'
                     }`}
                   >
@@ -213,7 +213,7 @@ export default function ShowingFeedbackDialog({ request, open, onClose, onSubmit
                     onClick={() => setWouldOffer(false)}
                     className={`rounded-full border px-3 py-1.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor ${
                       wouldOffer === false
-                        ? 'border-primarycolor bg-primarycolor/10 text-primarycolor'
+                        ? 'border-primarycolor bg-primarycolor/10 text-primarycolor-text'
                         : 'border-zinc-200 text-zinc-700 dark:border-zinc-700 dark:text-zinc-200'
                     }`}
                   >
@@ -259,7 +259,7 @@ export default function ShowingFeedbackDialog({ request, open, onClose, onSubmit
               <Button
                 type="submit"
                 disabled={submitting}
-                className="h-11 w-full rounded-full bg-primarycolor text-sm font-semibold text-white hover:bg-primarycolor/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                className="h-11 w-full rounded-full bg-primarycolor text-sm font-semibold text-primarycolor-foreground hover:bg-primarycolor/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
               >
                 {submitting ? 'Saving feedback...' : 'Submit feedback'}
               </Button>

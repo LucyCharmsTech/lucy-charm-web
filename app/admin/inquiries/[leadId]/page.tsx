@@ -100,7 +100,7 @@ export default function AdminLeadDetailPage() {
       <div>
         <Link
           href="/admin/inquiries"
-          className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-primarycolor hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+          className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-primarycolor-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
         >
           <ArrowLeftIcon className="size-4" aria-hidden="true" />
           Back to inquiries
@@ -185,18 +185,6 @@ export default function AdminLeadDetailPage() {
             <dd className="mt-0.5 text-sm text-zinc-900 dark:text-zinc-100">{lead.phone ?? '—'}</dd>
           </div>
           <div>
-            <dt className="text-xs font-semibold uppercase text-zinc-500 dark:text-zinc-400">Temperature</dt>
-            <dd className="mt-0.5 capitalize text-sm text-zinc-900 dark:text-zinc-100">
-              {lead.lead_temperature}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs font-semibold uppercase text-zinc-500 dark:text-zinc-400">Score</dt>
-            <dd className="mt-0.5 text-sm tabular-nums text-zinc-900 dark:text-zinc-100">
-              {lead.lead_score}
-            </dd>
-          </div>
-          <div>
             <dt className="text-xs font-semibold uppercase text-zinc-500 dark:text-zinc-400">Source</dt>
             <dd className="mt-0.5 text-sm text-zinc-900 dark:text-zinc-100">{lead.source ?? '—'}</dd>
           </div>
@@ -206,7 +194,7 @@ export default function AdminLeadDetailPage() {
               {lead.listing_id ? (
                 <Link
                   href={`/admin/listings/${lead.listing_id}`}
-                  className="font-mono text-xs text-primarycolor hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                  className="font-mono text-xs text-primarycolor-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
                 >
                   {lead.listing_id}
                 </Link>

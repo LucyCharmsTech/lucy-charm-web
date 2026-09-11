@@ -20,6 +20,9 @@ jest.mock('@/services/savedListingsService', () => ({
   checkListingSaved: jest.fn().mockResolvedValue({ saved: false, saved_listing_id: null }),
 }));
 jest.mock('@/lib/analytics', () => ({ track: jest.fn() }));
+jest.mock('@/components/listings/detail/ListingChatSessionContext', () => ({
+  useListingChatSession: jest.fn(),
+}));
 
 import {
   addPropertyCheckupQuestion,
@@ -28,6 +31,7 @@ import {
   fetchPropertyCheckup,
   requestDeeperReview,
 } from '@/services/propertyCheckupService';
+import { useListingChatSession } from '@/components/listings/detail/ListingChatSessionContext';
 import PropertyCheckupPanel from '@/components/listings/detail/PropertyCheckupPanel';
 
 const mockFetch = fetchPropertyCheckup as jest.MockedFunction<typeof fetchPropertyCheckup>;
@@ -37,6 +41,8 @@ const mockFetchMyQuestions = fetchMyCheckupQuestions as jest.MockedFunction<
 const mockAddQuestion = addPropertyCheckupQuestion as jest.Mock;
 const mockDeleteQuestion = deletePropertyCheckupQuestion as jest.Mock;
 const mockRequestReview = requestDeeperReview as jest.Mock;
+const mockUseListingChatSession = useListingChatSession as jest.Mock;
+const mockRequestRepresentative = jest.fn();
 
 function checkupWithItems(overrides: Partial<PropertyCheckup> = {}): PropertyCheckup {
   return {
@@ -63,6 +69,15 @@ beforeEach(() => {
   localStorage.clear();
   useAuthStore.setState({ accessToken: null, refreshToken: null, user: null });
   mockFetchMyQuestions.mockResolvedValue([]);
+  mockUseListingChatSession.mockReturnValue({
+    aiSessionId: null,
+    setAiSessionId: jest.fn(),
+    pendingRepresentativeRequest: null,
+    representativeRequestStatus: 'idle',
+    askedRepresentativeRuleIds: new Set(),
+    requestRepresentative: mockRequestRepresentative,
+    resolveRepresentativeRequest: jest.fn(),
+  });
 });
 
 function question(overrides: Record<string, unknown> = {}) {
@@ -101,19 +116,19 @@ describe('loading and error states', () => {
 });
 
 describe('rendered items', () => {
-  it('renders the listing_states, worth_verifying, and why_it_matters copy exactly as returned', async () => {
+  it('renders the listing_states, worth_verifying, and why_it_matters copy exactly as returned, each with its approved label', async () => {
     mockFetch.mockResolvedValue(checkupWithItems());
     render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
 
-    await screen.findByText('Private septic system');
+    await screen.findByText(/Listing states: Private septic system/);
     screen.getByText(/Worth verifying: System age, service and inspection history/);
-    screen.getByText('This can help confirm the system has been properly maintained.');
+    screen.getByText(/Why it matters: This can help confirm the system has been properly maintained\./);
   });
 
   it('never shows the internal priority number to the buyer', async () => {
     mockFetch.mockResolvedValue(checkupWithItems());
     render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
-    await screen.findByText('Private septic system');
+    await screen.findByText(/Listing states: Private septic system/);
     // Priority is an internal ranking value only (spec B) — must not leak
     // as visible "P1" / "1" text anywhere in the item.
     expect(screen.queryByText(/^P1$/)).toBeNull();
@@ -134,22 +149,22 @@ describe('"View full checkup"', () => {
   it('does not appear when there is nothing beyond the first view', async () => {
     mockFetch.mockResolvedValue(checkupWithItems({ items: manyItems(5), first_view_limit: 5 }));
     render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
-    await screen.findByText('Listing state 0');
-    await screen.findByText('Listing state 4');
+    await screen.findByText(/Listing states: Listing state 0/);
+    await screen.findByText(/Listing states: Listing state 4/);
     expect(screen.queryByRole('button', { name: /view full checkup/i })).toBeNull();
   });
 
   it('caps the first view and reveals the rest on tap', async () => {
     mockFetch.mockResolvedValue(checkupWithItems({ items: manyItems(7), first_view_limit: 5 }));
     render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
-    await screen.findByText('Listing state 0');
-    await screen.findByText('Listing state 4');
-    expect(screen.queryByText('Listing state 5')).toBeNull();
+    await screen.findByText(/Listing states: Listing state 0/);
+    await screen.findByText(/Listing states: Listing state 4/);
+    expect(screen.queryByText(/Listing states: Listing state 5/)).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: /view full checkup/i }));
 
-    await screen.findByText('Listing state 5');
-    await screen.findByText('Listing state 6');
+    await screen.findByText(/Listing states: Listing state 5/);
+    await screen.findByText(/Listing states: Listing state 6/);
     expect(screen.queryByRole('button', { name: /view full checkup/i })).toBeNull();
   });
 });
@@ -158,19 +173,19 @@ describe('"Property Checkup updated since your last visit"', () => {
   it('stays hidden the first time this browser ever sees the listing', async () => {
     mockFetch.mockResolvedValue(checkupWithItems({ generated_at: '2026-01-01T00:00:00Z' }));
     render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
-    await screen.findByText('Private septic system');
+    await screen.findByText(/Listing states: Private septic system/);
     expect(screen.queryByText(/updated since your last visit/i)).toBeNull();
   });
 
   it('appears on a later open whose generated_at differs from the one last recorded', async () => {
     mockFetch.mockResolvedValue(checkupWithItems({ generated_at: '2026-01-01T00:00:00Z' }));
     const { unmount } = render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
-    await screen.findByText('Private septic system');
+    await screen.findByText(/Listing states: Private septic system/);
     unmount();
 
     mockFetch.mockResolvedValue(checkupWithItems({ generated_at: '2026-02-01T00:00:00Z' }));
     render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
-    await screen.findByText('Private septic system');
+    await screen.findByText(/Listing states: Private septic system/);
     await screen.findByText(/updated since your last visit/i);
   });
 });
@@ -179,7 +194,7 @@ describe('signed-out "Save question"', () => {
   it('saves locally without calling the API when signed out', async () => {
     mockFetch.mockResolvedValue(checkupWithItems());
     render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
-    await screen.findByText('Private septic system');
+    await screen.findByText(/Listing states: Private septic system/);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /save question/i }));
@@ -192,7 +207,7 @@ describe('signed-out "Save question"', () => {
   it('does not show "Add to showing questions" when signed out', async () => {
     mockFetch.mockResolvedValue(checkupWithItems());
     render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
-    await screen.findByText('Private septic system');
+    await screen.findByText(/Listing states: Private septic system/);
     expect(
       screen.queryByRole('button', { name: /add to showing questions/i }),
     ).toBeNull();
@@ -201,7 +216,7 @@ describe('signed-out "Save question"', () => {
   it('clicking a saved question again un-saves it, without calling the API', async () => {
     mockFetch.mockResolvedValue(checkupWithItems());
     render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
-    await screen.findByText('Private septic system');
+    await screen.findByText(/Listing states: Private septic system/);
 
     const button = screen.getByRole('button', { name: /save question/i });
     await act(async () => fireEvent.click(button));
@@ -211,6 +226,89 @@ describe('signed-out "Save question"', () => {
 
     expect(mockDeleteQuestion).not.toHaveBeenCalled();
     await screen.findByText(/^save question$/i);
+  });
+});
+
+describe('"Ask a Lucy representative"', () => {
+  it('is available even when signed out', async () => {
+    mockFetch.mockResolvedValue(checkupWithItems());
+    render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
+    await screen.findByText(/Listing states: Private septic system/);
+    screen.getByRole('button', { name: /^ask a lucy representative$/i });
+  });
+
+  it('queues the request with the rule id and the property + question attached, no retyping', async () => {
+    mockFetch.mockResolvedValue(checkupWithItems());
+    render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
+    await screen.findByText(/Listing states: Private septic system/);
+
+    fireEvent.click(screen.getByRole('button', { name: /^ask a lucy representative$/i }));
+
+    expect(mockRequestRepresentative).toHaveBeenCalledWith(
+      'septic_system',
+      'Private septic system: System age, service and inspection history?',
+    );
+  });
+
+  it('shows "Asking…" and is disabled while this item\'s request is pending, not marked done optimistically', async () => {
+    mockFetch.mockResolvedValue(checkupWithItems());
+    mockUseListingChatSession.mockReturnValue({
+      aiSessionId: null,
+      setAiSessionId: jest.fn(),
+      pendingRepresentativeRequest: { ruleId: 'septic_system', message: 'anything' },
+      representativeRequestStatus: 'pending',
+      askedRepresentativeRuleIds: new Set(),
+      requestRepresentative: mockRequestRepresentative,
+      resolveRepresentativeRequest: jest.fn(),
+    });
+    render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
+    await screen.findByText(/Listing states: Private septic system/);
+
+    const button = screen.getByRole('button', { name: /asking…/i });
+    expect(button.hasAttribute('disabled')).toBe(true);
+    expect(screen.queryByText(/^asked a lucy representative$/i)).toBeNull();
+  });
+
+  it('only shows "Asked" once the widget actually reports success for this item\'s rule', async () => {
+    mockFetch.mockResolvedValue(checkupWithItems());
+    mockUseListingChatSession.mockReturnValue({
+      aiSessionId: null,
+      setAiSessionId: jest.fn(),
+      pendingRepresentativeRequest: null,
+      representativeRequestStatus: 'idle',
+      askedRepresentativeRuleIds: new Set(['septic_system']),
+      requestRepresentative: mockRequestRepresentative,
+      resolveRepresentativeRequest: jest.fn(),
+    });
+    render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
+    await screen.findByText(/Listing states: Private septic system/);
+
+    const button = screen.getByRole('button', { name: /asked a lucy representative/i });
+    expect(button.hasAttribute('disabled')).toBe(true);
+  });
+
+  it('offers a retry, not a dead end, when the escalation fails', async () => {
+    mockFetch.mockResolvedValue(checkupWithItems());
+    mockUseListingChatSession.mockReturnValue({
+      aiSessionId: null,
+      setAiSessionId: jest.fn(),
+      pendingRepresentativeRequest: { ruleId: 'septic_system', message: 'Private septic system: System age, service and inspection history?' },
+      representativeRequestStatus: 'error',
+      askedRepresentativeRuleIds: new Set(),
+      requestRepresentative: mockRequestRepresentative,
+      resolveRepresentativeRequest: jest.fn(),
+    });
+    render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
+    await screen.findByText(/Listing states: Private septic system/);
+
+    const button = screen.getByRole('button', { name: /could not reach a representative.*retry/i });
+    expect(button.hasAttribute('disabled')).toBe(false);
+
+    fireEvent.click(button);
+    expect(mockRequestRepresentative).toHaveBeenCalledWith(
+      'septic_system',
+      'Private septic system: System age, service and inspection history?',
+    );
   });
 });
 
@@ -227,7 +325,7 @@ describe('signed-in buyer actions', () => {
     mockFetch.mockResolvedValue(checkupWithItems());
     mockAddQuestion.mockResolvedValue({ id: 'question-1' });
     render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
-    await screen.findByText('Private septic system');
+    await screen.findByText(/Listing states: Private septic system/);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /save question/i }));
@@ -245,7 +343,7 @@ describe('signed-in buyer actions', () => {
     mockFetch.mockResolvedValue(checkupWithItems());
     mockAddQuestion.mockResolvedValue({ id: 'question-1' });
     render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
-    await screen.findByText('Private septic system');
+    await screen.findByText(/Listing states: Private septic system/);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /add to showing questions/i }));
@@ -263,7 +361,7 @@ describe('signed-in buyer actions', () => {
     mockAddQuestion.mockResolvedValue({ id: 'question-1' });
     mockDeleteQuestion.mockResolvedValue(undefined);
     render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
-    await screen.findByText('Private septic system');
+    await screen.findByText(/Listing states: Private septic system/);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /save question/i }));
@@ -285,7 +383,7 @@ describe('signed-in buyer actions', () => {
     mockAddQuestion.mockResolvedValue({ id: 'showing-question-1' });
     mockDeleteQuestion.mockResolvedValue(undefined);
     render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
-    await screen.findByText('Private septic system');
+    await screen.findByText(/Listing states: Private septic system/);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /add to showing questions/i }));
@@ -355,7 +453,7 @@ describe('state survives a refresh (hydration from the database)', () => {
 
     render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
 
-    await screen.findByText('Private septic system');
+    await screen.findByText(/Listing states: Private septic system/);
     screen.getByRole('button', { name: /^save question$/i });
     screen.getByRole('button', { name: /^add to showing questions$/i });
   });
@@ -366,7 +464,7 @@ describe('state survives a refresh (hydration from the database)', () => {
 
     render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
 
-    await screen.findByText('Private septic system');
+    await screen.findByText(/Listing states: Private septic system/);
     expect(mockFetchMyQuestions).not.toHaveBeenCalled();
   });
 
@@ -376,7 +474,7 @@ describe('state survives a refresh (hydration from the database)', () => {
 
     render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
 
-    await screen.findByText('Private septic system');
+    await screen.findByText(/Listing states: Private septic system/);
     screen.getByRole('button', { name: /^save question$/i });
   });
 });
@@ -385,7 +483,7 @@ describe('Deeper Property Review', () => {
   it('prompts sign-in instead of the request form when signed out', async () => {
     mockFetch.mockResolvedValue(checkupWithItems());
     render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
-    await screen.findByText('Private septic system');
+    await screen.findByText(/Listing states: Private septic system/);
     screen.getByText(/sign in to request a deeper property review/i);
   });
 
@@ -398,7 +496,7 @@ describe('Deeper Property Review', () => {
     mockFetch.mockResolvedValue(checkupWithItems());
     mockRequestReview.mockResolvedValue({});
     render(<PropertyCheckupPanel listingId="listing-1" onClose={jest.fn()} />);
-    await screen.findByText('Private septic system');
+    await screen.findByText(/Listing states: Private septic system/);
 
     fireEvent.click(screen.getByRole('button', { name: /request a deeper property review/i }));
     fireEvent.click(screen.getByRole('button', { name: /send request/i }));
@@ -413,7 +511,7 @@ describe('close control', () => {
     mockFetch.mockResolvedValue(checkupWithItems());
     const onClose = jest.fn();
     render(<PropertyCheckupPanel listingId="listing-1" onClose={onClose} />);
-    await screen.findByText('Private septic system');
+    await screen.findByText(/Listing states: Private septic system/);
     fireEvent.click(screen.getByRole('button', { name: /close property checkup/i }));
     expect(onClose).toHaveBeenCalled();
   });

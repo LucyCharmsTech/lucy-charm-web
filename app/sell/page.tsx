@@ -312,7 +312,7 @@ export default function SellPage() {
         <div className="flex items-center justify-between gap-4">
           <Link
             href="/"
-            className="text-sm font-semibold text-primarycolor hover:underline"
+            className="text-sm font-semibold text-primarycolor-text hover:underline"
           >
             ← Lucycharms
           </Link>
@@ -321,7 +321,7 @@ export default function SellPage() {
               type="button"
               onClick={saveForLater}
               disabled={saving}
-              className="text-sm font-semibold text-primarycolor hover:underline disabled:opacity-50"
+              className="text-sm font-semibold text-primarycolor-text hover:underline disabled:opacity-50"
             >
               Save and continue later
             </button>
@@ -338,8 +338,8 @@ export default function SellPage() {
                 key={label}
                 className={
                   index <= currentProgress
-                    ? 'text-primarycolor'
-                    : 'text-zinc-400'
+                    ? 'text-primarycolor-text'
+                    : 'text-zinc-500 dark:text-zinc-400'
                 }
               >
                 <span className="mx-auto mb-2 flex size-6 items-center justify-center rounded-full border border-current">
@@ -369,7 +369,7 @@ export default function SellPage() {
               {!accessToken && (
                 <button
                   onClick={() => router.push('/login?redirect=/sell')}
-                  className="ml-2 font-semibold text-primarycolor hover:underline"
+                  className="ml-2 font-semibold text-primarycolor-text hover:underline"
                 >
                   Sign in to save to your account
                 </button>
@@ -430,7 +430,7 @@ function Welcome({
 }) {
   return (
     <div className="py-4 sm:py-8">
-      <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primarycolor">
+      <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primarycolor-text">
         Seller Explorer
       </p>
       <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-4xl">
@@ -450,7 +450,7 @@ function Welcome({
             key={item}
             className="rounded-xl bg-zinc-50 p-4 text-sm text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
           >
-            <span className="mb-2 block font-bold text-primarycolor">
+            <span className="mb-2 block font-bold text-primarycolor-text">
               0{i + 1}
             </span>
             {item}
@@ -460,7 +460,7 @@ function Welcome({
       <button
         type="button"
         onClick={onStart}
-        className="mt-8 inline-flex w-full justify-center rounded-full bg-primarycolor px-5 py-3 text-sm font-semibold text-white hover:bg-primarycolor/90 sm:w-auto"
+        className="mt-8 inline-flex w-full justify-center rounded-full bg-primarycolor px-5 py-3 text-sm font-semibold text-primarycolor-foreground hover:bg-primarycolor/90 sm:w-auto"
       >
         Start exploring
       </button>
@@ -468,7 +468,7 @@ function Welcome({
         <button
           type="button"
           onClick={onResume}
-          className="mt-3 block text-sm font-semibold text-primarycolor hover:underline sm:ml-4 sm:mt-0 sm:inline"
+          className="mt-3 block text-sm font-semibold text-primarycolor-text hover:underline sm:ml-4 sm:mt-0 sm:inline"
         >
           Resume my exploration
         </button>
@@ -493,7 +493,7 @@ function PropertyStep({
 }) {
   return (
     <form onSubmit={onSubmit}>
-      <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primarycolor">
+      <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primarycolor-text">
         Step 1
       </p>
       <h1 className="mt-2 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
@@ -561,7 +561,7 @@ function PropertyStep({
       </fieldset>
       <button
         disabled={saving}
-        className="mt-7 w-full rounded-full bg-primarycolor px-5 py-3 text-sm font-semibold text-white hover:bg-primarycolor/90 disabled:opacity-50"
+        className="mt-7 w-full rounded-full bg-primarycolor px-5 py-3 text-sm font-semibold text-primarycolor-foreground hover:bg-primarycolor/90 disabled:opacity-50"
       >
         {saving ? 'Saving…' : 'Continue'}
       </button>
@@ -587,7 +587,7 @@ function SituationStep({
 }) {
   return (
     <form onSubmit={onSubmit}>
-      <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primarycolor">
+      <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primarycolor-text">
         Step 2
       </p>
       <h1 className="mt-2 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
@@ -643,13 +643,13 @@ function SituationStep({
         <button
           type="button"
           onClick={onBack}
-          className="rounded-full px-5 py-3 text-sm font-semibold text-primarycolor hover:bg-primarycolor/5"
+          className="rounded-full px-5 py-3 text-sm font-semibold text-primarycolor-text hover:bg-primarycolor/5"
         >
           Back
         </button>
         <button
           disabled={saving}
-          className="rounded-full bg-primarycolor px-5 py-3 text-sm font-semibold text-white hover:bg-primarycolor/90 disabled:opacity-50"
+          className="rounded-full bg-primarycolor px-5 py-3 text-sm font-semibold text-primarycolor-foreground hover:bg-primarycolor/90 disabled:opacity-50"
         >
           {saving ? 'Saving…' : 'View my seller snapshot'}
         </button>
@@ -681,7 +681,7 @@ function PlanStep({
       : 'A Home Value request or result will appear here when it is available through Lucycharms’ existing Home Value workflow.';
   return (
     <div>
-      <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primarycolor">
+      <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primarycolor-text">
         Your Seller Snapshot
       </p>
       <h1 className="mt-2 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
@@ -755,7 +755,7 @@ function PlanStep({
                 ? `/chat?q=${encodeURIComponent('I have a question about selling my home')}&sellerJourneyId=${journey.id}`
                 : '/chat?q=I%20have%20a%20question%20about%20selling%20my%20home'
             }
-            className="rounded-full border border-primarycolor px-5 py-3 text-center text-sm font-semibold text-primarycolor hover:bg-primarycolor/5"
+            className="rounded-full border border-primarycolor px-5 py-3 text-center text-sm font-semibold text-primarycolor-text hover:bg-primarycolor/5"
           >
             Ask Lucy
           </Link>
@@ -765,7 +765,7 @@ function PlanStep({
                 type="button"
                 disabled={saving}
                 onClick={() => setHandoffOpen(true)}
-                className="rounded-full bg-primarycolor px-5 py-3 text-sm font-semibold text-white hover:bg-primarycolor/90 disabled:opacity-50"
+                className="rounded-full bg-primarycolor px-5 py-3 text-sm font-semibold text-primarycolor-foreground hover:bg-primarycolor/90 disabled:opacity-50"
               >
                 Request Professional Review
               </button>
@@ -773,7 +773,7 @@ function PlanStep({
                 type="button"
                 disabled={saving}
                 onClick={() => setHandoffOpen(true)}
-                className="rounded-full px-5 py-3 text-sm font-semibold text-primarycolor hover:bg-primarycolor/5"
+                className="rounded-full px-5 py-3 text-sm font-semibold text-primarycolor-text hover:bg-primarycolor/5"
               >
                 I’m Ready to Discuss Selling
               </button>
@@ -781,13 +781,13 @@ function PlanStep({
                 type="button"
                 disabled={saving}
                 onClick={() => setHandoffOpen(true)}
-                className="rounded-full px-5 py-3 text-sm font-semibold text-primarycolor hover:bg-primarycolor/5"
+                className="rounded-full px-5 py-3 text-sm font-semibold text-primarycolor-text hover:bg-primarycolor/5"
               >
                 Talk to a Professional
               </button>
             </>
           ) : journey?.status === 'professional_review_requested' ? (
-            <p className="text-sm font-semibold text-primarycolor">
+            <p className="text-sm font-semibold text-primarycolor-text">
               Professional review requested — the seller team will follow up.
             </p>
           ) : null}
@@ -861,7 +861,7 @@ function ProfessionalReviewForm({
       onSubmit={submit}
       className="mt-7 rounded-xl border border-primarycolor/20 bg-primarycolor/5 p-4 sm:p-5"
     >
-      <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primarycolor">
+      <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primarycolor-text">
         Professional Review
       </p>
       <h2 className="mt-2 text-xl font-bold text-zinc-900 dark:text-zinc-50">
@@ -922,13 +922,13 @@ function ProfessionalReviewForm({
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-full px-5 py-3 text-sm font-semibold text-primarycolor hover:bg-primarycolor/5"
+          className="rounded-full px-5 py-3 text-sm font-semibold text-primarycolor-text hover:bg-primarycolor/5"
         >
           Cancel
         </button>
         <button
           disabled={saving}
-          className="rounded-full bg-primarycolor px-5 py-3 text-sm font-semibold text-white hover:bg-primarycolor/90 disabled:opacity-50"
+          className="rounded-full bg-primarycolor px-5 py-3 text-sm font-semibold text-primarycolor-foreground hover:bg-primarycolor/90 disabled:opacity-50"
         >
           {saving ? 'Sending…' : 'Request Professional Review'}
         </button>

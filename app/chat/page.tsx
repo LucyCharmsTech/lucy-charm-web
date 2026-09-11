@@ -28,6 +28,7 @@ import {
 } from '@/services/chatService';
 import { useAuthStore } from '@/stores/authStore';
 import AssistantTrustLayer from '@/components/chat/AssistantTrustLayer';
+import { AiDisclosure } from '@/components/common/AiDisclosure';
 import ChatMarkdown from '@/components/chat/ChatMarkdown';
 import ChatPlaceCards from '@/components/chat/ChatPlaceCards';
 import type { ChatMessage } from '@/types/api';
@@ -60,7 +61,7 @@ function ChatBubble({ msg, onRequestHuman, humanRequested, humanRequestPending }
       <div
         className={`flex size-7 shrink-0 items-center justify-center self-start rounded-full text-xs font-bold ${
           isUser
-            ? 'bg-primarycolor text-white'
+            ? 'bg-primarycolor text-primarycolor-foreground'
             : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-200'
         }`}
         aria-hidden="true"
@@ -74,7 +75,7 @@ function ChatBubble({ msg, onRequestHuman, humanRequested, humanRequestPending }
         <div
           className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
             isUser
-              ? 'max-w-[85%] rounded-br-sm bg-primarycolor text-white'
+              ? 'max-w-[85%] rounded-br-sm bg-primarycolor text-primarycolor-foreground'
               : 'w-full rounded-bl-sm bg-white text-zinc-800 shadow-sm ring-1 ring-zinc-200/70 dark:bg-zinc-900 dark:text-zinc-100 dark:ring-zinc-800'
           }`}
         >
@@ -144,8 +145,9 @@ function ChatPageFallback() {
               <ArrowLeftIcon className="size-4" />
             </Link>
             <div className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Ask Lucy</div>
+            <AiDisclosure className="mt-0.5" />
           </div>
-          <LoaderIcon className="size-4 animate-spin text-zinc-400" aria-hidden="true" />
+          <LoaderIcon className="size-4 animate-spin text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
         </div>
       </header>
       <main className="mx-auto flex w-full max-w-3xl flex-1 items-center justify-center px-4 py-6 sm:px-6">
@@ -259,7 +261,8 @@ function ChatPageContent() {
           email: email ?? undefined,
           seller_journey_id: sellerJourneyId ?? undefined,
           page_url: typeof window !== 'undefined' ? window.location.href : undefined,
-        });
+        },
+        userId ? null : getOrCreateAnonToken(GLOBAL_CHAT_LISTING_KEY));
         if (response.escalation_flag) track('chat_escalated', { surface: 'general' });
 
         const assistantMsg: ChatMessage = {
@@ -310,19 +313,23 @@ function ChatPageContent() {
         setSending(false);
       }
     },
-    [email, inputValue, sellerJourneyId, sessionId, sending],
+    [email, inputValue, sellerJourneyId, sessionId, sending, userId],
   );
 
   const handleRequestHuman = useCallback(async () => {
     if (!sessionId || humanRequested || humanRequestPending) return;
     setHumanRequestPending(true);
     try {
-      await requestHumanAgent({ sessionId, email: email ?? undefined });
+      await requestHumanAgent({
+        sessionId,
+        email: email ?? undefined,
+        sessionToken: userId ? null : getOrCreateAnonToken(GLOBAL_CHAT_LISTING_KEY),
+      });
       setHumanRequested(true);
     } finally {
       setHumanRequestPending(false);
     }
-  }, [email, sessionId, humanRequested, humanRequestPending]);
+  }, [email, sessionId, humanRequested, humanRequestPending, userId]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -349,7 +356,7 @@ function ChatPageContent() {
             </Link>
             <div className="flex items-center gap-2">
               <span
-                className="inline-flex size-8 items-center justify-center rounded-full bg-primarycolor text-sm font-bold text-white"
+                className="inline-flex size-8 items-center justify-center rounded-full bg-primarycolor text-sm font-bold text-primarycolor-foreground"
                 aria-hidden="true"
               >
                 L
@@ -370,7 +377,9 @@ function ChatPageContent() {
             {sessionError ? (
               <>
                 <span className="size-2 rounded-full bg-red-500" />
-                <span className="text-[11px] text-red-500">Offline</span>
+                <span className="text-[11px] text-red-600 dark:text-red-400">
+                  Offline
+                </span>
               </>
             ) : sessionId ? (
               <>
@@ -381,8 +390,8 @@ function ChatPageContent() {
               </>
             ) : (
               <>
-                <LoaderIcon className="size-3 animate-spin text-zinc-400" />
-                <span className="text-[11px] text-zinc-400">Connecting…</span>
+                <LoaderIcon className="size-3 animate-spin text-zinc-500 dark:text-zinc-400" />
+                <span className="text-[11px] text-zinc-500 dark:text-zinc-400">Connecting…</span>
               </>
             )}
           </div>
@@ -406,7 +415,7 @@ function ChatPageContent() {
         {messages.length === 0 && !sessionError && (
           <div className="flex flex-1 flex-col items-center justify-center gap-6 text-center">
             <div className="flex size-16 items-center justify-center rounded-2xl bg-primarycolor/10">
-              <BotIcon className="size-8 text-primarycolor" />
+              <BotIcon className="size-8 text-primarycolor-text" />
             </div>
             <div>
               <h1 className="text-xl font-extrabold text-zinc-900 dark:text-zinc-50">
@@ -482,7 +491,7 @@ function ChatPageContent() {
                 type="button"
                 onClick={() => handleSend()}
                 disabled={!sessionId || sending || !inputValue.trim()}
-                className="h-9 rounded-xl bg-primarycolor px-4 text-sm font-semibold text-white hover:bg-primarycolor/90 focus-visible:ring-primarycolor disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-9 rounded-xl bg-primarycolor px-4 text-sm font-semibold text-primarycolor-foreground hover:bg-primarycolor/90 focus-visible:ring-primarycolor disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label="Send message"
               >
                 {sending ? (
@@ -493,7 +502,7 @@ function ChatPageContent() {
               </Button>
             </InputGroupAddon>
           </InputGroup>
-          <p className="mt-1.5 text-center text-[11px] text-zinc-400 dark:text-zinc-600">
+          <p className="mt-1.5 text-center text-[11px] text-zinc-500 dark:text-zinc-600">
             AI-generated general information only, not professional advice. Verify important details with a qualified human.
           </p>
         </div>

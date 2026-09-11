@@ -161,7 +161,7 @@ export default function AdminSellersPage() {
     <div className="space-y-8">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primarycolor">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primarycolor-text">
             Seller acquisition
           </p>
           <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
@@ -338,7 +338,7 @@ export default function AdminSellersPage() {
                               [lead.id]: event.target.checked,
                             }))
                           }
-                          className="mt-0.5 h-3.5 w-3.5 rounded border-zinc-300 text-primarycolor focus:ring-primarycolor"
+                          className="mt-0.5 h-3.5 w-3.5 rounded border-zinc-300 text-primarycolor-text focus:ring-primarycolor"
                         />
                         I confirm the required representation and compliance
                         steps are approved.
@@ -352,7 +352,7 @@ export default function AdminSellersPage() {
                           !complianceApproved[lead.id]
                         }
                         onClick={() => convertLead(lead.id)}
-                        className="rounded-lg bg-primarycolor px-3 py-2 text-xs font-semibold text-white hover:bg-primarycolor/90 disabled:cursor-not-allowed disabled:opacity-40"
+                        className="rounded-lg bg-primarycolor px-3 py-2 text-xs font-semibold text-primarycolor-foreground hover:bg-primarycolor/90 disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         {convertingId === lead.id
                           ? 'Converting…'
@@ -417,12 +417,12 @@ export default function AdminSellersPage() {
                       {transaction.portal_activated_at ? (
                         <Link
                           href={`/seller-portal/${transaction.id}`}
-                          className="text-xs font-semibold text-primarycolor underline"
+                          className="text-xs font-semibold text-primarycolor-text underline"
                         >
                           Manage portal
                         </Link>
                       ) : (
-                        <span className="text-xs text-zinc-400">
+                        <span className="text-xs text-zinc-500 dark:text-zinc-400">
                           Not activated
                         </span>
                       )}

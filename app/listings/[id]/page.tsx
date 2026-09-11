@@ -149,7 +149,7 @@ export default async function ListingDetailPage({ params }: PageProps) {
         <div className="mb-6 flex items-center justify-between gap-4">
           <Link
             href="/listings"
-            className="inline-flex items-center gap-1 text-sm font-semibold text-primarycolor hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2"
+            className="inline-flex items-center gap-1 text-sm font-semibold text-primarycolor-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2"
           >
             <span aria-hidden="true">&lt;</span> All listings
           </Link>
@@ -179,15 +179,15 @@ export default async function ListingDetailPage({ params }: PageProps) {
               <h1 className="mt-4 text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-3xl">
                 {listing.title}
               </h1>
-              <p className="mt-2 text-2xl font-extrabold text-primarycolor sm:text-3xl">
+              <p className="mt-2 text-2xl font-extrabold text-primarycolor-text sm:text-3xl">
                 {listing.priceText}{' '}
-                <span className="text-base font-semibold text-zinc-400">
+                <span className="text-base font-semibold text-zinc-500 dark:text-zinc-400">
                   {listing.currency}
                 </span>
               </p>
               <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-zinc-500 dark:text-zinc-400">
                 <MapPinIcon
-                  className="size-4 shrink-0 text-primarycolor"
+                  className="size-4 shrink-0 text-primarycolor-text"
                   aria-hidden="true"
                 />
                 <span>Province: {listing.province}</span>

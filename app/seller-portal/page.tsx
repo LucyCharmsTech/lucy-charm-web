@@ -18,7 +18,7 @@ export default function SellerPortalIndexPage() {
   return (
     <main className="mx-auto max-w-3xl space-y-5 p-4 sm:p-6">
       <header>
-        <p className="text-sm font-semibold text-primarycolor">Lucy Charms Seller Portal</p>
+        <p className="text-sm font-semibold text-primarycolor-text">Lucy Charms Seller Portal</p>
         <h1 className="text-2xl font-bold">Your sale plans</h1>
       </header>
       {portals.length ? (

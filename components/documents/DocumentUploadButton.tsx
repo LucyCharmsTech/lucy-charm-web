@@ -141,7 +141,7 @@ export default function DocumentUploadButton({
           event.stopPropagation();
           inputRef.current?.click();
         }}
-        className="inline-flex h-9 items-center gap-2 rounded-lg bg-primarycolor px-3 text-xs font-semibold text-white transition hover:bg-primarycolor/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor disabled:opacity-50"
+        className="inline-flex h-9 items-center gap-2 rounded-lg bg-primarycolor px-3 text-xs font-semibold text-primarycolor-foreground transition hover:bg-primarycolor/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor disabled:opacity-50"
       >
         <FileUpIcon className="size-3.5" aria-hidden="true" />
         {busy ? busyLabel : label}

@@ -140,7 +140,7 @@ export default function FilterPanel({
         <div className="flex items-center gap-2">
           <span className="inline-flex size-8 items-center justify-center rounded-full bg-primarycolor/15">
             <SlidersHorizontalIcon
-              className="size-4 text-primarycolor"
+              className="size-4 text-primarycolor-text"
               aria-hidden="true"
             />
           </span>
@@ -148,13 +148,13 @@ export default function FilterPanel({
             <div className="text-sm font-bold text-zinc-900 dark:text-zinc-50">
               Filters
             </div>
-            <div className="text-[11px] text-primarycolor">
+            <div className="text-[11px] text-primarycolor-text">
               Refine results instantly
             </div>
           </div>
         </div>
         <span
-          className={`text-zinc-400 transition-transform duration-200 ${
+          className={`text-zinc-500 dark:text-zinc-400 transition-transform duration-200 ${
             open ? 'rotate-0' : 'rotate-180'
           }`}
         >
@@ -165,7 +165,7 @@ export default function FilterPanel({
       {open && (
         <div className="space-y-5 border-t border-zinc-100 px-4 py-4 dark:border-zinc-800">
           <div className="space-y-2">
-            <Label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+            <Label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
               Status
             </Label>
             <div className="flex flex-wrap gap-1.5">
@@ -184,7 +184,7 @@ export default function FilterPanel({
           <hr className="border-zinc-100 dark:border-zinc-800" />
 
           <div className="space-y-2">
-            <Label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+            <Label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
               Country
             </Label>
             <div className="flex flex-wrap gap-1.5">
@@ -203,7 +203,7 @@ export default function FilterPanel({
           <hr className="border-zinc-100 dark:border-zinc-800" />
 
           <div className="space-y-2">
-            <Label htmlFor="listings-city-filter" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+            <Label htmlFor="listings-city-filter" className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
               City
             </Label>
             <Input
@@ -222,15 +222,15 @@ export default function FilterPanel({
           <hr className="border-zinc-100 dark:border-zinc-800" />
 
           <div className="space-y-2">
-            <Label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+            <Label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
               Property Type
             </Label>
             <div className="flex flex-wrap gap-1.5">
               {propertyTypesLoading && (
-                <span className="text-xs text-zinc-400">Loading types…</span>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">Loading types…</span>
               )}
               {!propertyTypesLoading && propertyTypeOptions.length === 0 && (
-                <span className="text-xs text-zinc-400">No types available</span>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">No types available</span>
               )}
               {propertyTypeOptions.map((type) => (
                 <FilterChip
@@ -247,15 +247,15 @@ export default function FilterPanel({
           <hr className="border-zinc-100 dark:border-zinc-800" />
 
           <div className="space-y-2">
-            <Label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+            <Label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
               Listing Title
             </Label>
             <div className="max-h-52 space-y-1 overflow-y-auto pr-1">
               {listingTitlesLoading && (
-                <span className="text-xs text-zinc-400">Loading titles…</span>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">Loading titles…</span>
               )}
               {!listingTitlesLoading && listingTitleOptions.length === 0 && (
-                <span className="text-xs text-zinc-400">No titles available</span>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">No titles available</span>
               )}
               {listingTitleOptions.map((title) => (
                 <FilterChip
@@ -272,7 +272,7 @@ export default function FilterPanel({
           <hr className="border-zinc-100 dark:border-zinc-800" />
 
           <div className="space-y-2">
-            <Label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+            <Label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
               Price Range
             </Label>
             <div className="flex gap-2">
@@ -292,7 +292,7 @@ export default function FilterPanel({
           <hr className="border-zinc-100 dark:border-zinc-800" />
 
           <div className="space-y-2">
-            <Label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+            <Label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
               Min Bedrooms
             </Label>
             <div className="flex flex-wrap gap-1.5">
@@ -311,7 +311,7 @@ export default function FilterPanel({
           <hr className="border-zinc-100 dark:border-zinc-800" />
 
           <div className="space-y-2">
-            <Label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+            <Label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
               Min Bathrooms
             </Label>
             <div className="flex flex-wrap gap-1.5">
@@ -337,7 +337,7 @@ export default function FilterPanel({
           <div className="space-y-2">
             <Label
               htmlFor="filter-price-min"
-              className="text-[10px] font-bold uppercase tracking-widest text-zinc-400"
+              className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400"
             >
               Price
             </Label>
@@ -387,7 +387,7 @@ export default function FilterPanel({
           <div className="space-y-2">
             <Label
               htmlFor="filter-sqft-min"
-              className="text-[10px] font-bold uppercase tracking-widest text-zinc-400"
+              className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400"
             >
               Square Footage
             </Label>

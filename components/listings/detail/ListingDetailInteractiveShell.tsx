@@ -23,7 +23,7 @@ export default function ListingDetailInteractiveShell({
   }, [listingId]);
 
   return (
-    <ListingChatSessionProvider>
+    <ListingChatSessionProvider listingId={listingId}>
       <ShowingRequestModalProvider>
         {children}
         <ListingDetailChatWidget listingId={listingId} listingTitle={listingTitle} />

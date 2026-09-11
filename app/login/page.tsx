@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { AlertCircleIcon, LoaderIcon } from 'lucide-react';
 import { GoogleLoginButton } from '@/components/auth/GoogleAuthButton';
-import { MagicLinkAuthForm } from '@/components/auth/MagicLinkAuthForm';
+import { EmailCodeAuthForm } from '@/components/auth/EmailCodeAuthForm';
 import { useRedirectIfAuthenticated } from '@/lib/useRedirectIfAuthenticated';
 
 function LoginPageFallback() {
@@ -37,13 +37,13 @@ function LoginPageContent() {
           {/* Header */}
           <div className="mb-6 text-center">
             <div className="mb-3 inline-flex size-12 items-center justify-center rounded-2xl bg-primarycolor/10">
-              <span className="text-xl font-extrabold text-primarycolor">L</span>
+              <span className="text-xl font-extrabold text-primarycolor-text">L</span>
             </div>
             <h1 className="text-xl font-extrabold text-zinc-900 dark:text-zinc-50">
               Welcome back
             </h1>
             <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-              Sign in with Google or a secure email link
+              Sign in with Google, or get a code by email
             </p>
           </div>
 
@@ -70,20 +70,20 @@ function LoginPageContent() {
               <div className="w-full border-t border-zinc-200 dark:border-zinc-700" />
             </div>
             <div className="relative flex justify-center text-xs">
-              <span className="bg-white px-2 text-zinc-400 dark:bg-zinc-900/60 dark:text-zinc-500">
-                or continue with magic link
+              <span className="bg-white px-2 text-zinc-500 dark:bg-zinc-900/60 dark:text-zinc-500">
+                or continue with email
               </span>
             </div>
           </div>
 
-          <MagicLinkAuthForm redirectPath={redirectParam} />
+          <EmailCodeAuthForm redirectPath={redirectParam} />
 
           {/* Footer */}
           <p className="mt-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
             Don&apos;t have an account?{' '}
             <Link
               href="/register"
-              className="font-semibold text-primarycolor hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+              className="font-semibold text-primarycolor-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
             >
               Create one
             </Link>

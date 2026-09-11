@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { attachAuthRefreshInterceptor } from '@/lib/axiosAuthRefresh';
+import { attachMfaEnrolmentInterceptor } from '@/lib/mfaEnrolmentRedirect';
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1',
@@ -31,5 +32,8 @@ api.interceptors.request.use(
 
 // On 401: attempt refresh + retry; clear auth only when refresh is impossible.
 attachAuthRefreshInterceptor(api);
+
+// On the MFA-enrolment 403: send a staff account to the screen that fixes it.
+attachMfaEnrolmentInterceptor(api);
 
 export default api;

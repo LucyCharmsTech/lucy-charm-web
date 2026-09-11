@@ -15,17 +15,21 @@
  */
 
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
 import { useRouter } from 'next/navigation';
 import { LoaderIcon } from 'lucide-react';
 import { googleLogin } from '@/services/authService';
-import { fetchCurrentUser } from '@/services/userService';
 import { useAuthStore } from '@/stores/authStore';
-import { userMeToAuthUser } from '@/types/api';
-import { completeSignIn } from '@/lib/completeSignIn';
+import { isMfaChallenge, type AuthToken } from '@/types/api';
+import { seatSession } from '@/lib/seatSession';
+import { MfaChallengeForm } from '@/components/auth/MfaChallengeForm';
 import { getPostLoginPath } from '@/lib/postLoginRedirect';
 import { getAccountStatusPath, getInactiveAccountDetails } from '@/lib/accountStatus';
+
+/** The range Google's rendered button accepts; outside it the width is ignored. */
+const GOOGLE_MIN_WIDTH = 200;
+const GOOGLE_MAX_WIDTH = 400;
 
 interface GoogleLoginButtonProps {
   /** Optional ?redirect= param to honour after successful login */
@@ -42,8 +46,43 @@ export function GoogleLoginButton({
   onError,
 }: GoogleLoginButtonProps) {
   const router = useRouter();
+
+  // Google's button is rendered in an iframe that only accepts a pixel width —
+  // percentages are ignored. A hardcoded 400 overflowed every phone: on a
+  // 390px viewport it pushed the document to 449px, so `/login`, `/register`
+  // and `/onboarding` all scrolled sideways. Measure the container instead and
+  // clamp to the range Google accepts.
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [buttonWidth, setButtonWidth] = useState(GOOGLE_MAX_WIDTH);
+
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+
+    const measure = () => {
+      const available = node.clientWidth;
+      if (!available) return;
+      setButtonWidth(
+        Math.max(GOOGLE_MIN_WIDTH, Math.min(GOOGLE_MAX_WIDTH, Math.floor(available))),
+      );
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
   const setAuth = useAuthStore((s) => s.setAuth);
   const [loading, setLoading] = useState(false);
+  const [challenge, setChallenge] = useState<string | null>(null);
+
+  async function finishSignIn(tokens: AuthToken) {
+    const me = await seatSession(tokens, setAuth);
+    router.push(
+      getPostLoginPath(me.role, redirectParam ?? null, me.onboarding_completed),
+    );
+  }
 
   async function handleCredential(credentialResponse: { credential?: string }) {
     const idToken = credentialResponse.credential;
@@ -56,23 +95,14 @@ export function GoogleLoginButton({
     setLoading(true);
 
     try {
-      const tokens = await googleLogin(idToken);
+      const result = await googleLogin(idToken);
 
-      // Set a provisional user so the Axios interceptor can attach Bearer for GET /users/me
-      setAuth(tokens.access_token, tokens.refresh_token, {
-        user_id: '',
-        email: '',
-        first_name: '',
-        last_name: '',
-        role: 'client',
-      });
+      if (isMfaChallenge(result)) {
+        setChallenge(result.mfa_challenge_token);
+        return;
+      }
 
-      const me = await fetchCurrentUser();
-      setAuth(tokens.access_token, tokens.refresh_token, userMeToAuthUser(me));
-
-      await completeSignIn();
-
-      router.push(getPostLoginPath(me.role, redirectParam ?? null, me.onboarding_completed));
+      await finishSignIn(result);
     } catch (err: unknown) {
       const inactiveDetails = getInactiveAccountDetails(err);
       if (inactiveDetails) {
@@ -86,6 +116,16 @@ export function GoogleLoginButton({
     } finally {
       setLoading(false);
     }
+  }
+
+  if (challenge) {
+    return (
+      <MfaChallengeForm
+        challengeToken={challenge}
+        onVerified={finishSignIn}
+        onCancel={() => setChallenge(null)}
+      />
+    );
   }
 
   if (loading) {
@@ -102,11 +142,11 @@ export function GoogleLoginButton({
   }
 
   return (
-    <div className="w-full [&>div]:w-full [&>div>div]:w-full">
+    <div ref={containerRef} className="w-full [&>div]:w-full [&>div>div]:w-full">
       <GoogleLogin
         onSuccess={handleCredential}
         onError={() => onError?.('Google sign-in was cancelled or failed.')}
-        width="400"
+        width={String(buttonWidth)}
         shape="rectangular"
         size="large"
         text="continue_with"

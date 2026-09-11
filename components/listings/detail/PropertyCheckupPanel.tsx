@@ -11,6 +11,7 @@ import { CheckCircle2Icon, XIcon } from 'lucide-react';
 
 import { track } from '@/lib/analytics';
 import { useAuthStore } from '@/stores/authStore';
+import { useListingChatSession } from '@/components/listings/detail/ListingChatSessionContext';
 import {
   isQuestionSavedLocally,
   removeQuestionLocally,
@@ -116,12 +117,16 @@ export default function PropertyCheckupPanel({ listingId, onClose }: Props) {
           <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
             What stands out, and what may be worth verifying.
           </p>
+          <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+            A Checkup is not an inspection, a legal conclusion or a safety
+            guarantee.
+          </p>
         </div>
         <button
           type="button"
           onClick={onClose}
           aria-label="Close Property Checkup"
-          className="rounded-full p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+          className="rounded-full p-1.5 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
         >
           <XIcon className="size-4" aria-hidden="true" />
         </button>
@@ -131,7 +136,7 @@ export default function PropertyCheckupPanel({ listingId, onClose }: Props) {
         {state === 'loading' && <CheckupLoading />}
         {state === 'unavailable' && <CheckupUnavailable />}
         {state === 'ready' && updatedSinceLastVisit && (
-          <p className="mb-3 rounded-lg bg-primarycolor/10 px-3 py-2 text-xs font-semibold text-primarycolor">
+          <p className="mb-3 rounded-lg bg-primarycolor/10 px-3 py-2 text-xs font-semibold text-primarycolor-text">
             Property Checkup updated since your last visit
           </p>
         )}
@@ -184,10 +189,16 @@ function CheckupResult({
 
   if (checkup.zero_match) {
     return (
-      <p className="rounded-xl bg-zinc-50 p-4 text-sm text-zinc-600 dark:bg-zinc-800/40 dark:text-zinc-300">
-        Nothing additional stands out from the listing information available
-        right now.
-      </p>
+      <div className="rounded-xl bg-zinc-50 p-4 dark:bg-zinc-800/40">
+        <p className="text-sm text-zinc-600 dark:text-zinc-300">
+          Nothing additional stands out from the listing information available
+          right now.
+        </p>
+        <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+          This does not mean the property passed — only that the listing
+          information we can check did not raise anything.
+        </p>
+      </div>
     );
   }
 
@@ -216,7 +227,7 @@ function CheckupResult({
             setShowAll(true);
             track('property_checkup_view_full', { listing_id: listingId });
           }}
-          className="text-xs font-semibold text-primarycolor hover:underline"
+          className="text-xs font-semibold text-primarycolor-text hover:underline"
         >
           View full checkup
         </button>
@@ -253,6 +264,33 @@ function CheckupItemRow({
     () => existing?.showingId ?? null,
   );
   const [busy, setBusy] = useState<'save' | 'unsave' | 'showing' | 'unshowing' | null>(null);
+  const {
+    requestRepresentative,
+    pendingRepresentativeRequest,
+    representativeRequestStatus,
+    askedRepresentativeRuleIds,
+  } = useListingChatSession();
+
+  // Never optimistic — reflects what the shared chat widget actually
+  // reports back, not just that a click happened.
+  const askedRep = askedRepresentativeRuleIds.has(item.rule_id);
+  const isThisItemPending =
+    pendingRepresentativeRequest?.ruleId === item.rule_id && representativeRequestStatus === 'pending';
+  const isThisItemErrored =
+    pendingRepresentativeRequest?.ruleId === item.rule_id && representativeRequestStatus === 'error';
+
+  function handleAskRepresentative() {
+    if (askedRep || isThisItemPending) return;
+    // Reuses the same approved-copy composition as "Add to showing
+    // questions" — never invented wording (Clarifications Part 2 §8's
+    // principle applies here too), just attached automatically instead of
+    // the buyer having to retype the property and the question.
+    requestRepresentative(item.rule_id, `${item.listing_states}: ${item.worth_verifying}?`);
+    track('property_checkup_ask_representative', {
+      listing_id: listingId,
+      rule_id: item.rule_id,
+    });
+  }
 
   async function handleSaveQuestion() {
     if (busy) return;
@@ -330,12 +368,14 @@ function CheckupItemRow({
   return (
     <li className="rounded-xl border border-zinc-200/80 p-4 dark:border-zinc-800/80">
       <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-        {item.listing_states}
+        Listing states: {item.listing_states}
       </p>
       <p className="mt-1 text-sm text-amber-700 dark:text-amber-400">
         Worth verifying: {item.worth_verifying}
       </p>
-      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{item.why_it_matters}</p>
+      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+        Why it matters: {item.why_it_matters}
+      </p>
 
       <div className="mt-3 flex flex-wrap gap-2">
         <button
@@ -373,9 +413,30 @@ function CheckupItemRow({
             )}
           </button>
         )}
+
+        <button
+          type="button"
+          onClick={handleAskRepresentative}
+          disabled={askedRep || isThisItemPending}
+          aria-pressed={askedRep}
+          className={askedRep ? ACTION_PILL.done : ACTION_PILL.idle}
+        >
+          {askedRep ? (
+            <>
+              <CheckCircle2Icon className="size-3.5" aria-hidden="true" />
+              Asked a Lucy representative
+            </>
+          ) : isThisItemPending ? (
+            'Asking…'
+          ) : isThisItemErrored ? (
+            'Could not reach a representative — Retry'
+          ) : (
+            'Ask a Lucy representative'
+          )}
+        </button>
       </div>
       {!authed && savedId && (
-        <p className="mt-2 text-[11px] text-zinc-400">
+        <p className="mt-2 text-[11px] text-zinc-500 dark:text-zinc-400">
           Sign in to keep it across devices.
         </p>
       )}
@@ -412,7 +473,7 @@ function DeeperReviewCta({ listingId, authed }: { listingId: string; authed: boo
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="w-full rounded-xl border border-primarycolor/30 bg-primarycolor/5 px-4 py-3 text-left text-sm font-semibold text-primarycolor hover:bg-primarycolor/10"
+        className="w-full rounded-xl border border-primarycolor/30 bg-primarycolor/5 px-4 py-3 text-left text-sm font-semibold text-primarycolor-text hover:bg-primarycolor/10"
       >
         Interested in this property? Want us to look deeper? Request a Deeper
         Property Review.
@@ -462,7 +523,7 @@ function DeeperReviewCta({ listingId, authed }: { listingId: string; authed: boo
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-lg bg-primarycolor px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+          className="rounded-lg bg-primarycolor px-3 py-1.5 text-xs font-semibold text-primarycolor-foreground disabled:opacity-60"
         >
           {submitting ? 'Sending…' : 'Send request'}
         </button>

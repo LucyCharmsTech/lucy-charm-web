@@ -208,6 +208,52 @@ export type AuthToken = {
   token_type: string;
 };
 
+/** Two-step verification challenge — returned in place of an `AuthToken`. */
+export type MfaChallenge = {
+  mfa_required: true;
+  mfa_challenge_token: string;
+};
+
+/** What any sign-in path may return. Narrow with `isMfaChallenge`. */
+export type SignInResult = AuthToken | MfaChallenge;
+
+export function isMfaChallenge(result: SignInResult): result is MfaChallenge {
+  return (result as MfaChallenge).mfa_required === true;
+}
+
+/** POST /auth/mfa/setup — the QR payload. Nothing is saved server-side yet. */
+export type MfaSetupResponse = {
+  /** `otpauth://` URI to render as a QR code. */
+  totp_uri: string;
+  /** The same seed in text, for desktop apps and manual entry. */
+  secret: string;
+};
+
+/** The plaintext recovery codes, returned exactly once. */
+export type MfaRecoveryCodesResponse = {
+  recovery_codes: string[];
+};
+
+/** GET /auth/mfa/status — carries no credential. */
+export type MfaStatus = {
+  enabled: boolean;
+  /** True when the account's role may not hold a session without MFA. */
+  required: boolean;
+  state: 'satisfied' | 'enrolment_required' | 'not_required';
+  enrolled_at: string | null;
+  recovery_codes_remaining: number;
+  /** Too many wrong codes — the OTP path is temporarily closed. */
+  locked: boolean;
+};
+
+/** The 403 a staff account gets before it has enrolled. */
+export const MFA_ENROLMENT_REQUIRED_CODE = 'mfa_enrolment_required';
+
+export type MfaEnrolmentRequiredDetail = {
+  code: typeof MFA_ENROLMENT_REQUIRED_CODE;
+  message: string;
+};
+
 /** Mirrors SignupRequest body for POST /auth/signup */
 export type SignupRequest = {
   email: string;
@@ -250,6 +296,20 @@ export type InactiveAccountDetails = {
 
 export type MagicLinkVerifyBody = {
   token: string;
+};
+
+/** One staff account as the admin staff screen sees it. */
+export type StaffAccount = {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: UserRole;
+  mfa_enabled: boolean;
+  mfa_locked_until: string | null;
+  deactivated_at: string | null;
+  last_active_at: string;
+  created_at: string;
 };
 
 /** Mirrors `users.role` in lucy-charm-api */
@@ -666,6 +726,8 @@ export type ShowingRequest = {
    * attached when this showing request was submitted. Approved rule copy
    * only — see PropertyCheckupItem. */
   checkup_questions: string[];
+  /** True when this request already existed and the submission was a repeat. */
+  was_duplicate?: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -1319,4 +1381,265 @@ export type PropertyReviewRequestAssignRequest = {
 
 export type PropertyReviewRequestRespondRequest = {
   response_summary: string;
+};
+
+/** Public unsubscribe state (no session). */
+export type UnsubscribeState = {
+  email: string;
+  streams: Record<string, boolean>;
+  stop_all: boolean;
+};
+
+/** Request body for the public contact form. */
+export type ContactFormSubmission = {
+  first_name: string;
+  last_name: string;
+  email: string;
+  message: string;
+  topic: string;
+  lead_type: string;
+  /** Optional, per the client's Contact-page answer. */
+  phone?: string | null;
+  listing_id?: string | null;
+  ai_session_id?: string | null;
+};
+
+/** Returned only after the CRM record saves. */
+export type ContactFormReceipt = {
+  status: string;
+  reference: string;
+  is_new: boolean;
+};
+
+/** Request body for a one-time sign-in code (control 2.4). */
+export type EmailCodeRequestBody = {
+  email: string;
+  /** Sign-up only. Absent means sign in an existing account. */
+  full_name?: string;
+  redirect_path?: string | null;
+};
+
+export type EmailCodeRequestResponse = {
+  detail: string;
+  /** So the UI can state the expiry without hardcoding it. */
+  expires_in_minutes: number;
+};
+
+export type EmailCodeVerifyBody = {
+  email: string;
+  code: string;
+};
+
+/** One reversible state per property. */
+export type PropertyReaction = 'love' | 'maybe' | 'not_for_me';
+
+export type PropertyReactionRead = {
+  id: string;
+  listing_id: string;
+  reaction: PropertyReaction;
+  reacted_at: string;
+};
+
+/** Staff AI escalation queue (control 4.17). */
+export type EscalationStatus =
+  | 'pending'
+  | 'assigned'
+  | 'in_progress'
+  | 'resolved'
+  | 'closed';
+
+export type AiEscalation = {
+  id: string;
+  session_id: string;
+  reason: string;
+  assigned_agent_id: string | null;
+  assigned_at: string | null;
+  status: EscalationStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+/** One turn of a flagged conversation. */
+export type AiMessage = {
+  id: string;
+  session_id: string;
+  listing_id: string | null;
+  role: string;
+  message_text: string;
+  confidence_score: number | null;
+  source_data: Record<string, unknown> | null;
+  model_version: string | null;
+  page_url: string | null;
+  prompt_version: string | null;
+  escalation_flag: boolean;
+  created_at: string;
+};
+
+/** An operational log row. Staff-only. */
+export type SystemLog = {
+  id: string;
+  level: string;
+  source: string;
+  message: string;
+  log_data: Record<string, unknown> | null;
+  user_id: string | null;
+  created_at: string;
+};
+
+/** An identity document attached to a showing request. */
+export type ShowingIdentityDocument = {
+  id: string;
+  showing_request_id: string;
+  original_filename: string;
+  content_type: string;
+  size_bytes: number;
+  status: string;
+  reviewed_at: string | null;
+  review_note: string | null;
+  viewed_at: string | null;
+  created_at: string;
+};
+
+export type ShowingIdentityDocumentReview = {
+  status: 'verified' | 'rejected';
+  review_note?: string | null;
+};
+
+// ── IDX feed operations ──────────────────────────────────────────────────────
+
+export type IdxResourceHealth = {
+  resource_name: string;
+  status: string;
+  reason?: string | null;
+  last_run_age_hours: number | null;
+  cursor_lag_hours: number | null;
+  open_runs: number;
+};
+
+export type IdxHealthReport = {
+  status: string;
+  checked_at: string;
+  source_system: string;
+  warn_after_hours: number;
+  critical_after_hours: number;
+  unresolved_failures: number;
+  quarantined_failures: number;
+  resources: IdxResourceHealth[];
+};
+
+export type IdxJobRecord = {
+  job: string;
+  status: string;
+  started_at: string | null;
+  finished_at: string | null;
+  result: Record<string, unknown> | null;
+  error: string | null;
+};
+
+export type IdxJobsStatus = {
+  running: string[];
+  jobs: IdxJobRecord[];
+};
+
+export type IdxSchedulerStatus = {
+  enabled: boolean;
+  interval_minutes: number;
+  cadence_minutes: number;
+  next_due_in_minutes: Record<string, number>;
+  running: boolean;
+  last_started_at: string | null;
+  last_finished_at: string | null;
+  last_result: Record<string, unknown> | null;
+};
+
+export type IdxFailedRecord = {
+  source_key: string;
+  resource_name: string;
+  stage: string;
+  error_type: string;
+  error_message: string;
+  attempts: number;
+  /** Quarantined records no longer hold the cursor back — nothing retries them. */
+  quarantined: boolean;
+  first_failed_at: string;
+  last_failed_at: string;
+  resolved_at: string | null;
+};
+
+export type IdxFailuresReport = {
+  unresolved_total: number;
+  quarantine_after_attempts: number;
+  records: IdxFailedRecord[];
+};
+
+// ── Saved searches (control 6.1, client Q6) ──────────────────────────────────
+
+export type SavedSearch = {
+  id: string;
+  name: string;
+  filters: Record<string, unknown>;
+  /** The pause-email control. Off unless explicitly turned on. */
+  email_enabled: boolean;
+  /** Everything listed before this is "the old catalogue" and is never mailed. */
+  baseline_at: string;
+  last_notified_at: string | null;
+  /** Set when the search came from a device import. */
+  imported_at: string | null;
+  created_at: string;
+};
+
+/** Read from the server — Q6 says the limit is configurable, so never hardcode it. */
+export type SavedSearchLimit = {
+  limit: number;
+  used: number;
+};
+
+export type SavedSearchImportResult = {
+  imported: SavedSearch[];
+  /** Merged, because an identical search was already on the account. */
+  duplicates: string[];
+  /** Did not fit. Named rather than silently dropped. */
+  rejected: string[];
+};
+
+// ── Client journey (controls 6.1, 6.2, 6.3) ──────────────────────────────────
+
+export type RepresentationState = 'none' | 'working_with' | 'represented';
+
+export type Journey = {
+  id: string;
+  journey_type: 'buyer' | 'seller';
+  /** A stable stage code. Never a label. */
+  stage: string;
+  /** Derived server-side from the stage — never stored, never restated here. */
+  stage_label: string;
+  /** The one next step, control 6.3. Server-supplied wording. */
+  primary_action: string;
+  representation_state: RepresentationState;
+  assigned_agent_id: string | null;
+  /** Which revision of the client's stage tables this row was written under. */
+  stage_map_version: string;
+  /** Optimistic concurrency — control 6.15. */
+  record_version: number;
+  stage_entered_at: string;
+  created_at: string;
+};
+
+export type JourneyStage = {
+  code: string;
+  label: string;
+  primary_action: string;
+  entry_basis: string;
+  next_stage: string | null;
+  /** True where C4 requires an authorized registrant to move past. */
+  advance_requires_registrant: boolean;
+};
+
+/** One progressive preference prompt. */
+export type PreferencePrompt = {
+  key: string;
+  question: string;
+  benefit: string;
+  /** Which onboarding field an answer fills. Stable; used to pick an input. */
+  field: string;
 };

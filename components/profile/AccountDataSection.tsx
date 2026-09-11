@@ -116,7 +116,7 @@ export default function AccountDataSection() {
       aria-labelledby="account-data-heading"
     >
       <div className="flex items-start gap-3">
-        <ShieldAlertIcon className="mt-0.5 size-5 text-primarycolor" aria-hidden="true" />
+        <ShieldAlertIcon className="mt-0.5 size-5 text-primarycolor-text" aria-hidden="true" />
         <div>
           <h2 id="account-data-heading" className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
             Data & account controls

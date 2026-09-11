@@ -60,7 +60,7 @@ export default function AdminListingDetailPage({ params }: Props) {
         >
           {error}
         </div>
-        <Link href="/admin/listings" className="text-sm font-semibold text-primarycolor hover:underline">
+        <Link href="/admin/listings" className="text-sm font-semibold text-primarycolor-text hover:underline">
           ← Back to all listings
         </Link>
       </div>
@@ -76,7 +76,7 @@ export default function AdminListingDetailPage({ params }: Props) {
 
   return (
     <div className="space-y-8">
-      <Link href="/admin/listings" className="text-sm font-semibold text-primarycolor hover:underline">
+      <Link href="/admin/listings" className="text-sm font-semibold text-primarycolor-text hover:underline">
         ← All listings
       </Link>
 
@@ -105,13 +105,13 @@ export default function AdminListingDetailPage({ params }: Props) {
               <MapPinIcon className="size-4 shrink-0" aria-hidden="true" />
               {addr}
             </p>
-            <p className="mt-2 text-xl font-bold text-primarycolor">
+            <p className="mt-2 text-xl font-bold text-primarycolor-text">
               ${listing.price.toLocaleString('en-CA')} {listing.currency}
             </p>
           </div>
           <Link
             href={`/listings/${listing.id}`}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-primarycolor hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-primarycolor-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
           >
             View public listing page
             <ExternalLinkIcon className="size-4" aria-hidden="true" />

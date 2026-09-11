@@ -144,7 +144,7 @@ export default function PrivacyPreferencesSection() {
 
           <Button
             type="button"
-            className="rounded-xl bg-primarycolor text-white hover:bg-primarycolor/90"
+            className="rounded-xl bg-primarycolor text-primarycolor-foreground hover:bg-primarycolor/90"
             disabled={saving}
             onClick={() => void handleSave()}
           >

@@ -9,7 +9,7 @@ export default function AccountRecoveryPage() {
       <div className="w-full max-w-md rounded-2xl border border-zinc-200/80 bg-white p-8 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/60">
         <div className="mb-6 text-center">
           <div className="mb-3 inline-flex size-12 items-center justify-center rounded-2xl bg-primarycolor/10">
-            <span className="text-xl font-extrabold text-primarycolor">L</span>
+            <span className="text-xl font-extrabold text-primarycolor-text">L</span>
           </div>
           <h1 className="text-xl font-extrabold text-zinc-900 dark:text-zinc-50">
             Recover your account
@@ -22,7 +22,7 @@ export default function AccountRecoveryPage() {
         <AccountRecoveryForm />
 
         <p className="mt-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
-          <Link href="/login" className="font-semibold text-primarycolor hover:underline">
+          <Link href="/login" className="font-semibold text-primarycolor-text hover:underline">
             Back to sign in
           </Link>
         </p>

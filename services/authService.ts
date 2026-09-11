@@ -6,7 +6,11 @@ import api from '@/lib/axios';
 import { requestTokenRefresh } from '@/lib/tokenRefresh';
 import type {
   AuthToken,
+  SignInResult,
   AccountRecoveryRequestBody,
+  EmailCodeRequestBody,
+  EmailCodeRequestResponse,
+  EmailCodeVerifyBody,
   MagicLinkRequestBody,
   MagicLinkRequestResponse,
   MagicLinkVerifyBody,
@@ -25,8 +29,8 @@ export async function requestMagicLink(
 
 export async function verifyMagicLink(
   payload: MagicLinkVerifyBody,
-): Promise<AuthToken> {
-  const res = await api.post<AuthToken>('/auth/magic-link/verify', payload);
+): Promise<SignInResult> {
+  const res = await api.post<SignInResult>('/auth/magic-link/verify', payload);
   return res.data;
 }
 
@@ -39,8 +43,8 @@ export async function requestAccountRecovery(
 
 export async function verifyAccountRecovery(
   payload: MagicLinkVerifyBody,
-): Promise<AuthToken> {
-  const res = await api.post<AuthToken>('/auth/account-recovery/verify', payload);
+): Promise<SignInResult> {
+  const res = await api.post<SignInResult>('/auth/account-recovery/verify', payload);
   return res.data;
 }
 
@@ -72,7 +76,26 @@ export async function refreshAccessToken(
  * The `idToken` is the `credential` field from Google Identity Services'
  * CredentialResponse (``google.accounts.id.initialize`` callback).
  */
-export async function googleLogin(idToken: string): Promise<AuthToken> {
-  const res = await api.post<AuthToken>('/auth/google', { id_token: idToken });
+export async function googleLogin(idToken: string): Promise<SignInResult> {
+  const res = await api.post<SignInResult>('/auth/google', { id_token: idToken });
+  return res.data;
+}
+
+// ── Email one-time code ──────────────────────────────────────────────────────
+
+export async function requestEmailCode(
+  payload: EmailCodeRequestBody,
+): Promise<EmailCodeRequestResponse> {
+  const res = await api.post<EmailCodeRequestResponse>(
+    '/auth/email-code/request',
+    payload,
+  );
+  return res.data;
+}
+
+export async function verifyEmailCode(
+  payload: EmailCodeVerifyBody,
+): Promise<SignInResult> {
+  const res = await api.post<SignInResult>('/auth/email-code/verify', payload);
   return res.data;
 }

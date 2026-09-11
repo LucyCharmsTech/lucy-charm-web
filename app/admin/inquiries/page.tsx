@@ -109,7 +109,7 @@ export default function AdminInquiriesPage() {
             }}
             className={`rounded-full px-4 py-1.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor ${
               filter === tab.key
-                ? 'bg-primarycolor text-white shadow-sm'
+                ? 'bg-primarycolor text-primarycolor-foreground shadow-sm'
                 : 'border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800'
             }`}
           >
@@ -161,12 +161,6 @@ export default function AdminInquiriesPage() {
                   Agent
                 </th>
                 <th scope="col" className="px-4 py-3">
-                  Temperature
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  Score
-                </th>
-                <th scope="col" className="px-4 py-3">
                   Source
                 </th>
                 <th scope="col" className="px-4 py-3">
@@ -207,12 +201,6 @@ export default function AdminInquiriesPage() {
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 capitalize text-zinc-700 dark:text-zinc-300">
-                    {r.lead_temperature}
-                  </td>
-                  <td className="px-4 py-3 tabular-nums text-zinc-700 dark:text-zinc-300">
-                    {r.lead_score}
-                  </td>
                   <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
                     {r.source ?? '—'}
                   </td>
@@ -220,7 +208,7 @@ export default function AdminInquiriesPage() {
                     {r.listing_id ? (
                       <Link
                         href={`/admin/listings/${r.listing_id}`}
-                        className="text-primarycolor hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                        className="text-primarycolor-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
                       >
                         {r.listing_id.slice(0, 8)}…
                       </Link>
@@ -234,7 +222,7 @@ export default function AdminInquiriesPage() {
                   <td className="px-4 py-3">
                     <Link
                       href={`/admin/inquiries/${r.id}`}
-                      className="font-semibold text-primarycolor hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                      className="font-semibold text-primarycolor-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
                     >
                       Open
                     </Link>

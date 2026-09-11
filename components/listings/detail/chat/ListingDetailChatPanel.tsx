@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import ListingDetailChatBubble from '@/components/listings/detail/chat/ListingDetailChatBubble';
 import ListingDetailChatTypingIndicator from '@/components/listings/detail/chat/ListingDetailChatTypingIndicator';
 import { LISTING_DETAIL_CHAT_SUGGESTED_PROMPTS } from '@/components/listings/detail/chat/listingDetailChatConstants';
+import { AiDisclosure } from '@/components/common/AiDisclosure';
 import type { ChatMessage } from '@/types/api';
 
 export type ListingDetailChatPanelProps = {
@@ -65,7 +66,7 @@ export default function ListingDetailChatPanel({
       <div className="flex items-center justify-between gap-3 border-b border-zinc-200/70 bg-[#fde7f3]/80 px-4 py-3 dark:border-zinc-800/70 dark:bg-primarycolor/10">
         <div className="flex items-center gap-2.5">
           <span
-            className="inline-flex size-7 items-center justify-center rounded-full bg-primarycolor text-xs font-bold text-white"
+            className="inline-flex size-7 items-center justify-center rounded-full bg-primarycolor text-xs font-bold text-primarycolor-foreground"
             aria-hidden="true"
           >
             L
@@ -87,7 +88,7 @@ export default function ListingDetailChatPanel({
             <span className="size-2 rounded-full bg-emerald-500" title="Connected" />
           ) : (
             <LoaderIcon
-              className="size-3 animate-spin text-zinc-400"
+              className="size-3 animate-spin text-zinc-500 dark:text-zinc-400"
               aria-label="Connecting…"
             />
           )}
@@ -103,7 +104,7 @@ export default function ListingDetailChatPanel({
               className={`flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor disabled:cursor-not-allowed ${
                 humanRequested
                   ? 'text-emerald-600 dark:text-emerald-400'
-                  : 'text-zinc-500 hover:text-primarycolor dark:text-zinc-400 dark:hover:text-primarycolor'
+                  : 'text-zinc-500 hover:text-primarycolor-text dark:text-zinc-400 dark:hover:text-primarycolor-text'
               }`}
             >
               {humanRequested ? (
@@ -125,12 +126,16 @@ export default function ListingDetailChatPanel({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1 text-zinc-400 transition hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:hover:text-zinc-200"
+            className="rounded-md p-1 text-zinc-500 dark:text-zinc-400 transition hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:hover:text-zinc-200"
             aria-label="Close chat"
           >
             <XIcon className="size-4" />
           </button>
         </div>
+      </div>
+
+      <div className="border-b border-zinc-200/70 bg-white px-4 py-2 dark:border-zinc-800/70 dark:bg-zinc-950">
+        <AiDisclosure />
       </div>
 
       {sessionError && (
@@ -207,7 +212,7 @@ export default function ListingDetailChatPanel({
             type="button"
             onClick={() => onSend()}
             disabled={!sessionId || sending || !inputValue.trim()}
-            className="size-7 shrink-0 rounded-lg bg-primarycolor p-0 text-white hover:bg-primarycolor/90 focus-visible:ring-primarycolor disabled:cursor-not-allowed disabled:opacity-50"
+            className="size-7 shrink-0 rounded-lg bg-primarycolor p-0 text-primarycolor-foreground hover:bg-primarycolor/90 focus-visible:ring-primarycolor disabled:cursor-not-allowed disabled:opacity-50"
             aria-label="Send message"
           >
             {sending ? (
@@ -217,7 +222,7 @@ export default function ListingDetailChatPanel({
             )}
           </Button>
         </div>
-        <p className="mt-1.5 text-center text-[9px] text-zinc-400 dark:text-zinc-500">
+        <p className="mt-1.5 text-center text-[9px] text-zinc-500 dark:text-zinc-500">
           AI-generated general information only, not professional advice. Verify important details with a human.
         </p>
       </div>
