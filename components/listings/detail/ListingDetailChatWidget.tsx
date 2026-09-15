@@ -40,7 +40,11 @@ export default function ListingDetailChatWidget({
   );
   const isAuthenticated = Boolean(accessToken);
 
-  const { setAiSessionId } = useListingChatSession();
+  const {
+    setAiSessionId,
+    pendingRepresentativeRequest,
+    resolveRepresentativeRequest,
+  } = useListingChatSession();
   const { openModal: openShowingModal } = useShowingRequestModal();
   const [open, setOpen] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -177,22 +181,54 @@ export default function ListingDetailChatWidget({
     [email, inputValue, sessionId, sending, listingId, openShowingModal],
   );
 
+  // Returns whether the request actually succeeded — callers that need to
+  // reflect real state (not just fire-and-forget) rely on this rather than
+  // assuming success just because the call was made.
+  const sendHumanRequest = useCallback(
+    async (message?: string): Promise<boolean> => {
+      if (!sessionId || humanRequestPending) return false;
+      setHumanRequestPending(true);
+      try {
+        await requestHumanAgent({
+          sessionId,
+          listingId: listingId,
+          email: email ?? undefined,
+          message,
+        });
+        setHumanRequested(true);
+        return true;
+      } catch {
+        return false;
+      } finally {
+        setHumanRequestPending(false);
+      }
+    },
+    [email, sessionId, listingId, humanRequestPending],
+  );
+
+  // The manual "Request human" button inside the chat panel keeps its own
+  // one-per-session guard — unlike "Ask a Lucy representative" below, which
+  // can fire independently once per Checkup item.
   const handleRequestHuman = useCallback(async () => {
-    if (!sessionId || humanRequestPending || humanRequested) return;
-    setHumanRequestPending(true);
-    try {
-      await requestHumanAgent({
-        sessionId,
-        listingId: listingId,
-        email: email ?? undefined,
-      });
-      setHumanRequested(true);
-    } catch {
-      // best-effort — silently ignore; user can retry
-    } finally {
-      setHumanRequestPending(false);
-    }
-  }, [email, sessionId, listingId, humanRequestPending, humanRequested]);
+    if (humanRequested) return;
+    await sendHumanRequest();
+  }, [humanRequested, sendHumanRequest]);
+
+  // "Ask a Lucy representative" on a Checkup item — open the panel and, once
+  // a session exists, escalate straight to a human with that item's text.
+  // The pending request is only cleared by `resolveRepresentativeRequest`
+  // once we actually know whether it succeeded — never optimistically.
+  useEffect(() => {
+    if (pendingRepresentativeRequest) setOpen(true);
+  }, [pendingRepresentativeRequest]);
+
+  useEffect(() => {
+    if (!pendingRepresentativeRequest || !sessionId || humanRequestPending) return;
+    const { message } = pendingRepresentativeRequest;
+    void sendHumanRequest(message).then((success) => {
+      resolveRepresentativeRequest(success);
+    });
+  }, [pendingRepresentativeRequest, sessionId, humanRequestPending, sendHumanRequest, resolveRepresentativeRequest]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {

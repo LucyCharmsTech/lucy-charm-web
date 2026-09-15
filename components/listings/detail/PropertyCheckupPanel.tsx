@@ -11,6 +11,7 @@ import { CheckCircle2Icon, XIcon } from 'lucide-react';
 
 import { track } from '@/lib/analytics';
 import { useAuthStore } from '@/stores/authStore';
+import { useListingChatSession } from '@/components/listings/detail/ListingChatSessionContext';
 import {
   isQuestionSavedLocally,
   removeQuestionLocally,
@@ -253,6 +254,33 @@ function CheckupItemRow({
     () => existing?.showingId ?? null,
   );
   const [busy, setBusy] = useState<'save' | 'unsave' | 'showing' | 'unshowing' | null>(null);
+  const {
+    requestRepresentative,
+    pendingRepresentativeRequest,
+    representativeRequestStatus,
+    askedRepresentativeRuleIds,
+  } = useListingChatSession();
+
+  // Never optimistic — reflects what the shared chat widget actually
+  // reports back, not just that a click happened.
+  const askedRep = askedRepresentativeRuleIds.has(item.rule_id);
+  const isThisItemPending =
+    pendingRepresentativeRequest?.ruleId === item.rule_id && representativeRequestStatus === 'pending';
+  const isThisItemErrored =
+    pendingRepresentativeRequest?.ruleId === item.rule_id && representativeRequestStatus === 'error';
+
+  function handleAskRepresentative() {
+    if (askedRep || isThisItemPending) return;
+    // Reuses the same approved-copy composition as "Add to showing
+    // questions" — never invented wording (Clarifications Part 2 §8's
+    // principle applies here too), just attached automatically instead of
+    // the buyer having to retype the property and the question.
+    requestRepresentative(item.rule_id, `${item.listing_states}: ${item.worth_verifying}?`);
+    track('property_checkup_ask_representative', {
+      listing_id: listingId,
+      rule_id: item.rule_id,
+    });
+  }
 
   async function handleSaveQuestion() {
     if (busy) return;
@@ -330,12 +358,14 @@ function CheckupItemRow({
   return (
     <li className="rounded-xl border border-zinc-200/80 p-4 dark:border-zinc-800/80">
       <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-        {item.listing_states}
+        Listing states: {item.listing_states}
       </p>
       <p className="mt-1 text-sm text-amber-700 dark:text-amber-400">
         Worth verifying: {item.worth_verifying}
       </p>
-      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{item.why_it_matters}</p>
+      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+        Why it matters: {item.why_it_matters}
+      </p>
 
       <div className="mt-3 flex flex-wrap gap-2">
         <button
@@ -373,6 +403,27 @@ function CheckupItemRow({
             )}
           </button>
         )}
+
+        <button
+          type="button"
+          onClick={handleAskRepresentative}
+          disabled={askedRep || isThisItemPending}
+          aria-pressed={askedRep}
+          className={askedRep ? ACTION_PILL.done : ACTION_PILL.idle}
+        >
+          {askedRep ? (
+            <>
+              <CheckCircle2Icon className="size-3.5" aria-hidden="true" />
+              Asked a Lucy representative
+            </>
+          ) : isThisItemPending ? (
+            'Asking…'
+          ) : isThisItemErrored ? (
+            'Could not reach a representative — Retry'
+          ) : (
+            'Ask a Lucy representative'
+          )}
+        </button>
       </div>
       {!authed && savedId && (
         <p className="mt-2 text-[11px] text-zinc-400">

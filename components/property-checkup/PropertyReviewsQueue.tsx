@@ -16,6 +16,7 @@ import { fetchListingById } from '@/services/listingsService';
 import {
   assignReviewRequest,
   clearReviewRequestCompliance,
+  draftReviewRequestResponse,
   fetchStaffReviewRequests,
   respondToReviewRequest,
 } from '@/services/propertyCheckupService';
@@ -161,9 +162,24 @@ function RequestRow({
     }
   }
 
-  async function handleRespond(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSaveDraft() {
     if (busy || !responseText.trim()) return;
+    setBusy(true);
+    setActionError(null);
+    try {
+      const updated = await draftReviewRequestResponse(item.id, { response_summary: responseText.trim() });
+      onUpdated(updated);
+      setResponding(false);
+    } catch {
+      setActionError('Could not save the draft.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handlePublish(e: React.FormEvent) {
+    e.preventDefault();
+    if (busy || !responseText.trim() || !item.compliance_cleared_at) return;
     setBusy(true);
     setActionError(null);
     try {
@@ -176,7 +192,10 @@ function RequestRow({
         status: updated.status,
       });
     } catch {
-      setActionError('Could not send the response.');
+      // Most commonly the backend's own compliance gate refusing (403) even
+      // if this button were somehow enabled — the backend is the real gate,
+      // not this disabled attribute.
+      setActionError('Could not publish the response — compliance must be cleared first.');
     } finally {
       setBusy(false);
     }
@@ -251,21 +270,34 @@ function RequestRow({
             disabled={busy}
             className="rounded-lg bg-primarycolor px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
           >
-            {item.status === 'response_ready' ? 'Update response' : 'Send response'}
+            {item.response_summary ? 'Edit response' : 'Write response'}
           </button>
         )}
       </div>
 
       {actionError && <p className="mt-2 text-xs text-red-600 dark:text-red-400">{actionError}</p>}
 
-      {item.status === 'response_ready' && item.response_summary && !responding && (
-        <p className="mt-3 rounded-lg bg-emerald-50 p-2.5 text-sm text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">
-          {item.response_summary}
-        </p>
+      {item.response_summary && !responding && (
+        <div className="mt-3 rounded-lg p-2.5 text-sm">
+          {item.status === 'response_ready' ? (
+            <p className="bg-emerald-50 rounded-lg p-2.5 text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">
+              {item.response_summary}
+            </p>
+          ) : (
+            <>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                Draft — not visible to the buyer yet
+              </p>
+              <p className="mt-1 bg-zinc-50 rounded-lg p-2.5 text-zinc-700 dark:bg-zinc-800/40 dark:text-zinc-300">
+                {item.response_summary}
+              </p>
+            </>
+          )}
+        </div>
       )}
 
       {responding && (
-        <form onSubmit={handleRespond} className="mt-3 space-y-2">
+        <div className="mt-3 space-y-2">
           <textarea
             value={responseText}
             onChange={(e) => setResponseText(e.target.value)}
@@ -274,6 +306,13 @@ function RequestRow({
             placeholder="Client-visible summary only — internal research stays out of this field."
             className="w-full rounded-lg border border-zinc-200 p-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           />
+          {!item.compliance_cleared_at && (
+            <p className="text-[11px] text-amber-600 dark:text-amber-400">
+              {item.status === 'response_ready'
+                ? 'Compliance must be cleared before an update can be published.'
+                : 'Compliance must be cleared before this can be published — you can still save it as a draft.'}
+            </p>
+          )}
           <div className="flex justify-end gap-2">
             <button
               type="button"
@@ -282,15 +321,31 @@ function RequestRow({
             >
               Cancel
             </button>
+            {item.status !== 'response_ready' && (
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                disabled={busy || !responseText.trim()}
+                className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                {busy ? 'Saving…' : 'Save draft'}
+              </button>
+            )}
             <button
-              type="submit"
-              disabled={busy || !responseText.trim()}
+              type="button"
+              onClick={handlePublish}
+              disabled={busy || !responseText.trim() || !item.compliance_cleared_at}
+              title={
+                item.compliance_cleared_at
+                  ? undefined
+                  : 'Clear compliance first — the backend refuses to publish without it'
+              }
               className="rounded-lg bg-primarycolor px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
             >
-              {busy ? 'Sending…' : 'Publish response'}
+              {busy ? 'Publishing…' : 'Publish response'}
             </button>
           </div>
-        </form>
+        </div>
       )}
     </article>
   );

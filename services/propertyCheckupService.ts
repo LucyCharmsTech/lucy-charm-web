@@ -106,6 +106,21 @@ export async function clearReviewRequestCompliance(
   return res.data;
 }
 
+/** Saves/edits the response privately — never visible to the buyer, never
+ * gated on compliance. Use `respondToReviewRequest` to actually publish it. */
+export async function draftReviewRequestResponse(
+  requestId: string,
+  payload: PropertyReviewRequestRespondRequest,
+): Promise<PropertyReviewRequestStaff> {
+  const res = await api.patch<PropertyReviewRequestStaff>(
+    `/property_checkup/review_requests/${requestId}/draft`,
+    payload,
+  );
+  return res.data;
+}
+
+/** Publishes the response, making it visible to the buyer. The backend
+ * refuses (403) until compliance has been cleared on this request. */
 export async function respondToReviewRequest(
   requestId: string,
   payload: PropertyReviewRequestRespondRequest,
