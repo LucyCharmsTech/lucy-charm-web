@@ -168,6 +168,22 @@
 .leaflet-container {
   background: var(--background);
   font: inherit;
+  /*
+    Contain Leaflet's z-indexes.
+
+    Leaflet layers its own panes and controls from 200 up to 1000 (markers 600,
+    popups 700, controls 800, the control corners 1000). Those are meant to be
+    internal, but without a stacking context here they compete at the page root,
+    where the site header is z-40. The result: price pins and map controls drew
+    on top of the account menu and the notifications panel.
+
+    `isolation: isolate` makes the map its own stacking context, so everything
+    inside it is sealed in and the whole map takes part in the page at the one
+    level its container sits at. One line, and it holds for any overlay added
+    later — the alternative was raising the header above 1000 and re-checking
+    every dialog, banner and toast against that number.
+  */
+  isolation: isolate;
 }
 
 .listing-popup {

@@ -126,7 +126,7 @@ describe('/security is reachable on purpose, not only by force', () => {
   test('it stays out of the public nav', () => {
     // Signed-in only. It renders a live TOTP secret, so it does not belong
     // beside Buy and Sell.
-    const navLinks = navBarSource.match(/const NAV_LINKS = \[(.*?)\];/s)?.[1] ?? '';
+    const navLinks = navBarSource.match(/const NAV_LINKS = \[([\s\S]*?)\];/)?.[1] ?? '';
     expect(navLinks).not.toContain('/security');
   });
 

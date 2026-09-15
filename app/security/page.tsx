@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { MfaEnrolment } from '@/components/security/MfaEnrolment';
+import SecurityPageGate from '@/components/security/SecurityPageGate';
 
 /**
  * Account security — control 1.13 / C6's *"missing enrolment screen"*.
@@ -28,7 +28,7 @@ export default function SecurityPage() {
         your email or your Google sign-in.
       </p>
       <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <MfaEnrolment />
+        <SecurityPageGate />
       </div>
     </main>
   );

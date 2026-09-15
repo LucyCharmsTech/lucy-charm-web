@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import ListingCard from '@/components/ListingCard';
@@ -112,8 +112,17 @@ function ListingsPageContent() {
     [searchParams],
   );
 
+  // Set by a filter change that should not flash the loading state, read once
+  // by the fetch effect and cleared. A ref rather than state: it must not itself
+  // trigger the render it is describing.
+  const nextFetchIsSilent = useRef(false);
+
   const setFilters = useCallback(
-    (patch: Partial<ListingFilters>, options?: { keepPage?: boolean }) => {
+    (
+      patch: Partial<ListingFilters>,
+      options?: { keepPage?: boolean; silent?: boolean },
+    ) => {
+      if (options?.silent) nextFetchIsSilent.current = true;
       const next: ListingFilters = {
         ...filters,
         ...patch,
@@ -278,7 +287,9 @@ function ListingsPageContent() {
   );
 
   useEffect(() => {
-    void fetchListings();
+    const silent = nextFetchIsSilent.current;
+    nextFetchIsSilent.current = false;
+    void fetchListings({ silent });
   }, [fetchListings]);
 
   // ---------------------------------------------------------------------------
@@ -425,7 +436,7 @@ function ListingsPageContent() {
           </div>
         )}
 
-        {loading && (
+        {loading && filters.view !== 'map' && (
           <div className="grid gap-5 sm:gap-6 lg:grid-cols-2 xl:grid-cols-3 max-w-6xl">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="h-72 animate-pulse rounded-2xl bg-zinc-100 dark:bg-zinc-800" />
@@ -437,12 +448,29 @@ function ListingsPageContent() {
           <NoResultsAssistance filters={filters} />
         )}
 
-        {!loading && filters.view === 'map' && (
+        {/*
+          Deliberately NOT gated on `!loading`.
+
+          Panning or zooming writes the new bounds to the URL, which refetches,
+          which set `loading` — and this block unmounted. React then ran the
+          map's cleanup, Leaflet destroyed itself, and a fresh map was built and
+          re-fitted when the results arrived. Every single zoom click tore the
+          map down and rebuilt it, which is the flicker people reported, and a
+          map caught mid-rebuild is the grey rectangle.
+
+          The map is the surface in this view, so it outlives its own data. The
+          skeleton above is suppressed here for the same reason.
+        */}
+        {filters.view === 'map' && (
           <div className="space-y-3">
             <ListingsMap
               listings={mapPoints}
               initialBbox={filters.bbox}
-              onBoundsChange={(bbox) => setFilters({ bbox }, { keepPage: true })}
+              onBoundsChange={(bbox) =>
+                // `silent` so moving the map refreshes the pins underneath it
+                // without the page flashing its loading state.
+                setFilters({ bbox }, { keepPage: true, silent: true })
+              }
             />
             {unmappable > 0 && (
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -459,7 +487,12 @@ function ListingsPageContent() {
                 .
               </p>
             )}
-            {mapPoints.length === 0 && !apiError && (
+            {loading && (
+              <p role="status" className="text-sm text-zinc-500 dark:text-zinc-400">
+                Updating results…
+              </p>
+            )}
+            {!loading && mapPoints.length === 0 && !apiError && (
               <p className="text-sm text-zinc-500 dark:text-zinc-400">
                 No listings with a map location in this area. Try zooming out.
               </p>

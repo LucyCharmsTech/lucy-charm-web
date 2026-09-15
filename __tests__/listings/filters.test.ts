@@ -188,3 +188,50 @@ describe('counting what the map cannot place', () => {
     expect(params.page).toBe(1);
   });
 });
+
+// ── A saved viewport must still be a viewport ───────────────────────────────
+
+/**
+ * Client report: "when searching using location, if there are no listings with
+ * a map location the map shouldn't glitch."
+ *
+ * The bbox is written back to the URL on every pan, so a bad one persists and
+ * replays on the next visit. A zero-area box is the problem case: it is a
+ * point, not a viewport, and `fitBounds` on it drops the map to the tightest
+ * zoom available, showing building outlines with the zoom-in control already
+ * disabled, or blank space where the tile provider has nothing that deep.
+ */
+describe('parseBbox rejects boxes that are not viewports', () => {
+  const parse = (value: string) =>
+    filtersFromParams(new URLSearchParams(`bbox=${value}`)).bbox;
+
+  test('a normal box survives', () => {
+    expect(parse('-79.5,43.6,-79.3,43.8')).toEqual([-79.5, 43.6, -79.3, 43.8]);
+  });
+
+  test('a zero-area box is rejected', () => {
+    expect(parse('-79.4,43.7,-79.4,43.7')).toBeNull();
+  });
+
+  test('a box with no width is rejected', () => {
+    expect(parse('-79.4,43.6,-79.4,43.8')).toBeNull();
+  });
+
+  test('a box with no height is rejected', () => {
+    expect(parse('-79.5,43.7,-79.3,43.7')).toBeNull();
+  });
+
+  test.each([
+    ['latitude past the pole', '-79.5,-91,-79.3,43.8'],
+    ['latitude past the north pole', '-79.5,43.6,-79.3,91'],
+    ['longitude past the meridian', '-181,43.6,-79.3,43.8'],
+    ['longitude past the antimeridian', '-79.5,43.6,181,43.8'],
+  ])('%s is rejected', (_label, value) => {
+    // Leaflet does not reject these. It renders somewhere nothing exists.
+    expect(parse(value)).toBeNull();
+  });
+
+  test('an inverted box is still rejected', () => {
+    expect(parse('-79.3,43.8,-79.5,43.6')).toBeNull();
+  });
+});
