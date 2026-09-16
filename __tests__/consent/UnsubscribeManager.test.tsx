@@ -132,8 +132,49 @@ test('the stop-all control switches off everything promotional', async () => {
   expect(screen.getByText(/still get service emails/)).toBeTruthy();
 });
 
-test('a stop_all link applies immediately on arrival, so the footer is one click', async () => {
+test('a stop_all link offers the change, it does not make it', async () => {
+  /*
+   * This used to POST on arrival so the footer's "Stop all promotional emails"
+   * line was a single click. Nobody had to click it, though: corporate mail
+   * security (Safe Links, Mimecast, Proofpoint) opens links to check them and
+   * some render the page and run its scripts, which turned a scan into a
+   * consent decision. People were unsubscribed without ever opening the email.
+   */
   searchParams = new URLSearchParams('token=valid-token&stop_all=1');
+  mockFetch.mockResolvedValue({
+    email: 'buyer@example.com',
+    streams: {
+      marketing: true,
+      listing_alert: true,
+      product_update: true,
+      saved_search_alert: true,
+    },
+    stop_all: false,
+  });
+
+  render(<UnsubscribeManager />);
+
+  await waitFor(() => expect(mockFetch).toHaveBeenCalledWith('valid-token'));
+
+  // Nothing was withdrawn merely by the page loading.
+  expect(mockUnsubscribe).not.toHaveBeenCalled();
+  expect(
+    screen.getByRole('button', { name: /Yes, stop all promotional emails/ }),
+  ).toBeTruthy();
+});
+
+test('confirming the stop_all offer is what withdraws consent', async () => {
+  searchParams = new URLSearchParams('token=valid-token&stop_all=1');
+  mockFetch.mockResolvedValue({
+    email: 'buyer@example.com',
+    streams: {
+      marketing: true,
+      listing_alert: true,
+      product_update: true,
+      saved_search_alert: true,
+    },
+    stop_all: false,
+  });
   mockUnsubscribe.mockResolvedValue({
     email: 'buyer@example.com',
     streams: {
@@ -146,12 +187,37 @@ test('a stop_all link applies immediately on arrival, so the footer is one click
   });
 
   render(<UnsubscribeManager />);
+  await waitFor(() =>
+    screen.getByRole('button', { name: /Yes, stop all promotional emails/ }),
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: /Yes, stop all promotional emails/ }));
 
   await waitFor(() =>
     expect(mockUnsubscribe).toHaveBeenCalledWith('valid-token', 'all_promotional'),
   );
-  expect(mockFetch).not.toHaveBeenCalled();
-  expect(screen.getByRole('status').textContent).toContain('now switched off');
+});
+
+test('the offer is not shown to someone already stopped', async () => {
+  // Following the link a second time should not invite a decision already made.
+  searchParams = new URLSearchParams('token=valid-token&stop_all=1');
+  mockFetch.mockResolvedValue({
+    email: 'buyer@example.com',
+    streams: {
+      marketing: false,
+      listing_alert: false,
+      product_update: false,
+      saved_search_alert: false,
+    },
+    stop_all: true,
+  });
+
+  render(<UnsubscribeManager />);
+  await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+
+  expect(
+    screen.queryByRole('button', { name: /Yes, stop all promotional emails/ }),
+  ).toBeNull();
 });
 
 test('a link with no token explains itself instead of calling the API', async () => {

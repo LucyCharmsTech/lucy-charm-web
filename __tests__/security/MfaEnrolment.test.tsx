@@ -7,6 +7,7 @@ import {
   regenerateRecoveryCodes,
   startMfaSetup,
 } from '@/services/mfaService';
+import { useAuthStore } from '@/stores/authStore';
 
 /**
  * The enrolment screen — control 1.13 / C6's *"missing enrolment screen"*.
@@ -59,7 +60,13 @@ beforeEach(() => {
     totp_uri: 'otpauth://totp/Lucy%20Charms:a@b.c?secret=SEED',
     secret: 'SEEDSEEDSEEDSEED',
   });
-  mockEnable.mockResolvedValue({ recovery_codes: CODES });
+  // Enrolment returns a session as well as codes: the token this screen was
+  // loaded with still says `mfa=enrolment_required`, so the component has to
+  // store the replacement or the user is bounced straight back here.
+  mockEnable.mockResolvedValue({
+    recovery_codes: CODES,
+    token: { access_token: 'new-access', refresh_token: 'new-refresh', token_type: 'bearer' },
+  });
   mockRegenerate.mockResolvedValue({ recovery_codes: CODES });
   mockDisable.mockResolvedValue(undefined);
 });
@@ -244,4 +251,61 @@ test('a locked account is told a recovery code still works', async () => {
       screen.getAllByRole('alert').some((el) => /recovery code still works/i.test(el.textContent ?? '')),
     ).toBe(true),
   );
+});
+
+// ── The session enrolment hands back ────────────────────────────────────────
+
+test('the new session is stored, so setup does not loop back on itself', async () => {
+  /*
+   * The token this screen loads with says `mfa=enrolment_required`, and it goes
+   * on saying that however enrolled the account now is. Without storing the
+   * replacement the next protected request 403s, the interceptor redirects to
+   * /security, and the person who has just finished setup lands back on setup —
+   * for the full life of the token, which is eight hours.
+   */
+  useAuthStore.setState({
+    accessToken: 'enrolment-only',
+    refreshToken: 'old-refresh',
+    user: null,
+  });
+
+  render(<MfaEnrolment />);
+  await waitFor(() => screen.getByRole('button', { name: /Set up/ }));
+  fireEvent.click(screen.getByRole('button', { name: /Set up/ }));
+  await waitFor(() => screen.getByLabelText(/6-digit code your app shows/i));
+
+  fireEvent.change(screen.getByLabelText(/6-digit code your app shows/i), {
+    target: { value: '123456' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Turn on' }));
+
+  await waitFor(() =>
+    expect(useAuthStore.getState().accessToken).toBe('new-access'),
+  );
+  expect(useAuthStore.getState().refreshToken).toBe('new-refresh');
+});
+
+test('storing the session does not discard the signed-in user', async () => {
+  // Only the credential changed. Clearing the user here would empty the navbar
+  // and make the app look signed out at the exact moment it became more secure.
+  const user = { id: 'u-1', email: 'agent@example.com', role: 'agent' };
+  useAuthStore.setState({
+    accessToken: 'enrolment-only',
+    refreshToken: 'old-refresh',
+    user: user as never,
+  });
+
+  render(<MfaEnrolment />);
+  await waitFor(() => screen.getByRole('button', { name: /Set up/ }));
+  fireEvent.click(screen.getByRole('button', { name: /Set up/ }));
+  await waitFor(() => screen.getByLabelText(/6-digit code your app shows/i));
+  fireEvent.change(screen.getByLabelText(/6-digit code your app shows/i), {
+    target: { value: '123456' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Turn on' }));
+
+  await waitFor(() =>
+    expect(useAuthStore.getState().accessToken).toBe('new-access'),
+  );
+  expect(useAuthStore.getState().user).toEqual(user);
 });

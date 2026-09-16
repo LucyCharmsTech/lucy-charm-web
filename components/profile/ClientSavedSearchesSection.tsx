@@ -6,7 +6,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DEFAULT_FILTERS, paramsFromFilters } from '@/lib/listingFilters';
-import { listSavedSearches as listDeviceSearches } from '@/lib/clientPortalStorage';
+import {
+  listSavedSearches as listDeviceSearches,
+  removeSavedSearch,
+} from '@/lib/clientPortalStorage';
 import { getApiErrorMessage } from '@/lib/apiErrorMessage';
 import { fetchListingFacetOptions } from '@/services/listingsService';
 import {
@@ -16,6 +19,7 @@ import {
   fetchMySavedSearches,
   fetchSavedSearchLimit,
   importDeviceSearches,
+  SAVED_SEARCH_FILTER_KEYS,
   updateSavedSearch,
 } from '@/services/savedSearchService';
 import type { SavedSearch } from '@/types/api';
@@ -190,18 +194,40 @@ export default function ClientSavedSearchesSection() {
     }
   }
 
+  /** Every permitted filter in a stored query string, dropping empties. */
+  function filtersFromQuery(query: string): Record<string, string> {
+    const params = new URLSearchParams(query);
+    const filters: Record<string, string> = {};
+    for (const key of SAVED_SEARCH_FILTER_KEYS) {
+      const value = params.get(key)?.trim();
+      if (value) filters[key] = value;
+    }
+    return filters;
+  }
+
   async function handleImport() {
     setBusy('import');
     setError(null);
     setNotice(null);
     try {
       const device = listDeviceSearches();
-      const result = await importDeviceSearches(
-        device.map((entry) => ({
-          name: entry.name,
-          filters: { city: new URLSearchParams(entry.query).get('city') ?? '' },
-        })),
-      );
+      // Carry the whole stored query across, not just the city.
+      //
+      // This used to read `city` alone, so price, beds, property type and
+      // everything else was silently dropped — and a search saved without a
+      // city arrived as `{ city: '' }`, which is every listing on the site. A
+      // person importing three careful searches got three "all listings".
+      const candidates = device
+        .map((entry) => ({ name: entry.name, filters: filtersFromQuery(entry.query) }))
+        .filter((entry) => Object.keys(entry.filters).length > 0);
+
+      if (candidates.length === 0) {
+        setNotice('Those searches had no filters left to bring over.');
+        setImportDismissed(true);
+        return;
+      }
+
+      const result = await importDeviceSearches(candidates);
       const parts = [`${result.imported.length} kept`];
       if (result.duplicates.length > 0) {
         parts.push(`${result.duplicates.length} already saved`);
@@ -210,6 +236,13 @@ export default function ClientSavedSearchesSection() {
         parts.push(`not enough room for: ${result.rejected.join(', ')}`);
       }
       setNotice(parts.join(' · '));
+      // Clear what actually came over, so the prompt stops reappearing with
+      // searches the account already holds. Rejected ones stay on the device.
+      const importedNames = new Set(result.imported.map((entry) => entry.name));
+      for (const entry of device) {
+        if (importedNames.has(entry.name)) removeSavedSearch(entry.id);
+      }
+      setDeviceCount(listDeviceSearches().length);
       setImportDismissed(true);
       setReloadKey((k) => k + 1);
     } catch (err: unknown) {

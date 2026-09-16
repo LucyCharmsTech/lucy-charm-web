@@ -38,9 +38,16 @@ jest.mock('@/lib/completeSignIn', () => ({
 }));
 
 const setAuth = jest.fn();
-jest.mock('@/stores/authStore', () => ({
-  useAuthStore: (selector: (s: unknown) => unknown) => selector({ setAuth }),
-}));
+jest.mock('@/stores/authStore', () => {
+  // Built lazily: `jest.mock` is hoisted above the `const setAuth` below, so
+  // touching it at factory-evaluation time throws.
+  // `seatSession` seats the credential through `getState().setTokens` before
+  // fetching the user, so the mock has to offer it.
+  const state = () => ({ setAuth, setTokens: jest.fn() });
+  const useAuthStore = (selector: (s: unknown) => unknown) => selector(state());
+  useAuthStore.getState = state;
+  return { useAuthStore };
+});
 
 const mockRequest = requestEmailCode as jest.MockedFunction<typeof requestEmailCode>;
 const mockVerify = verifyEmailCode as jest.MockedFunction<typeof verifyEmailCode>;
@@ -157,8 +164,21 @@ test('verifies the code, seats the session and routes on', async () => {
       code: '123456',
     }),
   );
-  // Placeholder user first, then the real one — the established pattern.
-  expect(setAuth).toHaveBeenCalledTimes(2);
+  // Once, with the real user.
+  //
+  // This used to be twice: a placeholder (`role: 'client'`, empty email) was
+  // stored before `/users/me` was even called. When that call failed — which
+  // it does for a staff account that has not enrolled in two-step
+  // verification, since every authenticated route answers 403 — the
+  // placeholder stayed, and the form reported "that code is not valid" for a
+  // code that had been valid. The credential is now seated on its own, and
+  // only a real user is ever written.
+  expect(setAuth).toHaveBeenCalledTimes(1);
+  expect(setAuth).toHaveBeenCalledWith(
+    expect.any(String),
+    expect.any(String),
+    expect.objectContaining({ email: expect.stringContaining('@') }),
+  );
   await waitFor(() => expect(replace).toHaveBeenCalled());
 });
 

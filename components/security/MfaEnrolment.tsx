@@ -21,6 +21,7 @@ import {
   startMfaSetup,
 } from '@/services/mfaService';
 import type { MfaStatus } from '@/types/api';
+import { useAuthStore } from '@/stores/authStore';
 
 /**
  * The enrolment screen — control 1.13 / C6's *"missing enrolment screen"*.
@@ -39,6 +40,10 @@ import type { MfaStatus } from '@/types/api';
 type View = 'loading' | 'idle' | 'scanning' | 'codes' | 'disabling';
 
 export function MfaEnrolment() {
+  // `setTokens`, not `setAuth`: only the credential changed here, and the
+  // stored user is already correct. Passing the user back through would also
+  // have to handle it being null, which would mean clearing it.
+  const setTokens = useAuthStore((state) => state.setTokens);
   const [view, setView] = useState<View>('loading');
   const [status, setStatus] = useState<MfaStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -114,6 +119,14 @@ export function MfaEnrolment() {
     setError(null);
     try {
       const result = await enableMfa(secret, otp.replace(/\D/g, ''));
+      // Store the session enrolment just issued, before anything else runs.
+      //
+      // The token this screen was loaded with says `mfa=enrolment_required`,
+      // and it keeps saying that however enrolled the account now is. Leaving
+      // it in place means the next protected request 403s, the interceptor
+      // redirects here, and the person who has just finished setup is sent
+      // back to setup — for the full life of the token.
+      setTokens(result.token.access_token, result.token.refresh_token);
       setCodes(result.recovery_codes);
       setCodesReplacedPrevious(false);
       // Drop the seed as soon as it is no longer needed. It is on the server

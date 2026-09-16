@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { fetchVisibleModules, type JourneyType } from '@/services/journeyService';
+import { useAuthStore } from '@/stores/authStore';
 
 /**
  * Which portal modules to render — controls 6.4 and 6.19.
@@ -50,23 +51,33 @@ export type VisibleModules = {
 };
 
 export function useVisibleModules(type: JourneyType = 'buyer'): VisibleModules {
-  const [modules, setModules] = useState<readonly string[] | null>(null);
+  const [fetched, setFetched] = useState<readonly string[] | null>(null);
+
+  // Signed out there is no journey to ask about, and asking anyway starts one
+  // for nobody. The fallback already covers this case correctly.
+  const accessToken = useAuthStore((state) => state.accessToken);
+
+  // Derived, not stored: signed out there is nothing to fetch, and writing the
+  // fallback from inside the effect would be setting state on a value the
+  // render already knows.
+  const modules = accessToken ? fetched : ALWAYS_ON;
 
   useEffect(() => {
+    if (!accessToken) return;
     let active = true;
     fetchVisibleModules(type)
       .then((keys) => {
-        if (active) setModules(keys);
+        if (active) setFetched(keys);
       })
       .catch(() => {
         // See the note above: fall back to the unflagged modules, never to
         // everything and never to nothing.
-        if (active) setModules(ALWAYS_ON);
+        if (active) setFetched(ALWAYS_ON);
       });
     return () => {
       active = false;
     };
-  }, [type]);
+  }, [type, accessToken]);
 
   return {
     ready: modules !== null,

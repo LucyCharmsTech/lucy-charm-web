@@ -234,6 +234,18 @@ export type MfaRecoveryCodesResponse = {
   recovery_codes: string[];
 };
 
+/**
+ * POST /auth/mfa/enable — recovery codes, plus the session that replaces the
+ * enrolment-only one the caller arrived with.
+ *
+ * The caller's existing token says `mfa=enrolment_required` and keeps saying it
+ * regardless of the account now being enrolled, so storing this pair is what
+ * actually lets them leave the setup screen.
+ */
+export type MfaEnableResponse = MfaRecoveryCodesResponse & {
+  token: AuthToken;
+};
+
 /** GET /auth/mfa/status — carries no credential. */
 export type MfaStatus = {
   enabled: boolean;

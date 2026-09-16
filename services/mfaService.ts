@@ -9,6 +9,7 @@
 import api from '@/lib/axios';
 import type {
   AuthToken,
+  MfaEnableResponse,
   MfaRecoveryCodesResponse,
   MfaSetupResponse,
   MfaStatus,
@@ -43,8 +44,8 @@ export async function startMfaSetup(): Promise<MfaSetupResponse> {
 export async function enableMfa(
   secret: string,
   otp: string,
-): Promise<MfaRecoveryCodesResponse> {
-  const res = await api.post<MfaRecoveryCodesResponse>('/auth/mfa/enable', {
+): Promise<MfaEnableResponse> {
+  const res = await api.post<MfaEnableResponse>('/auth/mfa/enable', {
     secret,
     otp,
   });

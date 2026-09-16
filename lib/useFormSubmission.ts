@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   isDuplicate,
   isRecoverable,
@@ -66,13 +66,23 @@ export function useFormSubmission<T>(options?: {
   const [retryable, setRetryable] = useState(false);
   const [value, setValue] = useState<T | null>(null);
 
+  // The guard reads a ref, not state.
+  //
+  // `state` here is captured from the render this callback was created in, so
+  // two taps within the same render both saw 'idle' and both passed — which is
+  // exactly the double submit the guard exists to stop, and the case a slow
+  // connection makes most likely. A ref is the current value at the moment it
+  // is read.
+  const inFlight = useRef(false);
+
   const submit = useCallback(
     async (run: () => Promise<T>): Promise<SubmissionResult<T>> => {
       // See the note above: a disabled button is not enough on a slow
       // connection.
-      if (state === 'submitting') {
+      if (inFlight.current) {
         return { ok: false, state: 'error', message: 'Already sending.' };
       }
+      inFlight.current = true;
       setState('submitting');
       setMessage(null);
       try {
@@ -98,12 +108,19 @@ export function useFormSubmission<T>(options?: {
         // 422 teaches people the button does not work.
         setRetryable(isRecoverable(error));
         return { ok: false, state: 'error', message: text };
+      } finally {
+        // Released on every path, including a throw. Leaving it set would make
+        // the guard permanent and the form unusable after one failure.
+        inFlight.current = false;
       }
     },
-    [state, fallback, duplicate],
+    // `state` is deliberately gone: reading it was the bug, and keeping it as a
+    // dependency would rebuild this callback on every state change for nothing.
+    [fallback, duplicate],
   );
 
   const reset = useCallback(() => {
+    inFlight.current = false;
     setState('idle');
     setMessage(null);
     setRetryable(false);

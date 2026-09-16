@@ -42,9 +42,16 @@ jest.mock('@/lib/completeSignIn', () => ({
 }));
 
 const setAuth = jest.fn();
-jest.mock('@/stores/authStore', () => ({
-  useAuthStore: (selector: (s: unknown) => unknown) => selector({ setAuth }),
-}));
+jest.mock('@/stores/authStore', () => {
+  // Built lazily: `jest.mock` is hoisted above the `const setAuth` below, so
+  // touching it at factory-evaluation time throws.
+  // `seatSession` seats the credential through `getState().setTokens` before
+  // fetching the user, so the mock has to offer it.
+  const state = () => ({ setAuth, setTokens: jest.fn() });
+  const useAuthStore = (selector: (s: unknown) => unknown) => selector(state());
+  useAuthStore.getState = state;
+  return { useAuthStore };
+});
 
 const mockRequest = requestEmailCode as jest.MockedFunction<typeof requestEmailCode>;
 const mockVerifyCode = verifyEmailCode as jest.MockedFunction<typeof verifyEmailCode>;

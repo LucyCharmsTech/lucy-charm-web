@@ -17,6 +17,7 @@
 
 import { completeSignIn } from '@/lib/completeSignIn';
 import { fetchCurrentUser } from '@/services/userService';
+import { useAuthStore } from '@/stores/authStore';
 import {
   userMeToAuthUser,
   type AuthToken,
@@ -34,13 +35,16 @@ export async function seatSession(
   tokens: AuthToken,
   setAuth: SetAuth,
 ): Promise<UserMe> {
-  setAuth(tokens.access_token, tokens.refresh_token, {
-    user_id: '',
-    email: '',
-    first_name: '',
-    last_name: '',
-    role: 'client',
-  });
+  // Seat the credential only. `fetchCurrentUser` needs it on the request, but
+  // there is no user to store yet and inventing one is worse than storing none.
+  //
+  // This used to write a placeholder — `role: 'client'`, empty email — before
+  // the fetch. When the fetch failed, that placeholder stayed: a staff account
+  // that has not enrolled in two-step verification gets 403 from every
+  // authenticated route including this one, so it was left signed in as a
+  // nameless client, and the sign-in form reported "that code is not valid"
+  // for a code that had been perfectly valid.
+  useAuthStore.getState().setTokens(tokens.access_token, tokens.refresh_token);
 
   const me = await fetchCurrentUser();
   setAuth(tokens.access_token, tokens.refresh_token, userMeToAuthUser(me));

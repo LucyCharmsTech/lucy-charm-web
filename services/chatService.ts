@@ -68,9 +68,12 @@ export async function sendChatMessage(
 ): Promise<ChatSendResponse> {
   const res = await api.post<ChatSendResponse>('/chat/send', payload, {
     timeout: CHAT_SEND_TIMEOUT_MS,
-    headers: payload.seller_journey_id
-      ? { [ANONYMOUS_SESSION_HEADER]: getOrCreateAnonymousSessionToken() }
-      : sessionAuthHeaders(sessionToken),
+    // One header, one identity. This used to substitute a *different* token
+    // whenever a seller journey was attached, which broke every such message:
+    // the backend checks `get_for_caller` on the AI session AND
+    // `get_journey_for_chat` on the journey against this same header, so a
+    // token that matches neither is rejected before the turn runs.
+    headers: sessionAuthHeaders(sessionToken),
   });
   return res.data;
 }
@@ -179,14 +182,17 @@ export async function streamChatMessage(
  * Format: `anon_<listingId>_<random-uuid>` — one token per listing so each
  * property has its own independent conversation thread.
  */
-export function getOrCreateAnonToken(listingId: string): string {
-  if (typeof window === 'undefined') return `anon_${listingId}_${crypto.randomUUID()}`;
-
-  const key = `lucy_anon_session_${listingId}`;
-  let token = localStorage.getItem(key);
-  if (!token) {
-    token = `anon_${listingId}_${crypto.randomUUID()}`;
-    localStorage.setItem(key, token);
-  }
-  return token;
+export function getOrCreateAnonToken(): string {
+  // Deliberately ignores the listing and returns the one anonymous identity
+  // the rest of the app already uses (saved listings, lead capture, seller
+  // journeys). The old per-listing token gave the same visitor a different
+  // identity on every property, which is not what a session token is for: the
+  // conversation thread is keyed server-side by `session_id`, not by this.
+  //
+  // The mismatch it caused was invisible until the backend started verifying
+  // session ownership, at which point an anonymous seller-journey message
+  // authenticated as one identity against a session created under another.
+  //
+  // Kept as a named export so both chat surfaces read the same way.
+  return getOrCreateAnonymousSessionToken();
 }

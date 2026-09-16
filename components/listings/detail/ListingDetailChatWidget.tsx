@@ -74,7 +74,7 @@ export default function ListingDetailChatWidget({
         if (userId) {
           session = await createAiSession({ userId });
         } else {
-          const token = getOrCreateAnonToken(listingId);
+          const token = getOrCreateAnonToken();
           session = await createAiSession({ sessionToken: token });
         }
         setSessionId(session.id);
@@ -122,7 +122,7 @@ export default function ListingDetailChatWidget({
           listing_id: listingId,
           page_url: typeof window !== 'undefined' ? window.location.href : undefined,
         },
-        userId ? null : getOrCreateAnonToken(listingId));
+        userId ? null : getOrCreateAnonToken());
         if (response.escalation_flag) track('chat_escalated', { listing_id: listingId });
 
         const assistantMsg: ChatMessage = {
@@ -195,7 +195,7 @@ export default function ListingDetailChatWidget({
           listingId: listingId,
           email: email ?? undefined,
           message,
-          sessionToken: userId ? null : getOrCreateAnonToken(listingId),
+          sessionToken: userId ? null : getOrCreateAnonToken(),
         });
         setHumanRequested(true);
         return true;

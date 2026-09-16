@@ -202,7 +202,7 @@ function ChatPageContent() {
           session = await createAiSession({ userId });
         } else {
           // Anonymous: use a stable per-browser token stored in localStorage
-          const token = getOrCreateAnonToken(GLOBAL_CHAT_LISTING_KEY);
+          const token = getOrCreateAnonToken();
           session = await createAiSession({ sessionToken: token });
         }
         setSessionId(session.id);
@@ -262,7 +262,7 @@ function ChatPageContent() {
           seller_journey_id: sellerJourneyId ?? undefined,
           page_url: typeof window !== 'undefined' ? window.location.href : undefined,
         },
-        userId ? null : getOrCreateAnonToken(GLOBAL_CHAT_LISTING_KEY));
+        userId ? null : getOrCreateAnonToken());
         if (response.escalation_flag) track('chat_escalated', { surface: 'general' });
 
         const assistantMsg: ChatMessage = {
@@ -323,7 +323,7 @@ function ChatPageContent() {
       await requestHumanAgent({
         sessionId,
         email: email ?? undefined,
-        sessionToken: userId ? null : getOrCreateAnonToken(GLOBAL_CHAT_LISTING_KEY),
+        sessionToken: userId ? null : getOrCreateAnonToken(),
       });
       setHumanRequested(true);
     } finally {

@@ -48,19 +48,21 @@ export function UnsubscribeManager() {
     if (!token) return;
     let active = true;
 
-    // Applying the stop-all on arrival rather than after a second click is
-    // what makes the footer's "Stop all promotional emails" line honest.
-    const request = stopAllOnArrival
-      ? unsubscribeStream(token, ALL_PROMOTIONAL)
-      : fetchUnsubscribeState(token);
-
-    request
+    // Reads only. This used to POST the stop-all on arrival, so that the
+    // footer's "Stop all promotional emails" line was a single click.
+    //
+    // The trouble is that nobody had to click it. Corporate mail security
+    // (Safe Links, Mimecast, Proofpoint and the rest) opens links in messages
+    // to check them, and some render the page and run its scripts. That turned
+    // a scan into a consent decision, and the recipient was unsubscribed
+    // without ever seeing the email. A withdrawal nobody made is as wrong as
+    // ignoring one they did.
+    //
+    // `stop_all=1` now arrives as an offer, confirmed below by a real click.
+    fetchUnsubscribeState(token)
       .then((next) => {
         if (!active) return;
         setState(next);
-        if (stopAllOnArrival) {
-          setLastChange('All promotional emails are now switched off.');
-        }
       })
       .catch((err: unknown) => {
         if (!active) return;
@@ -78,7 +80,7 @@ export function UnsubscribeManager() {
     return () => {
       active = false;
     };
-  }, [stopAllOnArrival, token]);
+  }, [token]);
 
   async function change(
     stream: ConsentStream | typeof ALL_PROMOTIONAL,
@@ -151,6 +153,27 @@ export function UnsubscribeManager() {
         These settings apply to <span className="font-semibold">{state.email}</span>. You do
         not need to sign in to change them.
       </p>
+
+      {stopAllOnArrival && !state.stop_all && (
+        <div className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/40">
+          <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+            Stop all promotional emails?
+          </p>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            You followed the &ldquo;stop all&rdquo; link. Confirm below and we will switch
+            off every promotional email to this address. Messages about something you have
+            asked for, such as a viewing you booked, still reach you.
+          </p>
+          <Button
+            type="button"
+            onClick={() => change(ALL_PROMOTIONAL, false, 'All promotional email')}
+            disabled={pending !== null}
+            className="mt-3"
+          >
+            {pending === ALL_PROMOTIONAL ? 'Switching off…' : 'Yes, stop all promotional emails'}
+          </Button>
+        </div>
+      )}
 
       {lastChange && (
         <p

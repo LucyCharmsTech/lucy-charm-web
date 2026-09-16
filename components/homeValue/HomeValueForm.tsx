@@ -47,6 +47,9 @@ type Step = 'form' | 'signin' | 'confirm';
 
 const EMPTY: Partial<HomeValueRequestBody> = {};
 
+/** Where sign-in returns to, so the request in progress is not abandoned. */
+const HOME_VALUE_PATH = '/home-value';
+
 export function HomeValueForm() {
   const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
@@ -183,7 +186,17 @@ export function HomeValueForm() {
           </div>
         </div>
 
-        <GoogleLoginButton onError={(message) => setError(message)} />
+        {/*
+          Both sign-in surfaces are told where to come back to.
+          Without it `getPostLoginPath` sent the person to `/` or `/onboarding`,
+          so signing in mid-request navigated away from the form they were
+          filling and the confirmation step never appeared. The draft survived,
+          but they had to find their own way back to it.
+        */}
+        <GoogleLoginButton
+          redirectParam={HOME_VALUE_PATH}
+          onError={(message) => setError(message)}
+        />
 
         <div className="flex items-center gap-3">
           <span className="h-px flex-1 bg-zinc-200 dark:bg-zinc-700" />
@@ -191,7 +204,7 @@ export function HomeValueForm() {
           <span className="h-px flex-1 bg-zinc-200 dark:bg-zinc-700" />
         </div>
 
-        <EmailCodeAuthForm />
+        <EmailCodeAuthForm redirectPath={HOME_VALUE_PATH} />
 
         {error && (
           <p role="alert" className="text-sm text-red-600 dark:text-red-400">

@@ -127,6 +127,17 @@ test('submits an explicit professional-review handoff with the same journey owne
 });
 
 test('sends a Seller Journey chat request with the journey ownership token', async () => {
+  /*
+   * The backend checks this one header twice on a journey turn: once as the
+   * owner of the AI session, once as the owner of the journey. So the caller
+   * has to pass the token its session was created with, and that token has to
+   * be the same anonymous identity the journey was created under.
+   *
+   * This used to call `sendChatMessage(payload)` with no token at all and
+   * still expect a header, because the service quietly substituted a different
+   * token whenever `seller_journey_id` was set. That substitution is exactly
+   * what made every anonymous journey message fail the session check.
+   */
   const payload = {
     session_id: 'session-1',
     seller_journey_id: 'journey-1',
@@ -134,12 +145,26 @@ test('sends a Seller Journey chat request with the journey ownership token', asy
   };
   mockApi.post.mockResolvedValueOnce({ data: { reply_text: 'General education.' } });
 
-  await sendChatMessage(payload);
+  await sendChatMessage(payload, 'anonymous-session-token-1234');
 
   expect(mockApi.post).toHaveBeenCalledWith('/chat/send', payload, {
     timeout: 300_000,
     headers: { 'X-Anonymous-Session-Token': 'anonymous-session-token-1234' },
   });
+});
+
+test('a journey turn sent without a token carries no anonymous header', async () => {
+  // The signed-in case. Nothing is substituted to fill the gap, because a
+  // fabricated identity is what the backend would reject.
+  mockApi.post.mockResolvedValueOnce({ data: { reply_text: 'ok' } });
+
+  await sendChatMessage(
+    { session_id: 'session-1', seller_journey_id: 'journey-1', message_text: 'hi' },
+    null,
+  );
+
+  const [, , config] = mockApi.post.mock.calls.at(-1) as [string, unknown, { headers: Record<string, string> }];
+  expect(config.headers['X-Anonymous-Session-Token']).toBeUndefined();
 });
 
 test('converts an offline seller only with explicit representation and compliance approval', async () => {
