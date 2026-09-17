@@ -35,7 +35,7 @@ export default function FeaturedListingsSection({
       <div className="mt-10 flex justify-center">
         <Link
           href="/listings"
-          className="inline-flex items-center justify-center gap-2 rounded-full bg-primarycolor px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-primarycolor/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2"
+          className="inline-flex items-center justify-center gap-2 rounded-full bg-primarycolor px-6 py-3 text-sm font-semibold text-primarycolor-foreground shadow-sm transition hover:bg-primarycolor/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2"
         >
           Browse All Listings{' '}
           <ArrowRight className="size-4" aria-hidden="true" />

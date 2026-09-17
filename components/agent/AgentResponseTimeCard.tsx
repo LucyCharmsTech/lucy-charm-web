@@ -53,7 +53,7 @@ export default function AgentResponseTimeCard() {
       className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/40"
     >
       <div className="flex items-start gap-3">
-        <TimerIcon className="mt-0.5 size-5 text-primarycolor" aria-hidden="true" />
+        <TimerIcon className="mt-0.5 size-5 text-primarycolor-text" aria-hidden="true" />
         <div>
           <h2
             id="response-times-heading"

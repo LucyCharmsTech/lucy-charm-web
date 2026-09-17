@@ -123,7 +123,7 @@ export default function LeadNotesTagsPanel({ leadId }: { leadId: string }) {
 
       <section aria-labelledby="tags-heading" className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
         <div className="mb-4 flex items-center gap-2">
-          <TagIcon className="size-5 text-primarycolor" aria-hidden="true" />
+          <TagIcon className="size-5 text-primarycolor-text" aria-hidden="true" />
           <h2 id="tags-heading" className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
             Lead tags
           </h2>
@@ -149,7 +149,7 @@ export default function LeadNotesTagsPanel({ leadId }: { leadId: string }) {
           <button
             type="submit"
             disabled={busy || !tagInput.trim()}
-            className="inline-flex h-10 shrink-0 items-center justify-center rounded-xl bg-primarycolor px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+            className="inline-flex h-10 shrink-0 items-center justify-center rounded-xl bg-primarycolor px-4 text-sm font-semibold text-primarycolor-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
           >
             Add tag
           </button>
@@ -180,7 +180,7 @@ export default function LeadNotesTagsPanel({ leadId }: { leadId: string }) {
 
       <section aria-labelledby="notes-heading" className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
         <div className="mb-4 flex items-center gap-2">
-          <StickyNoteIcon className="size-5 text-primarycolor" aria-hidden="true" />
+          <StickyNoteIcon className="size-5 text-primarycolor-text" aria-hidden="true" />
           <h2 id="notes-heading" className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
             Internal notes
           </h2>
@@ -200,7 +200,7 @@ export default function LeadNotesTagsPanel({ leadId }: { leadId: string }) {
           <button
             type="submit"
             disabled={busy || !noteBody.trim()}
-            className="inline-flex h-10 items-center justify-center rounded-xl bg-primarycolor px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+            className="inline-flex h-10 items-center justify-center rounded-xl bg-primarycolor px-4 text-sm font-semibold text-primarycolor-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
           >
             Save note
           </button>

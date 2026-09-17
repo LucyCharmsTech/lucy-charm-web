@@ -41,7 +41,7 @@ export default function ClientFlaggedQuestionsDialog({ open, buyerName, question
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="shrink-0 rounded-full p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+            className="shrink-0 rounded-full p-1.5 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
           >
             <XIcon className="size-5" aria-hidden="true" />
           </button>

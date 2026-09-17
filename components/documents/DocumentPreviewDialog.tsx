@@ -130,7 +130,7 @@ export default function DocumentPreviewDialog({
               <button
                 type="button"
                 onClick={() => void handleDownload()}
-                className="mt-3 inline-flex h-9 items-center gap-2 rounded-lg bg-primarycolor px-4 text-xs font-semibold text-white transition hover:bg-primarycolor/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                className="mt-3 inline-flex h-9 items-center gap-2 rounded-lg bg-primarycolor px-4 text-xs font-semibold text-primarycolor-foreground transition hover:bg-primarycolor/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
               >
                 <DownloadIcon className="size-3.5" aria-hidden="true" />
                 Download instead

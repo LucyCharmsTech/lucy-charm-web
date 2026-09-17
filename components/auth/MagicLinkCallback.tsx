@@ -8,10 +8,10 @@ import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { getApiErrorMessage } from '@/lib/apiErrorMessage';
 import { getAccountStatusPath, getInactiveAccountDetails } from '@/lib/accountStatus';
 import { verifyAccountRecovery, verifyMagicLink } from '@/services/authService';
-import { fetchCurrentUser } from '@/services/userService';
 import { useAuthStore } from '@/stores/authStore';
-import { userMeToAuthUser } from '@/types/api';
-import { completeSignIn } from '@/lib/completeSignIn';
+import { isMfaChallenge, type AuthToken } from '@/types/api';
+import { seatSession } from '@/lib/seatSession';
+import { MfaChallengeForm } from '@/components/auth/MfaChallengeForm';
 import { getPostLoginPath } from '@/lib/postLoginRedirect';
 
 export function MagicLinkCallback() {
@@ -25,6 +25,7 @@ export function MagicLinkCallback() {
   const missingToken = !token;
   const [error, setError] = useState<string | null>(null);
   const [recoveryComplete, setRecoveryComplete] = useState(false);
+  const [challenge, setChallenge] = useState<string | null>(null);
 
   useEffect(() => {
     if (missingToken) {
@@ -33,22 +34,17 @@ export function MagicLinkCallback() {
 
     let active = true;
     (isRecovery ? verifyAccountRecovery({ token }) : verifyMagicLink({ token }))
-      .then(async (tokens) => {
+      .then(async (result) => {
         if (!active) return;
-        setAuth(tokens.access_token, tokens.refresh_token, {
-          user_id: '',
-          email: '',
-          first_name: '',
-          last_name: '',
-          role: 'client',
-        });
-        const me = await fetchCurrentUser();
+        if (isMfaChallenge(result)) {
+          setChallenge(result.mfa_challenge_token);
+          return;
+        }
+        const me = await seatSession(result, setAuth);
         if (!active) return;
-        setAuth(tokens.access_token, tokens.refresh_token, userMeToAuthUser(me));
         if (isRecovery) {
           setRecoveryComplete(true);
         } else {
-          await completeSignIn();
           router.replace(getPostLoginPath(me.role, redirectParam, me.onboarding_completed));
         }
       })
@@ -59,13 +55,32 @@ export function MagicLinkCallback() {
           router.replace(getAccountStatusPath(inactiveDetails));
           return;
         }
-        setError(getApiErrorMessage(err, 'Magic link is invalid or expired. Please request a new one.'));
+        setError(getApiErrorMessage(err, 'This link is invalid or expired. Please request a new one.'));
       });
 
     return () => {
       active = false;
     };
   }, [isRecovery, missingToken, redirectParam, router, setAuth, token]);
+
+  async function finishSignIn(tokens: AuthToken) {
+    const me = await seatSession(tokens, setAuth);
+    if (isRecovery) {
+      setRecoveryComplete(true);
+      return;
+    }
+    router.replace(getPostLoginPath(me.role, redirectParam, me.onboarding_completed));
+  }
+
+  if (challenge) {
+    return (
+      <div className="flex min-h-[calc(100vh-80px)] items-center justify-center bg-[#fef6f9] px-4 py-10 dark:bg-zinc-950">
+        <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-sm dark:bg-zinc-900">
+          <MfaChallengeForm challengeToken={challenge} onVerified={finishSignIn} />
+        </div>
+      </div>
+    );
+  }
 
   if (recoveryComplete) {
     return (
@@ -85,7 +100,7 @@ export function MagicLinkCallback() {
 
   if (missingToken || error) {
     const message = missingToken
-      ? 'Magic link token is missing.'
+      ? 'This link is missing its token.'
       : error;
     return (
       <div className="flex min-h-[calc(100vh-80px)] items-center justify-center bg-[#fef6f9] px-4 py-10 dark:bg-zinc-950">
@@ -96,7 +111,7 @@ export function MagicLinkCallback() {
           <p className="mt-2 text-sm text-red-600 dark:text-red-400">{message}</p>
           <Link
             href="/login"
-            className="mt-5 inline-block text-sm font-semibold text-primarycolor hover:underline"
+            className="mt-5 inline-block text-sm font-semibold text-primarycolor-text hover:underline"
           >
             {isRecovery ? 'Back to account recovery' : 'Back to sign in'}
           </Link>

@@ -68,7 +68,7 @@ export default function NotificationItem({
         <time
           dateTime={notification.created_at}
           title={formatAbsoluteTime(notification.created_at)}
-          className="mt-1 block text-[11px] font-medium text-zinc-400 dark:text-zinc-500"
+          className="mt-1 block text-[11px] font-medium text-zinc-500 dark:text-zinc-500"
         >
           {formatRelativeTime(notification.created_at)}
         </time>
@@ -105,7 +105,7 @@ export default function NotificationItem({
         onClick={() => setConfirmingDismiss(true)}
         aria-label={`Delete: ${notification.title}`}
         aria-haspopup="dialog"
-        className="mr-2 mt-3 shrink-0 rounded-md p-1 text-zinc-400 transition hover:bg-zinc-200/70 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:text-zinc-500 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
+        className="mr-2 mt-3 shrink-0 rounded-md p-1 text-zinc-500 transition hover:bg-zinc-200/70 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:text-zinc-500 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
       >
         <XIcon className="size-3.5" aria-hidden="true" />
       </button>

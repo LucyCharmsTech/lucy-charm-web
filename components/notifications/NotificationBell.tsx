@@ -110,12 +110,12 @@ export default function NotificationBell() {
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={unread > 0 ? `Notifications, ${unread} unread` : 'Notifications, none unread'}
-        className="relative cursor-pointer rounded-full border border-zinc-200/80 bg-white p-2 text-zinc-600 shadow-sm transition hover:border-primarycolor/40 hover:bg-primarycolor/5 hover:text-primarycolor focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+        className="relative cursor-pointer rounded-full border border-zinc-200/80 bg-white p-2 text-zinc-600 shadow-sm transition hover:border-primarycolor/40 hover:bg-primarycolor/5 hover:text-primarycolor-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
       >
         <BellIcon className="size-4" aria-hidden="true" />
         {unread > 0 && (
           <span
-            className="absolute -right-0.5 -top-0.5 inline-flex min-w-4 items-center justify-center rounded-full bg-primarycolor px-1 text-[10px] font-bold leading-4 text-white"
+            className="absolute -right-0.5 -top-0.5 inline-flex min-w-4 items-center justify-center rounded-full bg-primarycolor px-1 text-[10px] font-bold leading-4 text-primarycolor-foreground"
             aria-hidden="true"
           >
             {badgeLabel}

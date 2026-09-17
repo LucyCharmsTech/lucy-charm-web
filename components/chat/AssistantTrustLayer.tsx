@@ -105,7 +105,7 @@ export default function AssistantTrustLayer({
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
             aria-label={open ? 'Hide source details' : 'Why this answer?'}
-            className="flex items-center gap-0.5 rounded text-[10px] text-zinc-400 transition hover:text-zinc-600 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primarycolor dark:text-zinc-500 dark:hover:text-zinc-300"
+            className="flex items-center gap-0.5 rounded text-[10px] text-zinc-500 transition hover:text-zinc-600 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primarycolor dark:text-zinc-500 dark:hover:text-zinc-300"
           >
             <InfoIcon className="size-3" aria-hidden="true" />
             <span>Why?</span>
@@ -130,7 +130,7 @@ export default function AssistantTrustLayer({
                 {listing_fields_used.map((field) => (
                   <span
                     key={field}
-                    className="rounded-md bg-primarycolor/10 px-1.5 py-0.5 text-[10px] font-medium text-primarycolor dark:bg-primarycolor/20"
+                    className="rounded-md bg-primarycolor/10 px-1.5 py-0.5 text-[10px] font-medium text-primarycolor-text dark:bg-primarycolor/20"
                   >
                     {field.replace(/_/g, ' ')}
                   </span>
@@ -140,7 +140,7 @@ export default function AssistantTrustLayer({
           )}
 
           {(model_version || prompt_version) && (
-            <p className="text-zinc-400 dark:text-zinc-500">
+            <p className="text-zinc-500 dark:text-zinc-500">
               {model_version && <span>{model_version}</span>}
               {model_version && prompt_version && <span> · </span>}
               {prompt_version && <span>prompt v{prompt_version}</span>}
@@ -157,14 +157,14 @@ export default function AssistantTrustLayer({
               <p className="font-semibold text-zinc-600 dark:text-zinc-300">Sources</p>
               {sources.map((source) => (
                 <p key={`${source.source_type}-${source.label}`} className="text-zinc-500 dark:text-zinc-400">
-                  {source.verification_url ? <a href={source.verification_url} className="underline hover:text-primarycolor">{source.label}</a> : source.label}
+                  {source.verification_url ? <a href={source.verification_url} className="underline hover:text-primarycolor-text">{source.label}</a> : source.label}
                   {source.as_of && `, accessed ${new Date(source.as_of).toLocaleDateString()}`}
                 </p>
               ))}
             </div>
           )}
           {onRequestHuman && (
-            <button type="button" onClick={onRequestHuman} disabled={humanRequested || humanRequestPending} className="flex items-center gap-1 font-semibold text-primarycolor disabled:text-zinc-400">
+            <button type="button" onClick={onRequestHuman} disabled={humanRequested || humanRequestPending} className="flex items-center gap-1 font-semibold text-primarycolor-text disabled:text-zinc-400">
               <UserRoundCheckIcon className="size-3" aria-hidden="true" />
               {humanRequested ? 'Human verification requested' : humanRequestPending ? 'Requesting verification...' : 'Verify with a human'}
             </button>

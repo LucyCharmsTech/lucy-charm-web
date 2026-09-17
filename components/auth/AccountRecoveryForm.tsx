@@ -69,7 +69,7 @@ export default function AccountRecoveryForm({ initialEmail = '' }: AccountRecove
       <Button
         type="submit"
         disabled={!email.trim() || loading}
-        className="h-11 w-full rounded-xl bg-primarycolor font-semibold text-white hover:bg-primarycolor/90 focus-visible:ring-primarycolor disabled:opacity-60"
+        className="h-11 w-full rounded-xl bg-primarycolor font-semibold text-primarycolor-foreground hover:bg-primarycolor/90 focus-visible:ring-primarycolor disabled:opacity-60"
       >
         {loading ? (
           <span className="inline-flex items-center gap-2">

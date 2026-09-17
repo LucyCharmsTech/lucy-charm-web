@@ -121,7 +121,7 @@ export default function SavedListingsSection() {
           clear site data.
         </p>
         {!isProptxLive() && (
-          <p className="mt-2 text-xs font-medium text-primarycolor">
+          <p className="mt-2 text-xs font-medium text-primarycolor-text">
             PROPTX preview mode: saved homes use mock listing data for testing.
           </p>
         )}
@@ -154,7 +154,7 @@ export default function SavedListingsSection() {
         <div className="rounded-2xl border border-zinc-200/80 bg-white px-6 py-12 text-center shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/40">
           <p className="text-base font-semibold text-zinc-900 dark:text-zinc-50">No saved homes yet</p>
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            Browse listings and tap <span className="font-medium text-primarycolor">Save</span> on any
+            Browse listings and tap <span className="font-medium text-primarycolor-text">Save</span> on any
             card.
           </p>
           <Button asChild className="mt-5">

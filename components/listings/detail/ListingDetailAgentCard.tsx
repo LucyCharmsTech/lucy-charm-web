@@ -74,7 +74,7 @@ export default function ListingDetailAgentCard({
       {contact ? (
         <div className="mt-3 flex gap-3">
           <div
-            className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primarycolor/15 text-primarycolor dark:bg-primarycolor/25"
+            className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primarycolor/15 text-primarycolor-text dark:bg-primarycolor/25"
             aria-hidden="true"
           >
             <UserRoundIcon className="size-5" />
@@ -88,7 +88,7 @@ export default function ListingDetailAgentCard({
                 <a
                   href={telHref(contact.phone)}
                   aria-label={'Call ' + contact.name + ' at ' + contact.phone}
-                  className="inline-flex items-center gap-2 text-primarycolor underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                  className="inline-flex items-center gap-2 text-primarycolor-text underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                 >
                   <PhoneIcon className="size-4 shrink-0 opacity-80" aria-hidden="true" />
                   <span className="min-w-0 truncate">{contact.phone}</span>
@@ -98,7 +98,7 @@ export default function ListingDetailAgentCard({
                 <a
                   href={'mailto:' + contact.email}
                   aria-label={'Email ' + contact.name}
-                  className="inline-flex items-center gap-2 text-primarycolor underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
+                  className="inline-flex items-center gap-2 text-primarycolor-text underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900"
                 >
                   <MailIcon className="size-4 shrink-0 opacity-80" aria-hidden="true" />
                   <span className="min-w-0 truncate">{contact.email}</span>
@@ -127,7 +127,7 @@ export default function ListingDetailAgentCard({
           {idxOffice.phone ? (
             <a
               href={telHref(idxOffice.phone)}
-              className="mt-1 inline-flex items-center gap-2 text-primarycolor underline-offset-2 hover:underline"
+              className="mt-1 inline-flex items-center gap-2 text-primarycolor-text underline-offset-2 hover:underline"
             >
               <PhoneIcon className="size-4 shrink-0 opacity-80" aria-hidden="true" />
               {idxOffice.phone}

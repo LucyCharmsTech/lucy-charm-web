@@ -251,7 +251,7 @@ export default function AdminChatLogsPage() {
                         <span className="text-xs text-zinc-600 dark:text-zinc-300">
                           {s.user_id ? `User ${s.user_id.slice(0, 8)}…` : 'Anonymous session'}
                         </span>
-                        <span className="text-[11px] text-zinc-400 dark:text-zinc-500">
+                        <span className="text-[11px] text-zinc-500 dark:text-zinc-500">
                           {new Date(s.created_at).toLocaleString()}
                         </span>
                       </button>
@@ -325,7 +325,7 @@ export default function AdminChatLogsPage() {
                             Listing:{' '}
                             <Link
                               href={`/admin/listings/${m.listing_id}`}
-                              className="font-mono text-primarycolor hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primarycolor"
+                              className="font-mono text-primarycolor-text hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primarycolor"
                             >
                               {m.listing_id.slice(0, 8)}…
                             </Link>
@@ -437,7 +437,7 @@ export default function AdminChatLogsPage() {
                               setSelectedSessionId(m.session_id);
                               setSessionPage(1);
                             }}
-                            className="text-primarycolor hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                            className="text-primarycolor-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
                           >
                             {m.session_id.slice(0, 8)}…
                           </button>
@@ -446,7 +446,7 @@ export default function AdminChatLogsPage() {
                           {m.listing_id ? (
                             <Link
                               href={`/admin/listings/${m.listing_id}`}
-                              className="text-primarycolor hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                              className="text-primarycolor-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
                             >
                               {m.listing_id.slice(0, 8)}…
                             </Link>
@@ -456,7 +456,7 @@ export default function AdminChatLogsPage() {
                         </td>
                         <td className="px-3 py-2">
                           {m.escalation_flag ? <EscalationBadge /> : (
-                            <span className="text-xs text-zinc-400 dark:text-zinc-600">—</span>
+                            <span className="text-xs text-zinc-500 dark:text-zinc-600">—</span>
                           )}
                         </td>
                         <td className="px-3 py-2 text-[11px] text-zinc-500 dark:text-zinc-400">

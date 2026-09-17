@@ -35,7 +35,7 @@ export default function NotificationPanel({ onClose }: { onClose: () => void }) 
           <button
             type="button"
             onClick={() => void markAllRead()}
-            className="rounded-md text-xs font-semibold text-primarycolor transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+            className="rounded-md text-xs font-semibold text-primarycolor-text transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
           >
             Mark all as read
           </button>
@@ -89,7 +89,7 @@ export default function NotificationPanel({ onClose }: { onClose: () => void }) 
         <Link
           href="/notifications"
           onClick={onClose}
-          className="rounded-md text-xs font-semibold text-primarycolor transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+          className="rounded-md text-xs font-semibold text-primarycolor-text transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
         >
           View all notifications
         </Link>

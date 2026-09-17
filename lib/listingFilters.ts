@@ -65,6 +65,16 @@ function parseBbox(value: string | null): ListingFilters['bbox'] {
   if (parts.length !== 4 || parts.some((part) => !Number.isFinite(part))) return null;
   const [west, south, east, north] = parts;
   if (south > north || west > east) return null;
+  // A zero-area box is not a viewport, it is a point. `fitBounds` on one zooms
+  // to the tightest zoom the map allows, which lands the buyer on individual
+  // building outlines with the zoom-in button already disabled — and on empty
+  // tiles where the provider has nothing at that level. Since the box is
+  // written back to the URL on every pan, a degenerate one persists and
+  // replays on the next visit.
+  if (south === north || west === east) return null;
+  // Outside the real world entirely. Leaflet does not reject these, it just
+  // renders somewhere nothing exists.
+  if (south < -90 || north > 90 || west < -180 || east > 180) return null;
   return [west, south, east, north];
 }
 

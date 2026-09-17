@@ -287,7 +287,7 @@ export default function SellerPortalPage({
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-4 sm:p-6">
       <header>
-        <p className="text-sm font-semibold text-primarycolor">
+        <p className="text-sm font-semibold text-primarycolor-text">
           Lucy Charms Seller Portal
         </p>
         <h1 className="text-2xl font-bold">Your sale plan</h1>
@@ -299,7 +299,7 @@ export default function SellerPortalPage({
 
       {nextTask && (
         <section className="rounded-xl border border-primarycolor/30 bg-primarycolor/5 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-primarycolor">
+          <p className="text-xs font-semibold uppercase tracking-wide text-primarycolor-text">
             Next action
           </p>
           <p className="mt-1 font-semibold">{nextTask.title}</p>
@@ -334,7 +334,7 @@ export default function SellerPortalPage({
             key={stage}
             type="button"
             onClick={() => setActiveStage(stage)}
-            className={`rounded-full px-3 py-1 text-sm ${stage === activeStage ? 'bg-primarycolor text-white' : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200'}`}
+            className={`rounded-full px-3 py-1 text-sm ${stage === activeStage ? 'bg-primarycolor text-primarycolor-foreground' : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200'}`}
           >
             {labels[stage] ?? stage}
           </button>
@@ -349,7 +349,7 @@ export default function SellerPortalPage({
         {activeStage === 'active_listing' &&
           (portal.public_listing_url ? (
             <Link
-              className="mt-3 inline-block font-semibold text-primarycolor underline"
+              className="mt-3 inline-block font-semibold text-primarycolor-text underline"
               href={portal.public_listing_url}
             >
               View approved public listing
@@ -420,7 +420,7 @@ export default function SellerPortalPage({
                       type="button"
                       disabled={busyTaskId === task.id}
                       onClick={() => void updateTask(task.id, 'submitted')}
-                      className="rounded-lg bg-primarycolor px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                      className="rounded-lg bg-primarycolor px-3 py-1.5 text-xs font-semibold text-primarycolor-foreground disabled:opacity-50"
                     >
                       Submit for review
                     </button>
@@ -489,7 +489,7 @@ export default function SellerPortalPage({
                           type="button"
                           disabled={reviewingDocumentId === document.id}
                           onClick={() => void reviewClientDocument(document.id)}
-                          className="rounded-lg border border-primarycolor px-3 py-2 text-sm font-semibold text-primarycolor disabled:opacity-50"
+                          className="rounded-lg border border-primarycolor px-3 py-2 text-sm font-semibold text-primarycolor-text disabled:opacity-50"
                         >
                           Save review
                         </button>
@@ -527,7 +527,7 @@ export default function SellerPortalPage({
           <button
             type="submit"
             disabled={sendingMessage || !message.trim()}
-            className="rounded-lg bg-primarycolor px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            className="rounded-lg bg-primarycolor px-4 py-2 text-sm font-semibold text-primarycolor-foreground disabled:opacity-50"
           >
             {sendingMessage ? 'Sending…' : 'Send securely'}
           </button>
@@ -544,7 +544,7 @@ export default function SellerPortalPage({
       {isStaff && (
         <section className="space-y-4 rounded-xl border border-dashed border-zinc-300 p-4 dark:border-zinc-700">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-primarycolor">
+            <p className="text-xs font-semibold uppercase tracking-wide text-primarycolor-text">
               Staff controls
             </p>
             <h2 className="text-lg font-bold">
@@ -613,7 +613,7 @@ export default function SellerPortalPage({
             <button
               type="submit"
               disabled={staffBusy || !documentRequest.trim()}
-              className="rounded-lg border border-primarycolor px-3 py-2 text-sm font-semibold text-primarycolor disabled:opacity-50"
+              className="rounded-lg border border-primarycolor px-3 py-2 text-sm font-semibold text-primarycolor-text disabled:opacity-50"
             >
               Request document
             </button>
@@ -635,7 +635,7 @@ export default function SellerPortalPage({
                       type="button"
                       disabled={staffBusy}
                       onClick={() => void publishActivity(activity.id)}
-                      className="rounded-lg border border-primarycolor px-3 py-1.5 text-xs font-semibold text-primarycolor disabled:opacity-50"
+                      className="rounded-lg border border-primarycolor px-3 py-1.5 text-xs font-semibold text-primarycolor-text disabled:opacity-50"
                     >
                       Publish to seller
                     </button>

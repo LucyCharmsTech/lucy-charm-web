@@ -77,7 +77,7 @@ export default function ChatPlaceCards({ cards }: ChatPlaceCardsProps) {
                     className="size-full object-cover transition group-hover:scale-[1.03]"
                   />
                 ) : (
-                  <div className="flex size-full items-center justify-center text-zinc-400 dark:text-zinc-600">
+                  <div className="flex size-full items-center justify-center text-zinc-500 dark:text-zinc-600">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       className="size-6"
@@ -104,7 +104,7 @@ export default function ChatPlaceCards({ cards }: ChatPlaceCardsProps) {
                 <p className="mt-0.5 line-clamp-1 text-xs text-zinc-500 dark:text-zinc-400">
                   {location}
                 </p>
-                <p className="mt-1.5 text-sm font-bold text-primarycolor">
+                <p className="mt-1.5 text-sm font-bold text-primarycolor-text">
                   {formatPrice(card.price, card.currency)}
                 </p>
                 {specs.length > 0 && (

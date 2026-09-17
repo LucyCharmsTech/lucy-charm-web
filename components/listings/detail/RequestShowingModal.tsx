@@ -13,6 +13,10 @@ import { useListingChatSession } from '@/components/listings/detail/ListingChatS
 import { track } from '@/lib/analytics';
 import { submitShowingRequest } from '@/services/showingService';
 import {
+  ConfirmSubmission,
+  type SubmissionOutcome,
+} from '@/components/common/ConfirmSubmission';
+import {
   deletePropertyCheckupQuestion,
   fetchShowingQuestions,
 } from '@/services/propertyCheckupService';
@@ -69,8 +73,8 @@ export default function RequestShowingModal({ open, listingId, listingTitle, onC
   const [isPreApproved, setIsPreApproved] = useState(false);
   const [financingNotes, setFinancingNotes] = useState('');
   const [idVerificationRequested, setIdVerificationRequested] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [submittedRequest, setSubmittedRequest] = useState<ShowingRequest | null>(null);
+  const [step, setStep] = useState<'form' | 'confirm'>('form');
   const [error, setError] = useState<string | null>(null);
 
   // Sync dialog open state
@@ -140,17 +144,52 @@ export default function RequestShowingModal({ open, listingId, listingTitle, onC
     return new Date(`${date}T${time}`).toISOString();
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleReview(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-
-    const preferred = toIso(preferredDate, preferredTime);
-    if (!preferred) {
+    if (!toIso(preferredDate, preferredTime)) {
       setError('Please select a preferred date and time.');
       return;
     }
+    setStep('confirm');
+  }
 
-    setSubmitting(true);
+  function confirmationSummary(): string[] {
+    const when = preferredDate && preferredTime
+      ? new Date(`${preferredDate}T${preferredTime}`).toLocaleString(undefined, {
+          dateStyle: 'full',
+          timeStyle: 'short',
+        })
+      : 'your preferred time';
+    const lines = [
+      `We will ask the agent for a ${showingType === 'virtual' ? 'virtual' : 'in-person'} viewing of ${listingTitle} at ${when}.`,
+      `Your name, email${phone.trim() ? ' and phone number' : ''} will be shared with the Lucy Charms agent handling this property.`,
+      'This is a request, not a booking. Nothing is confirmed until the agent replies to you.',
+    ];
+    if (alternateDate && alternateTime) {
+      lines.splice(1, 0, 'Your alternate time will be offered if the first is not available.');
+    }
+    if (checkupQuestions.length > 0) {
+      lines.push(
+        `Your ${checkupQuestions.length} saved question${checkupQuestions.length === 1 ? '' : 's'} about this property will be sent with the request.`,
+      );
+    }
+    if (idVerificationRequested) {
+      lines.push('You have asked to verify your identity, so we will email you a secure upload link.');
+    }
+    return lines;
+  }
+
+  async function handleSubmit(): Promise<SubmissionOutcome> {
+    const preferred = toIso(preferredDate, preferredTime);
+    if (!preferred) {
+      return {
+        ok: false,
+        status: 'not sent',
+        message: 'Please go back and choose a preferred date and time.',
+      };
+    }
+
     try {
       const created = await submitShowingRequest({
         listing_id: listingId,
@@ -171,13 +210,29 @@ export default function RequestShowingModal({ open, listingId, listingTitle, onC
       });
       setSubmittedRequest(created);
       track('showing_requested', { listing_id: listingId });
+      if (created.was_duplicate) {
+        return {
+          ok: true,
+          status: created.status ?? 'pending',
+          message:
+            'You have already asked for this viewing — we have not sent a ' +
+            'second request. The agent will contact you to confirm.',
+        };
+      }
+      return {
+        ok: true,
+        status: created.status ?? 'pending',
+        message:
+          created.status === 'confirmed'
+            ? 'The agent has confirmed this viewing.'
+            : 'Your request has been sent to the agent. They will contact you to confirm — it is not booked yet.',
+      };
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
         'Something went wrong. Please try again.';
       setError(String(msg));
-    } finally {
-      setSubmitting(false);
+      return { ok: false, status: 'not sent', message: String(msg) };
     }
   }
 
@@ -223,8 +278,16 @@ export default function RequestShowingModal({ open, listingId, listingTitle, onC
               isAuthenticated={Boolean(user)}
               onClose={() => dialogRef.current?.close()}
             />
+          ) : step === 'confirm' ? (
+            <ConfirmSubmission
+              title="Request this showing"
+              summary={confirmationSummary()}
+              confirmLabel="Send request"
+              onConfirm={handleSubmit}
+              onBack={() => setStep('form')}
+            />
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+            <form onSubmit={handleReview} className="space-y-5" noValidate>
               {/* Contact */}
               <fieldset className="space-y-3">
                 <legend className="text-xs font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
@@ -294,7 +357,7 @@ export default function RequestShowingModal({ open, listingId, listingTitle, onC
                       onClick={() => setShowingType(t.value)}
                       className={`rounded-full border px-4 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor ${
                         showingType === t.value
-                          ? 'border-primarycolor bg-primarycolor/10 text-primarycolor'
+                          ? 'border-primarycolor bg-primarycolor/10 text-primarycolor-text'
                           : 'border-zinc-200 bg-white text-zinc-700 hover:border-primarycolor/40 hover:bg-primarycolor/5 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200'
                       }`}
                     >
@@ -363,7 +426,7 @@ export default function RequestShowingModal({ open, listingId, listingTitle, onC
                         onClick={() => setDuration(d.value)}
                         className={`rounded-full border px-3 py-1.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor ${
                           duration === d.value
-                            ? 'border-primarycolor bg-primarycolor/10 text-primarycolor'
+                            ? 'border-primarycolor bg-primarycolor/10 text-primarycolor-text'
                             : 'border-zinc-200 bg-white text-zinc-700 hover:border-primarycolor/40 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200'
                         }`}
                       >
@@ -453,7 +516,7 @@ export default function RequestShowingModal({ open, listingId, listingTitle, onC
                       >
                         <span className="flex items-start gap-1.5">
                           <CircleCheckIcon
-                            className="mt-0.5 size-3.5 shrink-0 text-primarycolor"
+                            className="mt-0.5 size-3.5 shrink-0 text-primarycolor-text"
                             aria-hidden="true"
                           />
                           {q.question_text}
@@ -463,14 +526,14 @@ export default function RequestShowingModal({ open, listingId, listingTitle, onC
                           onClick={() => handleRemoveCheckupQuestion(q.id)}
                           disabled={removingQuestionId === q.id}
                           aria-label={`Remove "${q.question_text}" from this request`}
-                          className="shrink-0 text-[11px] font-semibold text-zinc-400 hover:text-red-600 disabled:opacity-50 dark:hover:text-red-400"
+                          className="shrink-0 text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 hover:text-red-600 disabled:opacity-50 dark:hover:text-red-400"
                         >
                           {removingQuestionId === q.id ? 'Removing…' : 'Remove'}
                         </button>
                       </li>
                     ))}
                   </ul>
-                  <p className="text-[11px] text-zinc-400">
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
                     From Property Checkup — you can add more from the listing
                     page, or remove any of these before sending.
                   </p>
@@ -488,11 +551,10 @@ export default function RequestShowingModal({ open, listingId, listingTitle, onC
 
               <Button
                 type="submit"
-                disabled={submitting}
-                className="h-11 w-full rounded-full bg-primarycolor text-sm font-semibold text-white hover:bg-primarycolor/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                className="h-11 w-full rounded-full bg-primarycolor text-sm font-semibold text-primarycolor-foreground hover:bg-primarycolor/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
               >
                 <CalendarIcon className="mr-2 size-4" aria-hidden="true" />
-                {submitting ? 'Sending…' : 'Request showing'}
+                Review and send
               </Button>
             </form>
           )}

@@ -58,7 +58,7 @@ export default function NotificationsPageView() {
         <div className="mb-8">
           <Link
             href="/profile"
-            className="text-sm font-semibold text-primarycolor hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+            className="text-sm font-semibold text-primarycolor-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
           >
             ← Back to profile
           </Link>
@@ -82,7 +82,7 @@ export default function NotificationsPageView() {
               <Button
                 asChild
                 size="sm"
-                className="rounded-xl bg-primarycolor font-semibold text-white hover:bg-primarycolor/90 focus-visible:ring-primarycolor"
+                className="rounded-xl bg-primarycolor font-semibold text-primarycolor-foreground hover:bg-primarycolor/90 focus-visible:ring-primarycolor"
               >
                 <Link href="/login?redirect=%2Fnotifications">Sign in</Link>
               </Button>
@@ -128,7 +128,7 @@ export default function NotificationsPageView() {
                     className={cn(
                       'rounded-full px-3 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor',
                       unreadOnly === filter.value
-                        ? 'bg-primarycolor text-white'
+                        ? 'bg-primarycolor text-primarycolor-foreground'
                         : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800',
                     )}
                   >
@@ -141,7 +141,7 @@ export default function NotificationsPageView() {
                 <button
                   type="button"
                   onClick={() => void markAllRead()}
-                  className="rounded-md text-xs font-semibold text-primarycolor transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                  className="rounded-md text-xs font-semibold text-primarycolor-text transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
                 >
                   Mark all as read
                 </button>

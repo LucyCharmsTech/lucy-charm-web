@@ -3,21 +3,26 @@
 import { useEffect } from 'react';
 import { useHealthStore } from '@/stores/healthIndicatorStore';
 
+/** A development-only API health strip. */
 export default function HealthIndicator() {
+  const isDev = process.env.NODE_ENV !== 'production';
   const { status, loading, fetchHealth } = useHealthStore();
 
   useEffect(() => {
+    if (!isDev) return;
     fetchHealth();
-    // Optional: recheck every 10s
     const interval = setInterval(() => fetchHealth(), 10000);
     return () => clearInterval(interval);
-  }, [fetchHealth]);
+  }, [fetchHealth, isDev]);
 
-  // Determine color
+  if (!isDev) return null;
+
   const color = loading ? 'gray' : status === 'ok' ? 'green' : 'red';
 
   return (
     <div
+      aria-hidden="true"
+      title={`API health (development only): ${loading ? 'checking' : status}`}
       style={{
         height: '4px',
         width: '100%',

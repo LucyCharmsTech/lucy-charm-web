@@ -174,7 +174,7 @@ export default function AdminShowingsPage() {
                   </td>
                 <td className="whitespace-nowrap px-4 py-3 text-zinc-700 dark:text-zinc-300">
                     <span className="flex items-center gap-1.5">
-                      <CalendarIcon className="size-3.5 shrink-0 text-zinc-400" aria-hidden="true" />
+                      <CalendarIcon className="size-3.5 shrink-0 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
                       {new Date(r.preferred_date).toLocaleString()}
                     </span>
                 </td>
@@ -217,7 +217,7 @@ export default function AdminShowingsPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs font-semibold ${r.is_pre_approved ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-400'}`}>
+                    <span className={`text-xs font-semibold ${r.is_pre_approved ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-500 dark:text-zinc-400'}`}>
                       {r.is_pre_approved ? 'Yes' : 'No'}
                     </span>
                   </td>
@@ -257,7 +257,7 @@ export default function AdminShowingsPage() {
                         {r.id_verification_status === 'pending' ? 'Review documents' : 'Documents'}
                       </button>
                       {r.message && (
-                        <p className="mt-1 max-w-[180px] truncate text-xs text-zinc-400" title={r.message}>
+                        <p className="mt-1 max-w-[180px] truncate text-xs text-zinc-500 dark:text-zinc-400" title={r.message}>
                           &ldquo;{r.message}&rdquo;
                         </p>
                       )}

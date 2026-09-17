@@ -34,19 +34,19 @@ export default function AiPoweredSection({
           <div className="grid items-center gap-10 lg:grid-cols-2">
             {/* Left */}
             <div className="max-w-xl">
-              <span className="inline-flex items-center rounded-full bg-primarycolor/15 px-3 py-1 text-xs font-semibold text-primarycolor">
+              <span className="inline-flex items-center rounded-full bg-primarycolor/15 px-3 py-1 text-xs font-semibold text-primarycolor-text">
                 AI-powered
               </span>
 
               <h2 className="mt-4 text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
                 Smart home buying,
                 <br />
-                <span className="text-primarycolor">supercharged by AI</span>
+                <span className="text-primarycolor-text">supercharged by AI</span>
               </h2>
 
               <p className="mt-4 text-sm sm:text-base leading-relaxed text-zinc-700 dark:text-zinc-200">
-                The best real estate. Lucy helps you get in the market’s own
-                dream. Ask Lucy anything — pricing, neighbourhoods, mortgage
+                Lucy answers questions about the market the moment you have
+                them. Ask anything — pricing, neighbourhoods, mortgage
                 estimates.
               </p>
 
@@ -61,7 +61,7 @@ export default function AiPoweredSection({
                   <div className="pr-1.5">
                     <Button
                       type="submit"
-                      className="h-10 rounded-full px-6 font-semibold bg-primarycolor text-white hover:bg-primarycolor/90 focus-visible:ring-primarycolor"
+                      className="h-10 rounded-full px-6 font-semibold bg-primarycolor text-primarycolor-foreground hover:bg-primarycolor/90 focus-visible:ring-primarycolor"
                     >
                       Submit
                     </Button>
@@ -76,7 +76,7 @@ export default function AiPoweredSection({
                 <div className="flex items-center justify-between gap-3 border-b border-zinc-200/70 px-4 py-3 dark:border-zinc-800/70">
                   <div className="flex items-center gap-2">
                     <span
-                      className="inline-flex size-6 items-center justify-center rounded-full bg-primarycolor text-xs font-bold text-white"
+                      className="inline-flex size-6 items-center justify-center rounded-full bg-primarycolor text-xs font-bold text-primarycolor-foreground"
                       aria-hidden="true"
                     >
                       L
@@ -87,7 +87,7 @@ export default function AiPoweredSection({
                   </div>
                   <button
                     type="button"
-                    className="rounded-md px-2 py-1 text-zinc-400 hover:text-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2 dark:hover:text-zinc-200"
+                    className="rounded-md px-2 py-1 text-zinc-500 dark:text-zinc-400 hover:text-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2 dark:hover:text-zinc-200"
                     aria-label="Close preview"
                   >
                     ×
@@ -118,7 +118,7 @@ export default function AiPoweredSection({
                       </div>
                       <button
                         type="button"
-                        className="inline-flex items-center justify-center rounded-full bg-primarycolor px-3 py-1 text-[11px] font-semibold text-white hover:bg-primarycolor/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2"
+                        className="inline-flex items-center justify-center rounded-full bg-primarycolor px-3 py-1 text-[11px] font-semibold text-primarycolor-foreground hover:bg-primarycolor/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2"
                       >
                         Submit
                       </button>
@@ -137,7 +137,7 @@ export default function AiPoweredSection({
                       <Button
                         type="button"
                         size="icon-xs"
-                        className="rounded-full bg-primarycolor text-white hover:bg-primarycolor/90"
+                        className="rounded-full bg-primarycolor text-primarycolor-foreground hover:bg-primarycolor/90"
                         aria-label="Send"
                       >
                         <Send className="size-3.5" aria-hidden="true" />
@@ -157,7 +157,7 @@ export default function AiPoweredSection({
           <div className="grid grid-cols-2 gap-6 text-center sm:grid-cols-4">
             {stats.slice(0, 4).map((stat) => (
               <div key={stat.label}>
-                <div className="text-2xl font-extrabold text-primarycolor">
+                <div className="text-2xl font-extrabold text-primarycolor-text">
                   {stat.value}
                 </div>
                 <div className="mt-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
@@ -170,7 +170,7 @@ export default function AiPoweredSection({
           <div className="mt-8 flex justify-center">
             <a
               href="/chat"
-              className="inline-flex items-center gap-2 rounded-full text-sm font-semibold text-primarycolor hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2"
+              className="inline-flex items-center gap-2 rounded-full text-sm font-semibold text-primarycolor-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2"
             >
               Try Lucy now <ArrowRight className="size-4" aria-hidden="true" />
             </a>

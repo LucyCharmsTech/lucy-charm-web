@@ -12,12 +12,23 @@ type QueueEntry = {
   reject: (error: unknown) => void;
 };
 
+/**
+ * Routes where a 401 is the answer, not a stale session.
+ *
+ * `/auth/email-code` was missing, and the cost was paid by the person typing.
+ * A wrong code answers 401, so for anyone holding a refresh token the
+ * interceptor refreshed the session and *replayed the request* — burning a
+ * second of the five allowed attempts on one typo, possibly rotating the
+ * session underneath them, and showing a refresh error instead of "that code
+ * is not right".
+ */
 const SKIP_REFRESH_PATHS = [
   '/auth/refresh',
   '/auth/login',
   '/auth/signup',
   '/auth/google',
   '/auth/magic-link',
+  '/auth/email-code',
   '/auth/account-recovery',
   '/auth/mfa',
 ];

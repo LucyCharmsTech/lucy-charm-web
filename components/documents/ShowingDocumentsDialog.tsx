@@ -13,6 +13,7 @@ import {
 import DocumentHistoryList from '@/components/documents/DocumentHistoryList';
 import DocumentPreviewDialog from '@/components/documents/DocumentPreviewDialog';
 import DocumentStatusBadge from '@/components/documents/DocumentStatusBadge';
+import { IdentityDocumentReview } from '@/components/showings/IdentityDocumentReview';
 import {
   DOCUMENT_CATEGORY_LABELS,
   DocumentError,
@@ -215,7 +216,7 @@ export default function ShowingDocumentsDialog({
             type="button"
             disabled={busy}
             onClick={() => setRequestFormOpen((v) => !v)}
-            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-primarycolor px-3 text-xs font-semibold text-white transition hover:bg-primarycolor/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor disabled:opacity-50"
+            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-primarycolor px-3 text-xs font-semibold text-primarycolor-foreground transition hover:bg-primarycolor/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor disabled:opacity-50"
           >
             <PlusIcon className="size-3.5" aria-hidden="true" />
             Request a document
@@ -231,6 +232,10 @@ export default function ShowingDocumentsDialog({
           <p className="mt-3 text-sm text-emerald-700 dark:text-emerald-400" role="status">
             {notice}
           </p>
+        )}
+
+        {activeRequest.id_verification_requested && (
+          <IdentityDocumentReview showingRequestId={activeRequest.id} />
         )}
 
         {requestFormOpen && (
@@ -306,7 +311,7 @@ export default function ShowingDocumentsDialog({
                             setPreviewDoc(doc);
                             markViewed(doc.id);
                           }}
-                          className="inline-flex items-center gap-1 text-xs font-semibold text-primarycolor focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-primarycolor-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
                         >
                           <EyeIcon className="size-3.5" aria-hidden="true" />
                           Preview
@@ -314,7 +319,7 @@ export default function ShowingDocumentsDialog({
                         <button
                           type="button"
                           onClick={() => void handleDownload(doc)}
-                          className="inline-flex items-center gap-1 text-xs font-semibold text-primarycolor focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-primarycolor-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
                         >
                           <DownloadIcon className="size-3.5" aria-hidden="true" />
                           Download
@@ -353,7 +358,7 @@ export default function ShowingDocumentsDialog({
                   </div>
 
                   {REVIEWABLE.has(doc.status) && !viewed && hasFile && (
-                    <p className="mt-1.5 text-[11px] text-zinc-400 dark:text-zinc-500">
+                    <p className="mt-1.5 text-[11px] text-zinc-500 dark:text-zinc-500">
                       Open the document first — Review stays disabled until you view it.
                     </p>
                   )}
@@ -475,7 +480,7 @@ function RequestDocumentForm({
         <button
           type="submit"
           disabled={busy}
-          className="rounded-lg bg-primarycolor px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primarycolor/90 disabled:opacity-50"
+          className="rounded-lg bg-primarycolor px-3 py-1.5 text-xs font-semibold text-primarycolor-foreground transition hover:bg-primarycolor/90 disabled:opacity-50"
         >
           Send request
         </button>
@@ -569,7 +574,7 @@ function ReviewPanel({
         <button
           type="submit"
           disabled={!canSubmit || busy}
-          className="rounded-lg bg-primarycolor px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primarycolor/90 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-lg bg-primarycolor px-3 py-1.5 text-xs font-semibold text-primarycolor-foreground transition hover:bg-primarycolor/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy ? 'Saving…' : 'Submit review'}
         </button>

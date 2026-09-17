@@ -51,6 +51,11 @@ export async function createAiSession(options: {
 // Messaging
 // ---------------------------------------------------------------------------
 
+/** The token that authorises access to the session this turn belongs to. */
+function sessionAuthHeaders(sessionToken?: string | null): Record<string, string> {
+  return sessionToken ? { [ANONYMOUS_SESSION_HEADER]: sessionToken } : {};
+}
+
 /**
  * Sends one chat turn to the backend and returns the assistant reply.
  * The full orchestration (intent classification, escalation, persistence)
@@ -58,12 +63,17 @@ export async function createAiSession(options: {
  */
 export async function sendChatMessage(
   payload: ChatSendRequest,
+  /** The token this session was created with. Omit for a signed-in session. */
+  sessionToken?: string | null,
 ): Promise<ChatSendResponse> {
   const res = await api.post<ChatSendResponse>('/chat/send', payload, {
     timeout: CHAT_SEND_TIMEOUT_MS,
-    headers: payload.seller_journey_id
-      ? { [ANONYMOUS_SESSION_HEADER]: getOrCreateAnonymousSessionToken() }
-      : undefined,
+    // One header, one identity. This used to substitute a *different* token
+    // whenever a seller journey was attached, which broke every such message:
+    // the backend checks `get_for_caller` on the AI session AND
+    // `get_journey_for_chat` on the journey against this same header, so a
+    // token that matches neither is rejected before the turn runs.
+    headers: sessionAuthHeaders(sessionToken),
   });
   return res.data;
 }
@@ -78,13 +88,19 @@ export async function requestHumanAgent(options: {
   listingId?: string;
   email?: string;
   message?: string;
+  /** The token this session was created with. Omit for a signed-in session. */
+  sessionToken?: string | null;
 }): Promise<ChatRequestHumanResponse> {
-  const res = await api.post<ChatRequestHumanResponse>('/chat/request_human', {
-    session_id: options.sessionId,
-    listing_id: options.listingId ?? null,
-    email: options.email ?? null,
-    message: options.message ?? null,
-  });
+  const res = await api.post<ChatRequestHumanResponse>(
+    '/chat/request_human',
+    {
+      session_id: options.sessionId,
+      listing_id: options.listingId ?? null,
+      email: options.email ?? null,
+      message: options.message ?? null,
+    },
+    { headers: sessionAuthHeaders(options.sessionToken) },
+  );
   return res.data;
 }
 
@@ -100,6 +116,7 @@ export async function streamChatMessage(
   payload: ChatSendRequest,
   onChunk: (chunk: string) => void,
   onDone: () => void,
+  sessionToken?: string | null,
 ): Promise<void> {
   const baseUrl =
     process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
@@ -114,7 +131,7 @@ export async function streamChatMessage(
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(payload.seller_journey_id
         ? { [ANONYMOUS_SESSION_HEADER]: getOrCreateAnonymousSessionToken() }
-        : {}),
+        : sessionAuthHeaders(sessionToken)),
     },
     body: JSON.stringify(payload),
   });
@@ -165,14 +182,17 @@ export async function streamChatMessage(
  * Format: `anon_<listingId>_<random-uuid>` — one token per listing so each
  * property has its own independent conversation thread.
  */
-export function getOrCreateAnonToken(listingId: string): string {
-  if (typeof window === 'undefined') return `anon_${listingId}_${crypto.randomUUID()}`;
-
-  const key = `lucy_anon_session_${listingId}`;
-  let token = localStorage.getItem(key);
-  if (!token) {
-    token = `anon_${listingId}_${crypto.randomUUID()}`;
-    localStorage.setItem(key, token);
-  }
-  return token;
+export function getOrCreateAnonToken(): string {
+  // Deliberately ignores the listing and returns the one anonymous identity
+  // the rest of the app already uses (saved listings, lead capture, seller
+  // journeys). The old per-listing token gave the same visitor a different
+  // identity on every property, which is not what a session token is for: the
+  // conversation thread is keyed server-side by `session_id`, not by this.
+  //
+  // The mismatch it caused was invisible until the backend started verifying
+  // session ownership, at which point an anonymous seller-journey message
+  // authenticated as one identity against a session created under another.
+  //
+  // Kept as a named export so both chat surfaces read the same way.
+  return getOrCreateAnonymousSessionToken();
 }

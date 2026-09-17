@@ -47,7 +47,7 @@ export default function PortalHeader({
         <div className="flex items-center gap-3">
           <Link
             href="/"
-            className="text-lg font-extrabold tracking-tight text-primarycolor focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+            className="text-lg font-extrabold tracking-tight text-primarycolor-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
           >
             Lucycharms
           </Link>

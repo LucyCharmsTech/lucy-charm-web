@@ -5,6 +5,8 @@
 import api from '@/lib/axios';
 import type {
   UserDataRequestType,
+  PaginatedItems,
+  StaffAccount,
   UserMe,
   UserOnboardingRead,
   UserOnboardingSubmitRequest,
@@ -76,5 +78,20 @@ export async function deactivateCurrentAccount(): Promise<{ detail: string; deac
 
 export async function deleteCurrentAccount(): Promise<{ detail: string; deleted_at: string }> {
   const res = await api.delete<{ detail: string; deleted_at: string }>('/users/me');
+  return res.data;
+}
+
+// ---------------------------------------------------------------------------
+// Staff administration
+// ---------------------------------------------------------------------------
+
+/** The staff accounts, for the admin staff screen. */
+export async function fetchStaffAccounts(
+  page = 1,
+  size = 50,
+): Promise<PaginatedItems<StaffAccount>> {
+  const res = await api.get<PaginatedItems<StaffAccount>>('/users/', {
+    params: { page, size, staff_only: true },
+  });
   return res.data;
 }

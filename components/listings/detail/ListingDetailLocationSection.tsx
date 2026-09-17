@@ -36,7 +36,7 @@ export default function ListingDetailLocationSection({
               href={mapsLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-semibold text-primarycolor hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2"
+              className="font-semibold text-primarycolor-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor focus-visible:ring-offset-2"
             >
               Open in Google Maps
             </a>

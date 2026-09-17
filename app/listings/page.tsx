@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import ListingCard from '@/components/ListingCard';
@@ -112,8 +112,17 @@ function ListingsPageContent() {
     [searchParams],
   );
 
+  // Set by a filter change that should not flash the loading state, read once
+  // by the fetch effect and cleared. A ref rather than state: it must not itself
+  // trigger the render it is describing.
+  const nextFetchIsSilent = useRef(false);
+
   const setFilters = useCallback(
-    (patch: Partial<ListingFilters>, options?: { keepPage?: boolean }) => {
+    (
+      patch: Partial<ListingFilters>,
+      options?: { keepPage?: boolean; silent?: boolean },
+    ) => {
+      if (options?.silent) nextFetchIsSilent.current = true;
       const next: ListingFilters = {
         ...filters,
         ...patch,
@@ -278,7 +287,9 @@ function ListingsPageContent() {
   );
 
   useEffect(() => {
-    void fetchListings();
+    const silent = nextFetchIsSilent.current;
+    nextFetchIsSilent.current = false;
+    void fetchListings({ silent });
   }, [fetchListings]);
 
   // ---------------------------------------------------------------------------
@@ -318,7 +329,16 @@ function ListingsPageContent() {
   const hasResults = listings.length > 0;
 
   return (
-    <div className="flex flex-col md:flex-row gap-6 min-h-screen bg-background m-auto pmd:px-[100px]">
+    <div className="flex flex-col md:flex-row gap-6 min-h-screen bg-background m-auto md:px-[100px]">
+      {/*
+        The design has no visible page heading — the filter panel and the
+        results grid are the whole page. A document still needs one `h1`:
+        without it a screen-reader user lands on a page that never says what it
+        is, and the results list is the largest public page on the site. It
+        matches the route's own metadata title rather than inventing a second
+        name for the page.
+      */}
+      <h1 className="sr-only">Homes for sale</h1>
       <aside className="w-full md:w-72 shrink-0 border-zinc-200/80 bg-white dark:border-zinc-800/80 dark:bg-zinc-950/30 md:sticky md:top-6 self-start">
         <FilterPanel
           status={filters.status}
@@ -364,21 +384,21 @@ function ListingsPageContent() {
         />
 
         {!isProptxLive() && (
-          <p className="mb-4 rounded-xl border border-primarycolor/20 bg-primarycolor/10 px-4 py-2 text-xs text-primarycolor dark:border-primarycolor/30 dark:bg-primarycolor/15">
+          <p className="mb-4 rounded-xl border border-primarycolor/20 bg-primarycolor/10 px-4 py-2 text-xs text-primarycolor-text dark:border-primarycolor/30 dark:bg-primarycolor/15">
             PROPTX preview mode is enabled. Listing cards and matching currently use mock data.
           </p>
         )}
 
         {(activeCountryLabel || filters.city) && (
           <div className="mb-4 flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+            <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Location
             </span>
             {activeCountryLabel && (
               <button
                 type="button"
                 onClick={() => setFilters({ country: '' })}
-                className="inline-flex items-center rounded-full border border-primarycolor/30 bg-primarycolor/10 px-3 py-1 text-xs font-semibold text-primarycolor transition hover:bg-primarycolor/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                className="inline-flex items-center rounded-full border border-primarycolor/30 bg-primarycolor/10 px-3 py-1 text-xs font-semibold text-primarycolor-text transition hover:bg-primarycolor/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
               >
                 {activeCountryLabel} ×
               </button>
@@ -387,7 +407,7 @@ function ListingsPageContent() {
               <button
                 type="button"
                 onClick={() => setFilters({ city: '' })}
-                className="inline-flex items-center rounded-full border border-primarycolor/30 bg-primarycolor/10 px-3 py-1 text-xs font-semibold text-primarycolor transition hover:bg-primarycolor/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                className="inline-flex items-center rounded-full border border-primarycolor/30 bg-primarycolor/10 px-3 py-1 text-xs font-semibold text-primarycolor-text transition hover:bg-primarycolor/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
               >
                 {filters.city} ×
               </button>
@@ -416,7 +436,7 @@ function ListingsPageContent() {
           </div>
         )}
 
-        {loading && (
+        {loading && filters.view !== 'map' && (
           <div className="grid gap-5 sm:gap-6 lg:grid-cols-2 xl:grid-cols-3 max-w-6xl">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="h-72 animate-pulse rounded-2xl bg-zinc-100 dark:bg-zinc-800" />
@@ -428,12 +448,29 @@ function ListingsPageContent() {
           <NoResultsAssistance filters={filters} />
         )}
 
-        {!loading && filters.view === 'map' && (
+        {/*
+          Deliberately NOT gated on `!loading`.
+
+          Panning or zooming writes the new bounds to the URL, which refetches,
+          which set `loading` — and this block unmounted. React then ran the
+          map's cleanup, Leaflet destroyed itself, and a fresh map was built and
+          re-fitted when the results arrived. Every single zoom click tore the
+          map down and rebuilt it, which is the flicker people reported, and a
+          map caught mid-rebuild is the grey rectangle.
+
+          The map is the surface in this view, so it outlives its own data. The
+          skeleton above is suppressed here for the same reason.
+        */}
+        {filters.view === 'map' && (
           <div className="space-y-3">
             <ListingsMap
               listings={mapPoints}
               initialBbox={filters.bbox}
-              onBoundsChange={(bbox) => setFilters({ bbox }, { keepPage: true })}
+              onBoundsChange={(bbox) =>
+                // `silent` so moving the map refreshes the pins underneath it
+                // without the page flashing its loading state.
+                setFilters({ bbox }, { keepPage: true, silent: true })
+              }
             />
             {unmappable > 0 && (
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -442,7 +479,7 @@ function ListingsPageContent() {
                 published.{' '}
                 <button
                   type="button"
-                  className="font-semibold text-primarycolor underline"
+                  className="font-semibold text-primarycolor-text underline"
                   onClick={() => setFilters({ view: 'list' }, { keepPage: true })}
                 >
                   See them in the list
@@ -450,7 +487,12 @@ function ListingsPageContent() {
                 .
               </p>
             )}
-            {mapPoints.length === 0 && !apiError && (
+            {loading && (
+              <p role="status" className="text-sm text-zinc-500 dark:text-zinc-400">
+                Updating results…
+              </p>
+            )}
+            {!loading && mapPoints.length === 0 && !apiError && (
               <p className="text-sm text-zinc-500 dark:text-zinc-400">
                 No listings with a map location in this area. Try zooming out.
               </p>

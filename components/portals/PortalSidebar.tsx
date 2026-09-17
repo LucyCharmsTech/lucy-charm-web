@@ -31,7 +31,7 @@ export default function PortalSidebar({
   return (
     <aside className="flex w-full shrink-0 flex-col border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 md:w-56 md:border-b-0 md:border-r">
       <div className="border-b border-zinc-100 px-4 py-4 dark:border-zinc-800">
-        <p className="text-xs font-semibold uppercase tracking-wider text-primarycolor">{title}</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-primarycolor-text">{title}</p>
         <p className="mt-1 text-sm font-bold text-zinc-900 dark:text-zinc-50">{subtitle}</p>
       </div>
       <nav
@@ -47,7 +47,7 @@ export default function PortalSidebar({
               aria-current={active ? 'page' : undefined}
               className={`whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor md:py-2 ${
                 active
-                  ? 'bg-primarycolor/10 text-primarycolor'
+                  ? 'bg-primarycolor/10 text-primarycolor-text'
                   : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800'
               }`}
             >

@@ -24,6 +24,14 @@ type ListingsMapProps = {
 // to fit and no bbox in the URL.
 const FALLBACK_CENTRE: [number, number] = [43.6532, -79.3832];
 
+//: The deepest the map may go. Matches the tile layer, so the map can never sit
+//: at a zoom the provider has no imagery for.
+const MAX_ZOOM = 19;
+
+//: The deepest `fitBounds` may zoom when restoring a saved viewport. Street
+//: level, not building level: a results map should open on an area.
+const COMFORTABLE_ZOOM = 16;
+
 /**
  * The results map.
  *
@@ -65,11 +73,15 @@ export default function ListingsMap({
       const L = (await import('leaflet')).default;
       if (cancelled || !containerRef.current || mapRef.current) return;
 
-      map = L.map(containerRef.current, { scrollWheelZoom: true });
+      // `maxZoom` on the map, not only the tile layer. The tile layer's own
+      // maxZoom stops it *requesting* deeper tiles; it does not stop the map
+      // zooming there and showing blank space. `fitBounds` on a very small box
+      // is what gets you there.
+      map = L.map(containerRef.current, { scrollWheelZoom: true, maxZoom: MAX_ZOOM });
       mapRef.current = map;
 
       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
+        maxZoom: MAX_ZOOM,
         attribution: '&copy; OpenStreetMap contributors',
       }).addTo(map);
 
@@ -77,10 +89,16 @@ export default function ListingsMap({
 
       if (initialBbox) {
         const [west, south, east, north] = initialBbox;
-        map.fitBounds([
-          [south, west],
-          [north, east],
-        ]);
+        map.fitBounds(
+          [
+            [south, west],
+            [north, east],
+          ],
+          // Without this a narrow saved viewport reopens pinned at the tightest
+          // zoom available, looking at building outlines with no way to zoom
+          // further in. A results map is meant to open on an area.
+          { maxZoom: COMFORTABLE_ZOOM },
+        );
       } else {
         map.setView(FALLBACK_CENTRE, 11);
       }

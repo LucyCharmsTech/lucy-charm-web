@@ -235,7 +235,7 @@ export default function SignupOnboardingWizard() {
     <div className="flex min-h-[calc(100vh-80px)] items-center justify-center bg-[#fef6f9] px-4 py-10 dark:bg-zinc-950">
       <div className="w-full max-w-xl rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/60 sm:p-8">
         <div className="mb-6">
-          <p className="text-xs font-semibold uppercase tracking-wide text-primarycolor">
+          <p className="text-xs font-semibold uppercase tracking-wide text-primarycolor-text">
             Step {step} of {TOTAL_STEPS}
           </p>
           <h1 className="mt-2 text-2xl font-extrabold text-zinc-900 dark:text-zinc-50">
@@ -522,7 +522,7 @@ export default function SignupOnboardingWizard() {
           {step < TOTAL_STEPS ? (
             <Button
               type="button"
-              className="rounded-xl bg-primarycolor text-white hover:bg-primarycolor/90"
+              className="rounded-xl bg-primarycolor text-primarycolor-foreground hover:bg-primarycolor/90"
               disabled={!canContinue || submitting}
               onClick={() => setStep((prev) => Math.min(TOTAL_STEPS, prev + 1))}
             >
@@ -531,7 +531,7 @@ export default function SignupOnboardingWizard() {
           ) : (
             <Button
               type="button"
-              className="rounded-xl bg-primarycolor text-white hover:bg-primarycolor/90"
+              className="rounded-xl bg-primarycolor text-primarycolor-foreground hover:bg-primarycolor/90"
               disabled={submitting}
               onClick={() => void handleSubmit()}
             >

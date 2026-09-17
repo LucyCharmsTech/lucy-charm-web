@@ -274,11 +274,11 @@ function ShowingTable({
               </td>
               <td className="whitespace-nowrap px-4 py-3 text-zinc-700 dark:text-zinc-300">
                 <span className="flex items-center gap-1.5">
-                  <CalendarIcon className="size-3.5 shrink-0 text-zinc-400" aria-hidden="true" />
+                  <CalendarIcon className="size-3.5 shrink-0 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
                   {new Date(r.scheduled_at ?? r.preferred_date).toLocaleString()}
                 </span>
                 {r.rescheduled_at && (
-                  <span className="mt-0.5 block text-xs text-zinc-400">
+                  <span className="mt-0.5 block text-xs text-zinc-500 dark:text-zinc-400">
                     Originally requested: {new Date(r.preferred_date).toLocaleString()}
                   </span>
                 )}
@@ -303,7 +303,7 @@ function ShowingTable({
                 </span>
               </td>
               <td className="px-4 py-3">
-                <span className={`text-xs font-semibold ${r.is_pre_approved ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-400'}`}>
+                <span className={`text-xs font-semibold ${r.is_pre_approved ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-500 dark:text-zinc-400'}`}>
                   {r.is_pre_approved ? 'Yes' : 'No'}
                 </span>
               </td>

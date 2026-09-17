@@ -110,7 +110,7 @@ export default function ListingInsightsSection({ listingId }: Props) {
                 </div>
                 <div className="text-xs text-zinc-500 dark:text-zinc-400">{row.email}</div>
               </td>
-              <td className="px-4 py-3 font-medium capitalize text-primarycolor">{row.current_intent}</td>
+              <td className="px-4 py-3 font-medium capitalize text-primarycolor-text">{row.current_intent}</td>
               <td className="px-4 py-3 text-zinc-600 dark:text-zinc-300">
                 {(row.confidence * 100).toFixed(0)}%
               </td>
@@ -131,12 +131,12 @@ export default function ListingInsightsSection({ listingId }: Props) {
                     aria-label={`View full chat summary for ${row.first_name} ${row.last_name}`}
                   >
                     <span className="line-clamp-4">{row.latest_summary}</span>
-                    <span className="mt-1.5 block text-xs font-semibold text-primarycolor">
+                    <span className="mt-1.5 block text-xs font-semibold text-primarycolor-text">
                       View full summary
                     </span>
                   </button>
                 ) : (
-                  <span className="text-zinc-400 dark:text-zinc-500">—</span>
+                  <span className="text-zinc-500 dark:text-zinc-500">—</span>
                 )}
               </td>
             </tr>

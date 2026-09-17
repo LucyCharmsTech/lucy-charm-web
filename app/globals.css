@@ -9,6 +9,8 @@
   --font-heading: var(--font-sans);
   --font-sans: var(--font-sans);
   --color-primarycolor: var(--primarycolor);
+  --color-primarycolor-foreground: var(--primarycolor-foreground);
+  --color-primarycolor-text: var(--primarycolor-text);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -83,6 +85,8 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
   --primarycolor: #ff01c0;
+  --primarycolor-foreground: #0a0a0a;
+  --primarycolor-text: #d1019d;
 }
 
 .dark {
@@ -118,6 +122,8 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
   --primarycolor: #eb1da3;
+  --primarycolor-foreground: #0a0a0a;
+  --primarycolor-text: #ff01c0;
 }
 
 .listing-media-scrollbar {
@@ -162,6 +168,22 @@
 .leaflet-container {
   background: var(--background);
   font: inherit;
+  /*
+    Contain Leaflet's z-indexes.
+
+    Leaflet layers its own panes and controls from 200 up to 1000 (markers 600,
+    popups 700, controls 800, the control corners 1000). Those are meant to be
+    internal, but without a stacking context here they compete at the page root,
+    where the site header is z-40. The result: price pins and map controls drew
+    on top of the account menu and the notifications panel.
+
+    `isolation: isolate` makes the map its own stacking context, so everything
+    inside it is sealed in and the whole map takes part in the page at the one
+    level its container sits at. One line, and it holds for any overlay added
+    later — the alternative was raising the header above 1000 and re-checking
+    every dialog, banner and toast against that number.
+  */
+  isolation: isolate;
 }
 
 .listing-popup {

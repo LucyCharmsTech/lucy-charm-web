@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { IdentityDocumentUpload } from '@/components/showings/IdentityDocumentUpload';
 import { useCallback, useEffect, useState } from 'react';
 
 import ShowingFeedbackDialog from '@/components/profile/ShowingFeedbackDialog';
@@ -176,7 +177,7 @@ export default function ClientShowingScheduleSection() {
                     'border-primarycolor/40 ring-2 ring-primarycolor/40 dark:border-primarycolor/40',
                 )}
               >
-                <div className="mb-2 inline-flex items-center rounded-full bg-primarycolor/10 px-2.5 py-1 text-[11px] font-semibold text-primarycolor">
+                <div className="mb-2 inline-flex items-center rounded-full bg-primarycolor/10 px-2.5 py-1 text-[11px] font-semibold text-primarycolor-text">
                   {visitBadge(item.status)}
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -224,20 +225,16 @@ export default function ClientShowingScheduleSection() {
                 {item.message && (
                   <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{item.message}</p>
                 )}
-                {item.id_verification_requested &&
-                  item.id_verification_status !== 'verified' && (
-                    <Link
-                      href="#documents"
-                      className="mt-2 inline-flex h-8 items-center rounded-full border border-primarycolor/40 px-3 text-xs font-semibold text-primarycolor transition hover:bg-primarycolor/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
-                    >
-                      Manage ID documents
-                    </Link>
-                  )}
+                <IdentityDocumentUpload
+                  showingRequestId={item.id}
+                  verificationRequested={item.id_verification_requested}
+                  verificationStatus={item.id_verification_status}
+                />
                 {canLeaveFeedback(item) && (
                   <button
                     type="button"
                     onClick={() => handleFeedbackClick(item)}
-                    className="mt-2 inline-flex h-8 items-center rounded-full bg-primarycolor px-3 text-xs font-semibold text-white transition hover:bg-primarycolor/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+                    className="mt-2 inline-flex h-8 items-center rounded-full bg-primarycolor px-3 text-xs font-semibold text-primarycolor-foreground transition hover:bg-primarycolor/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
                   >
                     Leave showing feedback
                   </button>
