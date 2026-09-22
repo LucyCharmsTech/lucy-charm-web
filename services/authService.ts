@@ -34,6 +34,13 @@ export async function verifyMagicLink(
   return res.data;
 }
 
+export async function verifyAgentInvitation(
+  payload: MagicLinkVerifyBody,
+): Promise<SignInResult> {
+  const res = await api.post<SignInResult>('/auth/agent-invitation/verify', payload);
+  return res.data;
+}
+
 export async function requestAccountRecovery(
   payload: AccountRecoveryRequestBody,
 ): Promise<MagicLinkRequestResponse> {

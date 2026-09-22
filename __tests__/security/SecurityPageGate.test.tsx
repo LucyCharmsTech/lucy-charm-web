@@ -27,7 +27,12 @@ jest.mock('@/components/security/MfaEnrolment', () => ({
 
 beforeEach(() => {
   replace.mockClear();
-  useAuthStore.setState({ accessToken: null, refreshToken: null, user: null });
+  useAuthStore.setState({
+    accessToken: null,
+    refreshToken: null,
+    user: null,
+    hasHydrated: true,
+  });
 });
 
 test('a signed-out visitor is sent to sign in, and never mounts the enrolment form', async () => {
@@ -50,7 +55,12 @@ test('the redirect carries the way back, so sign-in returns here', async () => {
 });
 
 test('a signed-in visitor gets the enrolment form and no redirect', () => {
-  useAuthStore.setState({ accessToken: 'a-token', refreshToken: null, user: null });
+  useAuthStore.setState({
+    accessToken: 'a-token',
+    refreshToken: null,
+    user: null,
+    hasHydrated: true,
+  });
 
   render(<SecurityPageGate />);
 

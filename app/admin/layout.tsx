@@ -14,6 +14,7 @@ const NAV_LINKS = [
   { href: '/admin/feed', label: 'Property feed' },
   { href: '/admin/listings', label: 'All listings' },
   { href: '/admin/showings', label: 'Showings' },
+  { href: '/admin/work', label: 'Daily work queue' },
   { href: '/admin/property-reviews', label: 'Property reviews' },
   { href: '/admin/home-value', label: 'Home Value' },
   { href: '/admin/staff', label: 'Staff' },

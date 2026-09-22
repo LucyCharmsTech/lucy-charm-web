@@ -1,0 +1,42 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { fetchMyWork, updateWorkItem, type WorkItem } from '@/services/workItemService';
+
+const STORAGE_KEY = 'lucy-agent-work-filters';
+const contextHref: Record<string, string> = {
+  lead: '/agent/leads', showing_request: '/agent/showings', home_value_request: '/agent/home-value',
+  property_review_request: '/agent/property-reviews', ai_escalation: '/admin/escalations',
+};
+
+export default function AgentWorkView() {
+  const [items, setItems] = useState<WorkItem[]>([]);
+  const [filters, setFilters] = useState(() => {
+    if (typeof window === 'undefined') return { status: 'open', queue: 'all', priority: 'all', overdue: false };
+    try { return { status: 'open', queue: 'all', priority: 'all', overdue: false, ...JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? '{}') }; }
+    catch { return { status: 'open', queue: 'all', priority: 'all', overdue: false }; }
+  });
+  const { status, queue, priority, overdue } = filters;
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchMyWork().then(setItems).catch(() => setError('Could not load your work.'));
+  }, []);
+  useEffect(() => { sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ status, queue, priority, overdue })); }, [status, queue, priority, overdue]);
+
+  const rows = useMemo(() => items.filter((item) =>
+    (status === 'all' || item.status === status) && (queue === 'all' || item.queue === queue) &&
+    (priority === 'all' || item.priority === priority) && (!overdue || item.is_overdue),
+  ), [items, status, queue, priority, overdue]);
+  const queues = [...new Set(items.map((item) => item.queue))];
+
+  async function start(item: WorkItem) {
+    const updated = await updateWorkItem(item.id, { status: 'in_progress' });
+    setItems((current) => current.map((value) => value.id === updated.id ? updated : value));
+  }
+  if (error) return <p role="alert" className="text-sm text-red-600">{error}</p>;
+  return <div className="space-y-6"><div><h1 className="text-2xl font-extrabold">My work</h1><p className="text-sm text-zinc-600 dark:text-zinc-400">Actionable work assigned to you. Opening an item does not count as action.</p></div>
+    <div className="flex flex-wrap gap-2"><select value={status} onChange={(e) => setFilters((current) => ({ ...current, status: e.target.value }))} className="rounded border p-2 text-sm"><option value="all">All statuses</option><option value="open">Open</option><option value="in_progress">In progress</option><option value="done">Done</option></select><select value={queue} onChange={(e) => setFilters((current) => ({ ...current, queue: e.target.value }))} className="rounded border p-2 text-sm"><option value="all">All queues</option>{queues.map((value) => <option key={value}>{value}</option>)}</select><select value={priority} onChange={(e) => setFilters((current) => ({ ...current, priority: e.target.value }))} className="rounded border p-2 text-sm"><option value="all">All priorities</option><option value="urgent">Urgent</option><option value="high">High</option><option value="normal">Normal</option></select><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={overdue} onChange={(e) => setFilters((current) => ({ ...current, overdue: e.target.checked }))} />Overdue</label></div>
+    <div className="overflow-x-auto rounded-xl border"><table className="w-full text-left text-sm"><thead><tr><th className="p-3">Work</th><th className="p-3">Priority</th><th className="p-3">Due</th><th className="p-3">Status</th><th className="p-3">Action</th></tr></thead><tbody>{rows.map((item) => <tr key={item.id} className="border-t"><td className="p-3"><p className="font-medium">{item.title}</p><Link className="text-primarycolor-text hover:underline" href={contextHref[item.source_type] ?? '/agent'}>Open context</Link></td><td className="p-3 capitalize">{item.priority}</td><td className="p-3">{item.due_at ? new Date(item.due_at).toLocaleString() : 'Not scheduled'}{item.is_overdue && <span className="ml-2 text-red-600">Overdue</span>}</td><td className="p-3 capitalize">{item.status.replace('_', ' ')}</td><td className="p-3">{item.status === 'open' && <button onClick={() => void start(item)} className="rounded bg-zinc-900 px-3 py-1 text-white">Start work</button>}</td></tr>)}</tbody></table>{rows.length === 0 && <p className="p-6 text-sm text-zinc-500">No matching work items.</p>}</div></div>;
+}

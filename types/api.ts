@@ -423,11 +423,36 @@ export type AgentProfile = {
   email: string;
   user_id: string;
   name: string;
+  legal_name: string;
   phone: string;
   license_number: string;
+  registration_category: string;
+  registration_title: string;
+  reco_registration_id: string;
+  trade_name: string | null;
+  service_area: string | null;
+  languages: string[] | null;
+  office_branch: string | null;
+  public_profile_details: string | null;
+  status: string;
+  email_verified_at: string | null;
+  invited_at: string | null;
+  profile_completed_at: string | null;
+  activated_at: string | null;
   created_at: string;
   updated_at: string;
 };
+
+export type AgentOnboarding = AgentProfile & {
+  system_role: UserRole;
+  mfa_enabled: boolean;
+};
+
+export type AgentProfileOptions = {
+  registration_categories: string[];
+  registration_titles: string[];
+};
+
 
 /** Mirrors AgentShowingResponseStats from GET /agents/me/insights */
 export type AgentShowingResponseStats = {

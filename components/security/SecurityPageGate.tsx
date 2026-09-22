@@ -21,15 +21,16 @@ import { useAuthStore } from '@/stores/authStore';
 export default function SecurityPageGate() {
   const router = useRouter();
   const accessToken = useAuthStore((state) => state.accessToken);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated ?? true);
 
   useEffect(() => {
-    if (accessToken) return;
+    if (!hasHydrated || accessToken) return;
     // `replace`, not `push`: a signed-out visit to this page is not a step
     // worth putting in history for the back button to return to.
     router.replace(`/login?redirect=${encodeURIComponent('/security')}`);
-  }, [accessToken, router]);
+  }, [accessToken, hasHydrated, router]);
 
-  if (!accessToken) {
+  if (!hasHydrated || !accessToken) {
     return (
       <p
         role="status"
