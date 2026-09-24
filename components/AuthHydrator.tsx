@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { fetchCurrentUser } from '@/services/userService';
+import { isMfaEnrolmentRequired } from '@/lib/mfaEnrolmentRedirect';
 import { userMeToAuthUser } from '@/types/api';
 
 /**
@@ -26,7 +27,11 @@ export default function AuthHydrator() {
 
     fetchCurrentUser()
       .then((me) => updateUser(userMeToAuthUser(me)))
-      .catch(() => {
+      .catch((err: unknown) => {
+        // A staff account that has not enrolled in MFA gets this 403 on
+        // /users/me by design, and its session is still the one /security
+        // needs to finish enrolment. Clearing it bounced them to /login.
+        if (isMfaEnrolmentRequired(err)) return;
         clearAuth();
       });
   }, [accessToken, updateUser, clearAuth]);

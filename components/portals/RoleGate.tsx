@@ -6,6 +6,7 @@ import { useShallow } from 'zustand/react/shallow';
 import type { UserRole } from '@/types/api';
 import { getPostLoginPath } from '@/lib/postLoginRedirect';
 import { useAuthStore } from '@/stores/authStore';
+import { useAuthHydrated } from '@/lib/useAuthHydrated';
 
 type RoleGateProps = {
   allowed: Extract<UserRole, 'agent' | 'superadmin'>;
@@ -25,7 +26,9 @@ export default function RoleGate({ allowed, children }: RoleGateProps) {
       user: s.user,
     })),
   );
+  const hydrated = useAuthHydrated();
   useEffect(() => {
+    if (!hydrated) return;
     if (!accessToken) {
       const next = encodeURIComponent(pathname || '/');
       router.replace(`/login?redirect=${next}`);
@@ -37,7 +40,15 @@ export default function RoleGate({ allowed, children }: RoleGateProps) {
     if (user.role !== allowed) {
       router.replace(getPostLoginPath(user.role, null));
     }
-  }, [accessToken, user, allowed, router, pathname]);
+  }, [hydrated, accessToken, user, allowed, router, pathname]);
+
+  if (!hydrated) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center bg-zinc-50 dark:bg-zinc-950">
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>
+      </div>
+    );
+  }
 
   if (!accessToken) {
     return (

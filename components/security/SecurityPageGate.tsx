@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { MfaEnrolment } from '@/components/security/MfaEnrolment';
 import { useAuthStore } from '@/stores/authStore';
+import { useAuthHydrated } from '@/lib/useAuthHydrated';
 
 /**
  * Keeps signed-out visitors off the two-step verification screen.
@@ -21,13 +22,22 @@ import { useAuthStore } from '@/stores/authStore';
 export default function SecurityPageGate() {
   const router = useRouter();
   const accessToken = useAuthStore((state) => state.accessToken);
+  const hydrated = useAuthHydrated();
 
   useEffect(() => {
-    if (accessToken) return;
+    if (!hydrated || accessToken) return;
     // `replace`, not `push`: a signed-out visit to this page is not a step
     // worth putting in history for the back button to return to.
     router.replace(`/login?redirect=${encodeURIComponent('/security')}`);
-  }, [accessToken, router]);
+  }, [hydrated, accessToken, router]);
+
+  if (!hydrated) {
+    return (
+      <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">
+        Loading…
+      </p>
+    );
+  }
 
   if (!accessToken) {
     return (

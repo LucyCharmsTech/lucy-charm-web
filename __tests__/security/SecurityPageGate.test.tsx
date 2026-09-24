@@ -49,6 +49,22 @@ test('the redirect carries the way back, so sign-in returns here', async () => {
   expect(target.searchParams.get('redirect')).toBe('/security');
 });
 
+test('nothing is decided before the persisted session is visible to the render', () => {
+  // A full page load hydrates with the store's initial state, where the token
+  // reads null. Redirecting then sent signed-in staff to /login, which sent
+  // them straight back here — an endless loop on the enrolment screen.
+  const hydrated = jest
+    .spyOn(useAuthStore.persist, 'hasHydrated')
+    .mockReturnValue(false);
+
+  render(<SecurityPageGate />);
+
+  expect(replace).not.toHaveBeenCalled();
+  expect(screen.queryByTestId('enrolment')).toBeNull();
+  expect(screen.getByText('Loading…')).toBeTruthy();
+  hydrated.mockRestore();
+});
+
 test('a signed-in visitor gets the enrolment form and no redirect', () => {
   useAuthStore.setState({ accessToken: 'a-token', refreshToken: null, user: null });
 
