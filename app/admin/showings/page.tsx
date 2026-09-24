@@ -73,7 +73,10 @@ export default function AdminShowingsPage() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(timer);
+  }, [load]);
 
   async function changeStatus(id: string, status: ShowingRequestStatus) {
     setUpdating(id);

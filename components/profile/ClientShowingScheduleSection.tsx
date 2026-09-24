@@ -59,6 +59,7 @@ export default function ClientShowingScheduleSection() {
   const [listingTitlesById, setListingTitlesById] = useState<Record<string, string>>({});
   const [activeFeedbackRequest, setActiveFeedbackRequest] = useState<ShowingRequest | null>(null);
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
+  const [feedbackEligibilityCheckedAt] = useState(() => Date.now());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const highlightedShowingId = useShowingDeepLink(!loading);
@@ -153,7 +154,7 @@ export default function ClientShowingScheduleSection() {
     ) {
       return false;
     }
-    return new Date(item.scheduled_at ?? item.preferred_date).getTime() <= Date.now();
+    return new Date(item.scheduled_at ?? item.preferred_date).getTime() <= feedbackEligibilityCheckedAt;
   }
 
   function handleFeedbackClick(item: ShowingRequest) {

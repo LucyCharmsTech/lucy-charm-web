@@ -69,14 +69,17 @@ export default function ShowingFeedbackDialog({ request, open, onClose, onSubmit
 
   useEffect(() => {
     if (!open) return;
-    setSubmitted(false);
-    setError(null);
-    setRating(4);
-    setInterestLevel('medium');
-    setPriceFit('on_target');
-    setComment('');
-    setWouldOffer(null);
-    setConsentToAiProfile(false);
+    const frame = window.requestAnimationFrame(() => {
+      setSubmitted(false);
+      setError(null);
+      setRating(4);
+      setInterestLevel('medium');
+      setPriceFit('on_target');
+      setComment('');
+      setWouldOffer(null);
+      setConsentToAiProfile(false);
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, [open, request?.id]);
 
   async function handleSubmit(e: React.FormEvent) {

@@ -53,7 +53,8 @@ export default function ClientDocumentsSection() {
   }, []);
 
   useEffect(() => {
-    void load();
+    const timer = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(timer);
   }, [load]);
 
   // Document notifications (requested / reviewed / expired) arrive over the

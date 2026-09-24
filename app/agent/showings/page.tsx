@@ -88,7 +88,10 @@ function AgentShowingsPageContent() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(timer);
+  }, [load]);
 
   // Buyer actions (new request, ID upload, feedback, withdrawal) land here
   // live via the auto-granted user channel. `load()` never flips `loading`
