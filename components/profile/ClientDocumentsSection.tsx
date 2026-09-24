@@ -13,6 +13,7 @@ import {
   sortDocumentsForClient,
 } from '@/services/documentService';
 import { fetchMyShowingRequests } from '@/services/showingService';
+import { formatShowingDateTime } from '@/lib/showingPresentation';
 import type { AppDocument, NotificationCreatedPayload, ShowingRequest } from '@/types/api';
 
 type DocumentRow = { request: ShowingRequest; documents: AppDocument[] };
@@ -121,7 +122,7 @@ export default function ClientDocumentsSection() {
               >
                 <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                   Showing on{' '}
-                  {new Date(request.scheduled_at ?? request.preferred_date).toLocaleString()}
+                  {formatShowingDateTime(request.scheduled_at ?? request.proposed_scheduled_at ?? request.preferred_date)}
                 </p>
                 <div className="mt-2 space-y-2">
                   {visibleDocs.map((doc) => (

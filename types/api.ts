@@ -714,7 +714,13 @@ export type ChatRequestHumanResponse = {
 // ---------------------------------------------------------------------------
 
 export type ShowingRequestStatus =
-  'pending' | 'confirmed' | 'rescheduled' | 'cancelled' | 'completed';
+  | 'requested'
+  | 'being_arranged'
+  | 'awaiting_confirmation'
+  | 'confirmed'
+  | 'reschedule_needed'
+  | 'cancelled'
+  | 'completed';
 export type ShowingType = 'in_person' | 'virtual' | 'open_house';
 export type ShowingIdVerificationStatus =
   'not_requested' | 'pending' | 'verified';
@@ -749,6 +755,8 @@ export type ShowingRequest = {
   status: ShowingRequestStatus;
   confirmed_at: string | null;
   scheduled_at: string | null;
+  proposed_scheduled_at: string | null;
+  confirmed_by_user_id: string | null;
   rescheduled_at: string | null;
   agent_notes: string | null;
   crm_synced: boolean;
@@ -1134,6 +1142,7 @@ export type ShowingStatusChangedPayload = {
   previous_status: ShowingRequestStatus | null;
   scheduled_at: string | null;
   previous_scheduled_at?: string | null;
+  proposed_scheduled_at?: string | null;
   rescheduled?: boolean;
   id_verification_status?: ShowingIdVerificationStatus;
 };

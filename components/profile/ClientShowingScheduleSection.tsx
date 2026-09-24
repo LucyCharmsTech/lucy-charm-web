@@ -8,6 +8,7 @@ import ShowingFeedbackDialog from '@/components/profile/ShowingFeedbackDialog';
 import { useLiveShowingRequests } from '@/lib/useLiveShowingRequests';
 import { showingAnchorId, useShowingDeepLink } from '@/lib/useShowingDeepLink';
 import { cn } from '@/lib/utils';
+import { formatShowingDateTime, showingStatusLabel } from '@/lib/showingPresentation';
 import { fetchListingById } from '@/services/listingsService';
 import { fetchMyShowingRequests } from '@/services/showingService';
 import type { ShowingRequest } from '@/types/api';
@@ -19,7 +20,7 @@ function sortByPreferredDate(rows: ShowingRequest[]): ShowingRequest[] {
 }
 
 function statusTone(status: ShowingRequest['status']): string {
-  if (status === 'confirmed' || status === 'rescheduled') {
+  if (status === 'confirmed' || status === 'completed') {
     return 'text-emerald-700 dark:text-emerald-400';
   }
   if (status === 'cancelled') return 'text-red-700 dark:text-red-400';
@@ -27,13 +28,30 @@ function statusTone(status: ShowingRequest['status']): string {
 }
 
 function statusLabel(status: ShowingRequest['status']): string {
-  if (status === 'rescheduled') return 'confirmed';
-  return status;
+  return showingStatusLabel(status);
 }
 
 function visitBadge(status: ShowingRequest['status']): string {
-  if (status === 'cancelled') return 'Visit cancelled';
-  return 'Visit booked';
+  const labels: Record<ShowingRequest['status'], string> = {
+    requested: 'Request received',
+    being_arranged: 'Being arranged',
+    awaiting_confirmation: 'Awaiting confirmation',
+    confirmed: 'Visit confirmed',
+    reschedule_needed: 'Reschedule needed',
+    cancelled: 'Visit cancelled',
+    completed: 'Visit completed',
+  };
+  return labels[status];
+}
+
+function scheduleDescription(item: ShowingRequest): string {
+  if (item.status === 'confirmed' || item.status === 'completed') {
+    return `Confirmed for ${formatShowingDateTime(item.scheduled_at!)}`;
+  }
+  if (item.proposed_scheduled_at) {
+    return `Proposed time: ${formatShowingDateTime(item.proposed_scheduled_at)}`;
+  }
+  return `Requested time: ${formatShowingDateTime(item.preferred_date)}`;
 }
 
 export default function ClientShowingScheduleSection() {
@@ -131,8 +149,7 @@ export default function ClientShowingScheduleSection() {
     if (item.feedback_submitted_at) return false;
     if (
       item.status !== 'confirmed' &&
-      item.status !== 'completed' &&
-      item.status !== 'rescheduled'
+      item.status !== 'completed'
     ) {
       return false;
     }
@@ -165,7 +182,7 @@ export default function ClientShowingScheduleSection() {
       {!loading && !error && (
         <div className="mt-4 space-y-3">
           {items.length === 0 ? (
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">No showings scheduled yet.</p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">No showing requests yet.</p>
           ) : (
             items.map((item) => (
               <article
@@ -193,12 +210,12 @@ export default function ClientShowingScheduleSection() {
                   </p>
                 </div>
                 <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                  {new Date(item.scheduled_at ?? item.preferred_date).toLocaleString()} ·{' '}
+                  {scheduleDescription(item)} ·{' '}
                   {item.showing_type.replace('_', ' ')}
                 </p>
                 {item.rescheduled_at && (
                   <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                    Originally requested: {new Date(item.preferred_date).toLocaleString()}
+                    Originally requested: {formatShowingDateTime(item.preferred_date)}
                   </p>
                 )}
                 <div className="mt-2 flex flex-wrap gap-2">

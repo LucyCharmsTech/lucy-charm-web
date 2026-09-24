@@ -28,7 +28,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <PortalHeader title="Admin console" fullWidth />
         <div className="flex w-full flex-col md:flex-row">
           <PortalSidebar title="Superadmin" subtitle="Brokerage-wide" links={NAV_LINKS} />
-          <div className="flex-1 p-4 md:p-8">{children}</div>
+          <div className="min-w-0 flex-1 p-4 md:p-8">{children}</div>
         </div>
       </div>
     </RoleGate>

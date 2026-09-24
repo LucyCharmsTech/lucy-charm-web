@@ -16,6 +16,7 @@ const initial: AgentInvitationPayload = {
   legal_name: '', email: '', phone: '', registration_category: '',
   registration_title: '', reco_registration_id: '', system_role: 'agent',
 };
+const PAGE_SIZE = 50;
 
 export function AgentOnboardingPanel() {
   const [rows, setRows] = useState<AgentOnboarding[]>([]);
@@ -23,34 +24,44 @@ export function AgentOnboardingPanel() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
   const [options, setOptions] = useState({
     registration_categories: [] as string[],
     registration_titles: [] as string[],
   });
 
-  async function load() {
-    try { setRows((await fetchAgentOnboarding()).items); }
-    catch (err: unknown) { setError(getApiErrorMessage(err, 'Could not load agent onboarding.')); }
-  }
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  function refresh() { setLoading(true); setReloadKey((key) => key + 1); }
+  // Existing action handlers call this after a mutation; retain their page.
+  function load() { refresh(); }
   useEffect(() => {
     let active = true;
-    Promise.all([fetchAgentOnboarding(), fetchAgentProfileOptions()])
-      .then(([data, profileOptions]) => {
+    fetchAgentOnboarding(page, PAGE_SIZE)
+      .then((data) => {
         if (!active) return;
+        const lastPage = Math.max(1, Math.ceil(data.total / data.page_size));
+        if (page > lastPage) { setPage(lastPage); return; }
         setRows(data.items);
-        setOptions(profileOptions);
+        setTotal(data.total); setError(null);
       })
       .catch((err: unknown) => {
         if (active) setError(getApiErrorMessage(err, 'Could not load agent onboarding.'));
-      });
+      }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
+  }, [page, reloadKey]);
+  useEffect(() => {
+    fetchAgentProfileOptions().then(setOptions)
+      .catch((err: unknown) => setError(getApiErrorMessage(err, 'Could not load agent onboarding.')));
   }, []);
 
   async function invite(event: React.FormEvent) {
     event.preventDefault(); setBusy(true); setError(null); setNotice(null);
     try {
       await createAgentInvitation(form);
-      setForm(initial); setNotice('Invitation sent.'); await load();
+      setForm(initial); setNotice('Invitation sent.'); refresh();
     } catch (err: unknown) { setError(getApiErrorMessage(err, 'Could not send invitation.')); }
     finally { setBusy(false); }
   }
@@ -83,6 +94,8 @@ export function AgentOnboardingPanel() {
     <section className="space-y-3">
       <h2 className="font-semibold">Agent onboarding</h2>
       {rows.length === 0 ? <p className="text-sm text-zinc-500">No invited agents yet.</p> : rows.map((row) => <div key={row.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 p-4 dark:border-zinc-800"><div><p className="font-medium">{row.legal_name}</p><p className="text-sm text-zinc-500">{row.email} · {row.registration_title} · {row.status}</p></div><div className="flex gap-2">{row.status !== 'active' && row.status !== 'profile_complete' && <button onClick={() => void resendAgentInvitation(row.id).then(load).catch((err: unknown) => setError(getApiErrorMessage(err, 'Could not resend invitation.')))} className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-semibold dark:border-zinc-700">Resend</button>}{row.status === 'profile_complete' && <button onClick={() => void activateAgent(row.id).then(load).catch((err: unknown) => setError(getApiErrorMessage(err, 'Could not activate this agent.')))} className="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white">Activate</button>}</div></div>)}
+      {loading && <p className="text-sm text-zinc-500">Loadingâ€¦</p>}
+      {total > PAGE_SIZE && <nav aria-label="Agent onboarding pages" className="flex flex-wrap items-center gap-3 text-sm"><button type="button" disabled={page === 1 || loading} onClick={() => { setLoading(true); setPage((value) => value - 1); }} className="rounded-lg border border-zinc-200 px-3 py-1.5 disabled:opacity-50 dark:border-zinc-700">Previous</button><span className="text-zinc-600 dark:text-zinc-400">Page {page} of {totalPages} · {total} agents</span><button type="button" disabled={page >= totalPages || loading} onClick={() => { setLoading(true); setPage((value) => value + 1); }} className="rounded-lg border border-zinc-200 px-3 py-1.5 disabled:opacity-50 dark:border-zinc-700">Next</button></nav>}
     </section>
   </div>;
 }
