@@ -17,6 +17,10 @@ import { isMfaChallenge, type AuthToken } from '@/types/api';
 import { seatSession } from '@/lib/seatSession';
 import { MfaChallengeForm } from '@/components/auth/MfaChallengeForm';
 import { getPostLoginPath } from '@/lib/postLoginRedirect';
+import {
+  clearMfaEnrolmentReturnPath,
+  rememberAgentOnboardingAfterMfa,
+} from '@/lib/mfaEnrolmentReturnPath';
 
 export function MagicLinkCallback() {
   const router = useRouter();
@@ -49,11 +53,18 @@ export function MagicLinkCallback() {
           setChallenge(result.mfa_challenge_token);
           return;
         }
+        if (isAgentInvitation) {
+          // `/users/me` deliberately refuses an enrolment-only staff token.
+          // The global interceptor sends it to `/security`; remember the
+          // invitation's safe, fixed destination for after MFA is complete.
+          rememberAgentOnboardingAfterMfa();
+        }
         const me = await seatSession(result, setAuth);
         if (!active) return;
         if (isRecovery) {
           setRecoveryComplete(true);
         } else {
+          clearMfaEnrolmentReturnPath();
           router.replace(
             isAgentInvitation
               ? '/agent/onboarding'
@@ -82,6 +93,7 @@ export function MagicLinkCallback() {
       setRecoveryComplete(true);
       return;
     }
+    clearMfaEnrolmentReturnPath();
     router.replace(
       isAgentInvitation
         ? '/agent/onboarding'

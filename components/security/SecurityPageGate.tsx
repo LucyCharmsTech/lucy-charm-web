@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { MfaEnrolment } from '@/components/security/MfaEnrolment';
 import { useAuthStore } from '@/stores/authStore';
+import { consumeMfaEnrolmentReturnPath } from '@/lib/mfaEnrolmentReturnPath';
 
 /**
  * Keeps signed-out visitors off the two-step verification screen.
@@ -41,5 +42,12 @@ export default function SecurityPageGate() {
     );
   }
 
-  return <MfaEnrolment />;
+  return (
+    <MfaEnrolment
+      onEnrolmentComplete={() => {
+        const returnPath = consumeMfaEnrolmentReturnPath();
+        if (returnPath) router.replace(returnPath);
+      }}
+    />
+  );
 }

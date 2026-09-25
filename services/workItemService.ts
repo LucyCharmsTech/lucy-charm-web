@@ -34,8 +34,33 @@ export type WorkItemUpdate = Pick<Partial<WorkItem>, 'status' | 'follow_up_at' |
   reason?: string;
 };
 
+export type Paginated<T> = {
+  page: number;
+  page_size: number;
+  total: number;
+  items: T[];
+};
+
+export type WorkItemFilters = {
+  status?: string;
+  queue?: string;
+  priority?: string;
+  overdue?: boolean;
+};
+
 export function fetchMyWork(): Promise<WorkItem[]> {
   return api.get<WorkItem[]>('/work-items/mine').then((response) => response.data);
+}
+
+/** Bounded Daily Work read. The legacy list function remains for compatibility. */
+export function fetchMyWorkPage(
+  page = 1,
+  size = 25,
+  filters: WorkItemFilters = {},
+): Promise<Paginated<WorkItem>> {
+  return api.get<Paginated<WorkItem>>('/work-items/mine/page', {
+    params: { page, size, ...filters },
+  }).then((response) => response.data);
 }
 
 export function updateWorkItem(id: string, payload: WorkItemUpdate): Promise<WorkItem> {
@@ -44,4 +69,14 @@ export function updateWorkItem(id: string, payload: WorkItemUpdate): Promise<Wor
 
 export function fetchWorkItemHistory(id: string): Promise<WorkItemHistory[]> {
   return api.get<WorkItemHistory[]>(`/work-items/${id}/history`).then((response) => response.data);
+}
+
+export function fetchWorkItemHistoryPage(
+  id: string,
+  page = 1,
+  size = 25,
+): Promise<Paginated<WorkItemHistory>> {
+  return api.get<Paginated<WorkItemHistory>>(`/work-items/${id}/history/page`, {
+    params: { page, size },
+  }).then((response) => response.data);
 }

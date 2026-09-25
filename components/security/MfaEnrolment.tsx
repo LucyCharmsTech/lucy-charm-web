@@ -39,7 +39,16 @@ import { useAuthStore } from '@/stores/authStore';
 
 type View = 'loading' | 'idle' | 'scanning' | 'codes' | 'disabling';
 
-export function MfaEnrolment({ onEnabled }: { onEnabled?: () => void } = {}) {
+type MfaEnrolmentProps = {
+  onEnabled?: () => void;
+  /** Called only after the recovery codes have been acknowledged. */
+  onEnrolmentComplete?: () => void;
+};
+
+export function MfaEnrolment({
+  onEnabled,
+  onEnrolmentComplete,
+}: MfaEnrolmentProps = {}) {
   // `setTokens`, not `setAuth`: only the credential changed here, and the
   // stored user is already correct. Passing the user back through would also
   // have to handle it being null, which would mean clearing it.
@@ -217,6 +226,7 @@ export function MfaEnrolment({ onEnabled }: { onEnabled?: () => void } = {}) {
           setCodes(null);
           setView('idle');
           setReloadKey((key) => key + 1);
+          onEnrolmentComplete?.();
         }}
       />
     );
