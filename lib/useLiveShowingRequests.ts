@@ -73,6 +73,9 @@ export function useLiveShowingRequests(handlers: LiveShowingRequestHandlers): vo
     ref.current.patch(payload.showing_request_id, {
       status: payload.status,
       scheduled_at: payload.scheduled_at,
+      ...(payload.proposed_scheduled_at !== undefined
+        ? { proposed_scheduled_at: payload.proposed_scheduled_at }
+        : {}),
       ...(payload.id_verification_status
         ? { id_verification_status: payload.id_verification_status }
         : {}),

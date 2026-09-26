@@ -39,7 +39,7 @@ export default function ShowingFeedbackDialog({ request, open, onClose, onSubmit
   const [priceFit, setPriceFit] = useState<ShowingFeedbackPriceFit>('on_target');
   const [comment, setComment] = useState('');
   const [wouldOffer, setWouldOffer] = useState<boolean | null>(null);
-  const [consentToAiProfile, setConsentToAiProfile] = useState(true);
+  const [consentToAiProfile, setConsentToAiProfile] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,14 +69,17 @@ export default function ShowingFeedbackDialog({ request, open, onClose, onSubmit
 
   useEffect(() => {
     if (!open) return;
-    setSubmitted(false);
-    setError(null);
-    setRating(4);
-    setInterestLevel('medium');
-    setPriceFit('on_target');
-    setComment('');
-    setWouldOffer(null);
-    setConsentToAiProfile(true);
+    const frame = window.requestAnimationFrame(() => {
+      setSubmitted(false);
+      setError(null);
+      setRating(4);
+      setInterestLevel('medium');
+      setPriceFit('on_target');
+      setComment('');
+      setWouldOffer(null);
+      setConsentToAiProfile(false);
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, [open, request?.id]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -137,8 +140,7 @@ export default function ShowingFeedbackDialog({ request, open, onClose, onSubmit
               <CheckCircleIcon className="size-12 text-emerald-500" aria-hidden="true" />
               <p className="text-lg font-bold text-zinc-900 dark:text-zinc-50">Feedback saved</p>
               <p className="max-w-sm text-sm text-zinc-600 dark:text-zinc-300">
-                Thanks for sharing your showing feedback. Lucy will use this signal to improve your
-                recommendations.
+                Thanks for sharing your showing feedback.
               </p>
               <Button type="button" variant="outline" className="rounded-full" onClick={() => dialogRef.current?.close()}>
                 Close
@@ -243,7 +245,8 @@ export default function ShowingFeedbackDialog({ request, open, onClose, onSubmit
                   className="mt-0.5 size-4 accent-primarycolor"
                 />
                 <span className="text-sm text-zinc-700 dark:text-zinc-200">
-                  Allow this feedback to tune my AI profile and improve future listing matches.
+                  I agree that this feedback may be used to personalize my AI profile, subject to
+                  Lucy Charms&apos; approved data-use rules.
                 </span>
               </label>
 

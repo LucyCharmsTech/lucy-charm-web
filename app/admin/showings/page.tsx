@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-  CalendarIcon,
   CheckCircleIcon,
   ClockIcon,
   XCircleIcon,
@@ -10,22 +9,28 @@ import {
 } from 'lucide-react';
 import ShowingDocumentsDialog from '@/components/documents/ShowingDocumentsDialog';
 import ClientFlaggedQuestionsDialog from '@/components/showings/ClientFlaggedQuestionsDialog';
+import ShowingDateTime from '@/components/showings/ShowingDateTime';
 import { fetchAllShowingRequestsAdmin, updateShowingRequest } from '@/services/showingService';
 import { fetchAllAgents } from '@/services/portalService';
 import type { AgentProfile, ApiPaginated, ShowingRequest, ShowingRequestStatus } from '@/types/api';
+import { showingStatusLabel } from '@/lib/showingPresentation';
 
 const STATUS_STYLES: Record<ShowingRequestStatus, string> = {
-  pending: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+  requested: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+  being_arranged: 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300',
+  awaiting_confirmation: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
   confirmed: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
-  rescheduled: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+  reschedule_needed: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
   cancelled: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400',
   completed: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300',
 };
 
 const STATUS_ICON: Record<ShowingRequestStatus, React.ReactNode> = {
-  pending: <ClockIcon className="size-3.5" aria-hidden="true" />,
+  requested: <ClockIcon className="size-3.5" aria-hidden="true" />,
+  being_arranged: <RefreshCcwIcon className="size-3.5" aria-hidden="true" />,
+  awaiting_confirmation: <ClockIcon className="size-3.5" aria-hidden="true" />,
   confirmed: <CheckCircleIcon className="size-3.5" aria-hidden="true" />,
-  rescheduled: <RefreshCcwIcon className="size-3.5" aria-hidden="true" />,
+  reschedule_needed: <RefreshCcwIcon className="size-3.5" aria-hidden="true" />,
   cancelled: <XCircleIcon className="size-3.5" aria-hidden="true" />,
   completed: <CheckCircleIcon className="size-3.5" aria-hidden="true" />,
 };
@@ -36,7 +41,7 @@ function StatusBadge({ status }: { status: ShowingRequestStatus }) {
       className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${STATUS_STYLES[status]}`}
     >
       {STATUS_ICON[status]}
-      {status}
+      {showingStatusLabel(status)}
     </span>
   );
 }
@@ -68,14 +73,16 @@ export default function AdminShowingsPage() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(timer);
+  }, [load]);
 
   async function changeStatus(id: string, status: ShowingRequestStatus) {
     setUpdating(id);
     try {
       const updated = await updateShowingRequest(id, {
         status,
-        confirmed_at: status === 'confirmed' ? new Date().toISOString() : undefined,
       });
       setData((prev) =>
         prev
@@ -119,7 +126,7 @@ export default function AdminShowingsPage() {
   const rows = data?.items ?? [];
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
@@ -139,53 +146,50 @@ export default function AdminShowingsPage() {
           No showing requests yet.
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
-          <table className="w-full min-w-[800px] text-left text-sm">
-            <thead className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
+        <div className="w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-xl border border-zinc-200 dark:border-zinc-800">
+          <table className="block w-full text-left text-sm lg:table lg:min-w-[1640px]">
+            <thead className="hidden border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase tracking-wide text-zinc-600 lg:table-header-group dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
               <tr>
-                <th scope="col" className="px-4 py-3">Buyer</th>
-                <th scope="col" className="px-4 py-3">Listing</th>
-                <th scope="col" className="px-4 py-3">Type</th>
-                <th scope="col" className="px-4 py-3">Preferred date</th>
-                <th scope="col" className="px-4 py-3">Assigned agent</th>
-                <th scope="col" className="px-4 py-3">Status</th>
-                <th scope="col" className="px-4 py-3">ID verification</th>
-                <th scope="col" className="px-4 py-3">Pre-approved</th>
-                <th scope="col" className="px-4 py-3">Feedback</th>
-                <th scope="col" className="px-4 py-3">Submitted</th>
-                <th scope="col" className="px-4 py-3">Actions</th>
+                <th scope="col" className="min-w-[220px] px-4 py-3">Buyer</th>
+                <th scope="col" className="min-w-[105px] px-4 py-3">Listing</th>
+                <th scope="col" className="min-w-[105px] px-4 py-3">Type</th>
+                <th scope="col" className="min-w-[210px] px-4 py-3">Appointment / requested time</th>
+                <th scope="col" className="min-w-[200px] px-4 py-3">Assigned agent</th>
+                <th scope="col" className="min-w-[145px] px-4 py-3">Status</th>
+                <th scope="col" className="min-w-[155px] px-4 py-3">ID verification</th>
+                <th scope="col" className="min-w-[125px] px-4 py-3">Pre-approved</th>
+                <th scope="col" className="min-w-[90px] px-4 py-3">Feedback</th>
+                <th scope="col" className="min-w-[110px] px-4 py-3">Submitted</th>
+                <th scope="col" className="min-w-[245px] px-4 py-3">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            <tbody className="block divide-y divide-zinc-100 lg:table-row-group dark:divide-zinc-800">
               {rows.map((r) => (
-                <tr key={r.id} className="bg-white dark:bg-zinc-950/40">
-                  <td className="px-4 py-3">
+                <tr key={r.id} className="mb-3 block rounded-xl border border-zinc-200 bg-white lg:mb-0 lg:table-row lg:rounded-none lg:border-0 dark:border-zinc-800 dark:bg-zinc-950/40">
+                  <td data-label="Buyer" className="block px-4 py-3 lg:table-cell">
                     <p className="font-medium text-zinc-900 dark:text-zinc-100">
                       {r.first_name} {r.last_name}
                     </p>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400">{r.email}</p>
+                    <p className="truncate text-xs text-zinc-500 dark:text-zinc-400" title={r.email}>{r.email}</p>
                     {r.phone && <p className="text-xs text-zinc-500 dark:text-zinc-400">{r.phone}</p>}
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs text-zinc-500 dark:text-zinc-400">
+                  <td data-label="Listing" className="block px-4 py-3 font-mono text-xs before:mr-2 before:font-sans before:font-semibold before:uppercase before:tracking-wide before:text-zinc-500 before:content-[attr(data-label)] lg:table-cell lg:before:content-none text-zinc-500 dark:text-zinc-400">
                     {r.listing_id.slice(0, 8)}…
                   </td>
-                  <td className="px-4 py-3 capitalize text-zinc-700 dark:text-zinc-300">
+                  <td data-label="Type" className="block px-4 py-3 capitalize before:mr-2 before:text-xs before:font-semibold before:uppercase before:tracking-wide before:text-zinc-500 before:content-[attr(data-label)] lg:table-cell lg:before:content-none text-zinc-700 dark:text-zinc-300">
                     {r.showing_type.replace('_', ' ')}
                   </td>
-                <td className="whitespace-nowrap px-4 py-3 text-zinc-700 dark:text-zinc-300">
-                    <span className="flex items-center gap-1.5">
-                      <CalendarIcon className="size-3.5 shrink-0 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
-                      {new Date(r.preferred_date).toLocaleString()}
-                    </span>
+                <td data-label="Appointment / requested time" className="block px-4 py-3 before:mb-1 before:block before:text-xs before:font-semibold before:uppercase before:tracking-wide before:text-zinc-500 before:content-[attr(data-label)] lg:table-cell lg:before:content-none">
+                    <ShowingDateTime value={r.scheduled_at ?? r.proposed_scheduled_at ?? r.preferred_date} />
                 </td>
-                <td className="px-4 py-3">
-                  {r.status === 'pending' || r.status === 'rescheduled' ? (
+                <td data-label="Assigned agent" className="block px-4 py-3 before:mb-1 before:block before:text-xs before:font-semibold before:uppercase before:tracking-wide before:text-zinc-500 before:content-[attr(data-label)] lg:table-cell lg:before:content-none">
+                  {['requested', 'being_arranged', 'awaiting_confirmation', 'reschedule_needed'].includes(r.status) ? (
                     <select
                       aria-label="Assign agent"
                       value={r.agent_id ?? ''}
                       disabled={updating === r.id}
                       onChange={(event) => void assignAgent(r.id, event.target.value)}
-                      className="max-w-[180px] rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                      className="w-full rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                     >
                       <option value="">Admin queue</option>
                       {agents.map((agent) => (
@@ -200,10 +204,10 @@ export default function AdminShowingsPage() {
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3">
+                <td data-label="Status" className="block px-4 py-3 before:mr-2 before:text-xs before:font-semibold before:uppercase before:tracking-wide before:text-zinc-500 before:content-[attr(data-label)] lg:table-cell lg:before:content-none">
                     <StatusBadge status={r.status} />
                   </td>
-                  <td className="px-4 py-3">
+                  <td data-label="ID verification" className="block px-4 py-3 before:mr-2 before:text-xs before:font-semibold before:uppercase before:tracking-wide before:text-zinc-500 before:content-[attr(data-label)] lg:table-cell lg:before:content-none">
                     <span
                       className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
                         r.id_verification_status === 'verified'
@@ -216,20 +220,20 @@ export default function AdminShowingsPage() {
                       {r.id_verification_status.replace('_', ' ')}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td data-label="Pre-approved" className="block px-4 py-3 before:mr-2 before:text-xs before:font-semibold before:uppercase before:tracking-wide before:text-zinc-500 before:content-[attr(data-label)] lg:table-cell lg:before:content-none">
                     <span className={`text-xs font-semibold ${r.is_pre_approved ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-500 dark:text-zinc-400'}`}>
                       {r.is_pre_approved ? 'Yes' : 'No'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-xs text-zinc-600 dark:text-zinc-300">
+                  <td data-label="Feedback" className="block px-4 py-3 text-xs before:mr-2 before:font-semibold before:uppercase before:tracking-wide before:text-zinc-500 before:content-[attr(data-label)] lg:table-cell lg:before:content-none text-zinc-600 dark:text-zinc-300">
                     {r.feedback_rating ? `${r.feedback_rating}/5` : '—'}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-xs text-zinc-500 dark:text-zinc-400">
+                  <td data-label="Submitted" className="block px-4 py-3 text-xs before:mr-2 before:font-semibold before:uppercase before:tracking-wide before:text-zinc-500 before:content-[attr(data-label)] lg:table-cell lg:before:content-none text-zinc-500 dark:text-zinc-400">
                     {new Date(r.created_at).toLocaleDateString()}
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1.5">
-                      {r.status === 'pending' && (
+                  <td data-label="Actions" className="block px-4 py-3 before:mb-2 before:block before:text-xs before:font-semibold before:uppercase before:tracking-wide before:text-zinc-500 before:content-[attr(data-label)] lg:table-cell lg:before:content-none">
+                    <div className="flex flex-col items-stretch gap-1.5">
+                      {['requested', 'being_arranged', 'awaiting_confirmation', 'reschedule_needed'].includes(r.status) && (
                         <>
                           <span className="text-xs text-zinc-500 dark:text-zinc-400">
                             {r.agent_id ? 'Awaiting agent acceptance' : 'Select an agent'}
@@ -238,7 +242,7 @@ export default function AdminShowingsPage() {
                             type="button"
                             disabled={updating === r.id}
                             onClick={() => changeStatus(r.id, 'cancelled')}
-                            className="inline-flex h-7 items-center rounded-full bg-zinc-200 px-3 text-xs font-semibold text-zinc-800 transition hover:bg-zinc-300 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:bg-zinc-700 dark:text-zinc-100"
+                            className="inline-flex h-7 w-full items-center justify-center rounded-full bg-zinc-200 px-3 text-xs font-semibold text-zinc-800 transition hover:bg-zinc-300 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:bg-zinc-700 dark:text-zinc-100"
                           >
                             Cancel
                           </button>
@@ -248,7 +252,7 @@ export default function AdminShowingsPage() {
                         type="button"
                         disabled={updating === r.id}
                         onClick={() => setReviewRequest(r)}
-                        className={`inline-flex h-7 items-center rounded-full px-3 text-xs font-semibold transition disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor ${
+                        className={`inline-flex h-7 w-full items-center justify-center rounded-full px-3 text-xs font-semibold transition disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor ${
                           r.id_verification_status === 'pending'
                             ? 'bg-emerald-600 text-white hover:bg-emerald-700'
                             : 'bg-zinc-200 text-zinc-800 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-100'
@@ -257,7 +261,7 @@ export default function AdminShowingsPage() {
                         {r.id_verification_status === 'pending' ? 'Review documents' : 'Documents'}
                       </button>
                       {r.message && (
-                        <p className="mt-1 max-w-[180px] truncate text-xs text-zinc-500 dark:text-zinc-400" title={r.message}>
+                        <p className="mt-1 break-words text-xs text-zinc-500 dark:text-zinc-400">
                           &ldquo;{r.message}&rdquo;
                         </p>
                       )}
@@ -265,7 +269,7 @@ export default function AdminShowingsPage() {
                         <button
                           type="button"
                           onClick={() => setFlaggedRequest(r)}
-                          className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-amber-600 hover:underline dark:text-amber-400"
+                          className="mt-1 inline-flex w-fit items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-amber-600 hover:underline dark:text-amber-400"
                         >
                           Client flagged {r.checkup_questions.length === 1 ? 'this' : `${r.checkup_questions.length} things`}
                         </button>

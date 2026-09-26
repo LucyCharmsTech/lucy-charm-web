@@ -22,12 +22,20 @@ jest.mock('next/navigation', () => ({
 // The gate must decide before this ever mounts; if it renders, the unauthenticated
 // request that produced the original error has already been made.
 jest.mock('@/components/security/MfaEnrolment', () => ({
-  MfaEnrolment: () => <div data-testid="enrolment" />,
+  MfaEnrolment: ({ onEnrolmentComplete }: { onEnrolmentComplete?: () => void }) => (
+    <button data-testid="enrolment" type="button" onClick={onEnrolmentComplete}>MFA</button>
+  ),
 }));
 
 beforeEach(() => {
   replace.mockClear();
-  useAuthStore.setState({ accessToken: null, refreshToken: null, user: null });
+  useAuthStore.setState({
+    accessToken: null,
+    refreshToken: null,
+    user: null,
+    hasHydrated: true,
+  });
+  sessionStorage.clear();
 });
 
 test('a signed-out visitor is sent to sign in, and never mounts the enrolment form', async () => {
@@ -50,10 +58,31 @@ test('the redirect carries the way back, so sign-in returns here', async () => {
 });
 
 test('a signed-in visitor gets the enrolment form and no redirect', () => {
-  useAuthStore.setState({ accessToken: 'a-token', refreshToken: null, user: null });
+  useAuthStore.setState({
+    accessToken: 'a-token',
+    refreshToken: null,
+    user: null,
+    hasHydrated: true,
+  });
 
   render(<SecurityPageGate />);
 
   expect(screen.getByTestId('enrolment')).toBeTruthy();
   expect(replace).not.toHaveBeenCalled();
+});
+
+test('a completed invitation enrolment returns to agent onboarding', () => {
+  useAuthStore.setState({
+    accessToken: 'a-token',
+    refreshToken: null,
+    user: null,
+    hasHydrated: true,
+  });
+  sessionStorage.setItem('lucy-mfa-enrolment-return-path', '/agent/onboarding');
+
+  render(<SecurityPageGate />);
+  screen.getByTestId('enrolment').click();
+
+  expect(replace).toHaveBeenCalledWith('/agent/onboarding');
+  expect(sessionStorage.getItem('lucy-mfa-enrolment-return-path')).toBeNull();
 });

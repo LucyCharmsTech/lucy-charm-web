@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { MfaEnrolment } from '@/components/security/MfaEnrolment';
 import { useAuthStore } from '@/stores/authStore';
+import { consumeMfaEnrolmentReturnPath } from '@/lib/mfaEnrolmentReturnPath';
 
 /**
  * Keeps signed-out visitors off the two-step verification screen.
@@ -21,15 +22,16 @@ import { useAuthStore } from '@/stores/authStore';
 export default function SecurityPageGate() {
   const router = useRouter();
   const accessToken = useAuthStore((state) => state.accessToken);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated ?? true);
 
   useEffect(() => {
-    if (accessToken) return;
+    if (!hasHydrated || accessToken) return;
     // `replace`, not `push`: a signed-out visit to this page is not a step
     // worth putting in history for the back button to return to.
     router.replace(`/login?redirect=${encodeURIComponent('/security')}`);
-  }, [accessToken, router]);
+  }, [accessToken, hasHydrated, router]);
 
-  if (!accessToken) {
+  if (!hasHydrated || !accessToken) {
     return (
       <p
         role="status"
@@ -40,5 +42,12 @@ export default function SecurityPageGate() {
     );
   }
 
-  return <MfaEnrolment />;
+  return (
+    <MfaEnrolment
+      onEnrolmentComplete={() => {
+        const returnPath = consumeMfaEnrolmentReturnPath();
+        if (returnPath) router.replace(returnPath);
+      }}
+    />
+  );
 }

@@ -63,7 +63,7 @@ describe('status changes', () => {
         showing_request_id: 's1',
         listing_id: 'l1',
         status: 'confirmed',
-        previous_status: 'pending',
+        previous_status: 'requested',
         scheduled_at: '2026-08-09T14:30:00Z',
       }),
     );
@@ -98,7 +98,7 @@ describe('status changes', () => {
       mockClient.emit('showing.status_changed', {
         showing_request_id: 's2',
         listing_id: 'l1',
-        status: 'pending',
+        status: 'requested',
         previous_status: null,
         scheduled_at: null,
       }),
@@ -113,7 +113,7 @@ describe('status changes', () => {
     const payload = {
       showing_request_id: 's2',
       listing_id: 'l1',
-      status: 'pending',
+        status: 'requested',
       previous_status: null,
       scheduled_at: null,
     };
