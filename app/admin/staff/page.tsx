@@ -1,4 +1,5 @@
 import { StaffAccountsList } from '@/components/admin/StaffAccountsList';
+import { AgentOnboardingPanel } from '@/components/admin/AgentOnboardingPanel';
 
 export default function AdminStaffPage() {
   return (
@@ -10,6 +11,9 @@ export default function AdminStaffPage() {
       </p>
       <div className="mt-6">
         <StaffAccountsList />
+      </div>
+      <div className="mt-10">
+        <AgentOnboardingPanel />
       </div>
     </div>
   );

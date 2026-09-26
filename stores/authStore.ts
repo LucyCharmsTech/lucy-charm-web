@@ -16,6 +16,7 @@ interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   user: AuthUser | null;
+  hasHydrated: boolean;
 
   /** Store tokens + user after a successful login or register+auto-login. */
   setAuth: (
@@ -48,6 +49,7 @@ export const useAuthStore = create<AuthState>()(
         accessToken: null,
         refreshToken: null,
         user: null,
+        hasHydrated: false,
 
         setAuth: (accessToken, refreshToken, user) =>
           set({ accessToken, refreshToken, user }, false, 'auth/setAuth'),
@@ -75,6 +77,11 @@ export const useAuthStore = create<AuthState>()(
           refreshToken: state.refreshToken,
           user: state.user,
         }),
+        onRehydrateStorage: () => (state) => {
+          if (state && !state.hasHydrated) {
+            useAuthStore.setState({ hasHydrated: true });
+          }
+        },
       },
     ),
     { name: 'authStore' },

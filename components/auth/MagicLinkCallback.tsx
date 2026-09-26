@@ -7,12 +7,20 @@ import { LoaderIcon } from 'lucide-react';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { getApiErrorMessage } from '@/lib/apiErrorMessage';
 import { getAccountStatusPath, getInactiveAccountDetails } from '@/lib/accountStatus';
-import { verifyAccountRecovery, verifyMagicLink } from '@/services/authService';
+import {
+  verifyAccountRecovery,
+  verifyAgentInvitation,
+  verifyMagicLink,
+} from '@/services/authService';
 import { useAuthStore } from '@/stores/authStore';
 import { isMfaChallenge, type AuthToken } from '@/types/api';
 import { seatSession } from '@/lib/seatSession';
 import { MfaChallengeForm } from '@/components/auth/MfaChallengeForm';
 import { getPostLoginPath } from '@/lib/postLoginRedirect';
+import {
+  clearMfaEnrolmentReturnPath,
+  rememberAgentOnboardingAfterMfa,
+} from '@/lib/mfaEnrolmentReturnPath';
 
 export function MagicLinkCallback() {
   const router = useRouter();
@@ -22,6 +30,7 @@ export function MagicLinkCallback() {
   const token = useMemo(() => searchParams.get('token'), [searchParams]);
   const redirectParam = useMemo(() => searchParams.get('redirect'), [searchParams]);
   const isRecovery = searchParams.get('flow') === 'recovery';
+  const isAgentInvitation = searchParams.get('flow') === 'agent_invitation';
   const missingToken = !token;
   const [error, setError] = useState<string | null>(null);
   const [recoveryComplete, setRecoveryComplete] = useState(false);
@@ -33,19 +42,34 @@ export function MagicLinkCallback() {
     }
 
     let active = true;
-    (isRecovery ? verifyAccountRecovery({ token }) : verifyMagicLink({ token }))
+    (isRecovery
+      ? verifyAccountRecovery({ token })
+      : isAgentInvitation
+        ? verifyAgentInvitation({ token })
+        : verifyMagicLink({ token }))
       .then(async (result) => {
         if (!active) return;
         if (isMfaChallenge(result)) {
           setChallenge(result.mfa_challenge_token);
           return;
         }
+        if (isAgentInvitation) {
+          // `/users/me` deliberately refuses an enrolment-only staff token.
+          // The global interceptor sends it to `/security`; remember the
+          // invitation's safe, fixed destination for after MFA is complete.
+          rememberAgentOnboardingAfterMfa();
+        }
         const me = await seatSession(result, setAuth);
         if (!active) return;
         if (isRecovery) {
           setRecoveryComplete(true);
         } else {
-          router.replace(getPostLoginPath(me.role, redirectParam, me.onboarding_completed));
+          clearMfaEnrolmentReturnPath();
+          router.replace(
+            isAgentInvitation
+              ? '/agent/onboarding'
+              : getPostLoginPath(me.role, redirectParam, me.onboarding_completed),
+          );
         }
       })
       .catch((err: unknown) => {
@@ -61,7 +85,7 @@ export function MagicLinkCallback() {
     return () => {
       active = false;
     };
-  }, [isRecovery, missingToken, redirectParam, router, setAuth, token]);
+  }, [isAgentInvitation, isRecovery, missingToken, redirectParam, router, setAuth, token]);
 
   async function finishSignIn(tokens: AuthToken) {
     const me = await seatSession(tokens, setAuth);
@@ -69,7 +93,12 @@ export function MagicLinkCallback() {
       setRecoveryComplete(true);
       return;
     }
-    router.replace(getPostLoginPath(me.role, redirectParam, me.onboarding_completed));
+    clearMfaEnrolmentReturnPath();
+    router.replace(
+      isAgentInvitation
+        ? '/agent/onboarding'
+        : getPostLoginPath(me.role, redirectParam, me.onboarding_completed),
+    );
   }
 
   if (challenge) {
@@ -106,14 +135,22 @@ export function MagicLinkCallback() {
       <div className="flex min-h-[calc(100vh-80px)] items-center justify-center bg-[#fef6f9] px-4 py-10 dark:bg-zinc-950">
         <div className="w-full max-w-md rounded-2xl border border-zinc-200/80 bg-white p-8 text-center shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/60">
           <h1 className="text-xl font-extrabold text-zinc-900 dark:text-zinc-50">
-            {isRecovery ? 'Recovery link problem' : 'Sign-in link problem'}
+            {isRecovery
+              ? 'Recovery link problem'
+              : isAgentInvitation
+                ? 'Invitation link problem'
+                : 'Sign-in link problem'}
           </h1>
           <p className="mt-2 text-sm text-red-600 dark:text-red-400">{message}</p>
           <Link
             href="/login"
             className="mt-5 inline-block text-sm font-semibold text-primarycolor-text hover:underline"
           >
-            {isRecovery ? 'Back to account recovery' : 'Back to sign in'}
+            {isRecovery
+              ? 'Back to account recovery'
+              : isAgentInvitation
+                ? 'Back to sign in'
+                : 'Back to sign in'}
           </Link>
         </div>
       </div>

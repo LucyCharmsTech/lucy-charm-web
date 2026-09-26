@@ -11,12 +11,24 @@ export function getPostLoginPath(
   onboardingCompleted?: boolean,
 ): string {
   const effective: UserRole = role ?? 'client';
+  if (effective === 'agent') {
+    // `/agent/onboarding` is only for an invited agent completing activation.
+    // A stale login redirect to it must not override the active agent dashboard.
+    if (
+      redirectParam &&
+      redirectParam.startsWith('/agent') &&
+      !redirectParam.startsWith('/agent/onboarding') &&
+      !redirectParam.startsWith('//')
+    ) {
+      return redirectParam;
+    }
+    return '/agent';
+  }
   if (effective === 'client' && onboardingCompleted === false) {
     return '/onboarding';
   }
   if (redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//')) {
     // Only honour same-origin style paths; role-specific dashboards still win for internal roles
-    if (effective === 'agent' && redirectParam.startsWith('/agent')) return redirectParam;
     if (effective === 'superadmin' && redirectParam.startsWith('/admin')) return redirectParam;
     if (
       effective === 'client' &&
@@ -27,8 +39,6 @@ export function getPostLoginPath(
     }
   }
   switch (effective) {
-    case 'agent':
-      return '/agent';
     case 'superadmin':
       return '/admin';
     default:
