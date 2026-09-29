@@ -75,6 +75,7 @@ function makeRequest(
 
 beforeEach(() => {
   jest.clearAllMocks();
+  window.history.replaceState({}, '', '/agent/home-value');
   mockList.mockResolvedValue([makeRequest()]);
   mockDraft.mockResolvedValue(makeRequest());
   mockClear.mockResolvedValue(makeRequest());
@@ -89,6 +90,12 @@ function fillReport() {
   });
   fireEvent.change(screen.getByLabelText(/Client-visible summary/), {
     target: { value: 'Comparables support this range.' },
+  });
+  fireEvent.change(screen.getByLabelText('Data support *'), {
+    target: { value: 'moderate' },
+  });
+  fireEvent.change(screen.getByLabelText('Why this support level *'), {
+    target: { value: 'Nearby recent sales are comparable.' },
   });
 }
 
@@ -198,6 +205,77 @@ test('an unassigned request is flagged as being in the central queue', async () 
     expect(screen.getByText(/central brokerage queue/i)).toBeTruthy(),
   );
   expect(screen.getByText(/admin must assign this to you/i)).toBeTruthy();
+});
+
+test('a needs-more-information outcome can publish without a value range', async () => {
+  mockList.mockResolvedValue([
+    makeRequest({ compliance_cleared_at: '2026-09-02T00:00:00Z' }),
+  ]);
+  render(<HomeValueQueue role="admin" />);
+  await waitFor(() => screen.getByText('12 Elm Street'));
+
+  fireEvent.change(screen.getByLabelText('Report outcome *'), {
+    target: { value: 'needs_more_information' },
+  });
+  fireEvent.change(screen.getByLabelText('Client explanation *'), {
+    target: { value: 'Please provide renovation details.' },
+  });
+
+  const publish = screen.getByRole('button', { name: 'Publish to client' });
+  expect((publish as HTMLButtonElement).disabled).toBe(false);
+  fireEvent.click(publish);
+  await waitFor(() => expect(mockPublish).toHaveBeenCalledWith('r1', expect.objectContaining({
+    report_outcome: 'needs_more_information',
+    value_low: null,
+    value_high: null,
+  })));
+});
+
+test('estimated ranges require a data-support explanation in addition to limitations', async () => {
+  mockList.mockResolvedValue([
+    makeRequest({ compliance_cleared_at: '2026-09-02T00:00:00Z' }),
+  ]);
+  render(<HomeValueQueue role="admin" />);
+  await waitFor(() => screen.getByText('12 Elm Street'));
+  fillReport();
+  fireEvent.change(screen.getByLabelText('Why this support level *'), {
+    target: { value: '' },
+  });
+
+  expect(
+    (screen.getByRole('button', { name: 'Publish to client' }) as HTMLButtonElement).disabled,
+  ).toBe(true);
+  fireEvent.change(screen.getByLabelText('Why this support level *'), {
+    target: { value: 'Nearby recent sales are comparable.' },
+  });
+  fireEvent.change(screen.getByLabelText('Data support *'), {
+    target: { value: 'moderate' },
+  });
+  expect(
+    (screen.getByRole('button', { name: 'Publish to client' }) as HTMLButtonElement).disabled,
+  ).toBe(false);
+});
+
+test('a Daily Work request_id focuses the referenced Home Value request', async () => {
+  mockList.mockResolvedValue([
+    makeRequest({ id: 'r1', address: '12 Elm Street' }),
+    makeRequest({ id: 'r2', address: '98 Focused Avenue' }),
+  ]);
+  window.history.replaceState({}, '', '/agent/home-value?request_id=r2');
+
+  render(<HomeValueQueue role="agent" />);
+
+  await waitFor(() => expect(screen.getByText('98 Focused Avenue')).toBeTruthy());
+  expect(screen.queryByText('12 Elm Street')).toBeNull();
+  expect(screen.getByText(/opened from Daily Work/i)).toBeTruthy();
+});
+
+test('an unavailable Daily Work request_id leaves the permitted queue usable', async () => {
+  window.history.replaceState({}, '', '/agent/home-value?request_id=missing');
+  render(<HomeValueQueue role="agent" />);
+
+  await waitFor(() => expect(screen.getByText('12 Elm Street')).toBeTruthy());
+  expect(screen.getByText(/requested Home Value item is unavailable/i)).toBeTruthy();
 });
 
 test('internal notes are labelled as never reaching the client', async () => {

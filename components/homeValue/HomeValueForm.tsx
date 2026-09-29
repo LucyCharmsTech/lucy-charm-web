@@ -312,7 +312,7 @@ export function HomeValueForm() {
             <option value="">Choose one</option>
             <option value="owner">I own it</option>
             <option value="researching">I am researching it</option>
-            <option value="other">Something else</option>
+            <option value="curious">I am curious about it</option>
           </select>
         </div>
 

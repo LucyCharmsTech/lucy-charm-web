@@ -5,10 +5,17 @@
 import api from '@/lib/axios';
 import type {
   HomeValueDraftBody,
+  HomeValueAiDraftSuggestions,
+  HomeValueEvidence,
+  HomeValueEvidenceBody,
+  HomeValueFollowUp,
+  HomeValueFollowUpStaff,
+  HomeValueFollowUpType,
   HomeValuePublishBody,
   HomeValueRequestBody,
   HomeValueRequestRead,
   HomeValueRequestStaff,
+  HomeValueReportVersion,
 } from '@/types/homeValue';
 
 export async function submitHomeValueRequest(
@@ -92,6 +99,102 @@ export async function publishHomeValueReport(
   const res = await api.post<HomeValueRequestStaff>(
     `/home_value/requests/${id}/publish`,
     report,
+  );
+  return res.data;
+}
+
+/** Records a neutral acknowledgement of an existing-representation answer. */
+export async function acknowledgeHomeValueRepresentationReview(
+  id: string,
+): Promise<HomeValueRequestStaff> {
+  const res = await api.post<HomeValueRequestStaff>(
+    `/home_value/requests/${id}/acknowledge-representation-review`,
+  );
+  return res.data;
+}
+
+export async function fetchHomeValueEvidence(id: string): Promise<HomeValueEvidence[]> {
+  const res = await api.get<HomeValueEvidence[]>(`/home_value/requests/${id}/evidence`);
+  return res.data;
+}
+
+export async function createHomeValueEvidence(
+  id: string,
+  evidence: HomeValueEvidenceBody,
+): Promise<HomeValueEvidence> {
+  const res = await api.post<HomeValueEvidence>(
+    `/home_value/requests/${id}/evidence`,
+    evidence,
+  );
+  return res.data;
+}
+
+export async function updateHomeValueEvidence(
+  requestId: string,
+  evidenceId: string,
+  evidence: HomeValueEvidenceBody,
+): Promise<HomeValueEvidence> {
+  const res = await api.patch<HomeValueEvidence>(
+    `/home_value/requests/${requestId}/evidence/${evidenceId}`,
+    evidence,
+  );
+  return res.data;
+}
+
+export async function deleteHomeValueEvidence(
+  requestId: string,
+  evidenceId: string,
+): Promise<void> {
+  await api.delete(`/home_value/requests/${requestId}/evidence/${evidenceId}`);
+}
+
+export async function fetchHomeValueReportVersions(id: string): Promise<HomeValueReportVersion[]> {
+  const res = await api.get<HomeValueReportVersion[]>(`/home_value/requests/${id}/versions`);
+  return res.data;
+}
+
+export async function createHomeValueFollowUp(
+  id: string,
+  requestType: HomeValueFollowUpType,
+  message: string,
+): Promise<HomeValueFollowUp> {
+  const res = await api.post<HomeValueFollowUp>(
+    `/home_value/requests/mine/${id}/follow-ups`,
+    { request_type: requestType, message },
+  );
+  return res.data;
+}
+
+export async function fetchMyHomeValueFollowUps(id: string): Promise<HomeValueFollowUp[]> {
+  const res = await api.get<HomeValueFollowUp[]>(`/home_value/requests/mine/${id}/follow-ups`);
+  return res.data;
+}
+
+export async function generateHomeValueAiDraft(
+  id: string,
+  includeRangeContext = false,
+): Promise<HomeValueAiDraftSuggestions> {
+  const res = await api.post<HomeValueAiDraftSuggestions>(
+    `/home_value/requests/${id}/ai-draft`,
+    { include_range_context: includeRangeContext },
+  );
+  return res.data;
+}
+
+export async function fetchHomeValueFollowUps(id: string): Promise<HomeValueFollowUpStaff[]> {
+  const res = await api.get<HomeValueFollowUpStaff[]>(`/home_value/requests/${id}/follow-ups`);
+  return res.data;
+}
+
+export async function updateHomeValueFollowUp(
+  requestId: string,
+  followUpId: string,
+  status: HomeValueFollowUpStaff['status'],
+  resolutionNotes: string | null = null,
+): Promise<HomeValueFollowUpStaff> {
+  const res = await api.patch<HomeValueFollowUpStaff>(
+    `/home_value/requests/${requestId}/follow-ups/${followUpId}`,
+    { status, resolution_notes: resolutionNotes },
   );
   return res.data;
 }

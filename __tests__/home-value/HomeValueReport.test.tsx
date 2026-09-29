@@ -114,3 +114,26 @@ test('a unit is shown with the address when there is one', () => {
   render(<HomeValueReport request={makeRequest({ unit: '4B' })} />);
   expect(screen.getByText(/12 Elm Street, unit 4B/)).toBeTruthy();
 });
+
+test('a needs-more-information outcome never renders a stale range', () => {
+  render(<HomeValueReport request={makeRequest({
+    report_outcome: 'needs_more_information',
+    value_low: null,
+    value_high: null,
+    limitations: null,
+    outcome_explanation: 'Please provide renovation details before we can estimate.',
+  })} />);
+
+  expect(screen.getByText(/More information is needed/)).toBeTruthy();
+  expect(screen.getByText(/Please provide renovation details/)).toBeTruthy();
+  expect(document.body.textContent).not.toMatch(/\$900,000/);
+});
+
+test('published evidence shows only its reviewer-authored safe summary', () => {
+  render(<HomeValueReport request={makeRequest({
+    report_outcome: 'estimated_range',
+    published_evidence: [{ id: 'e1', summary: 'A similar nearby sale informed the review.' }],
+  })} />);
+  expect(screen.getByText('Supporting evidence')).toBeTruthy();
+  expect(screen.getByText(/similar nearby sale/)).toBeTruthy();
+});
