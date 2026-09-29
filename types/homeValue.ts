@@ -13,7 +13,7 @@
 
 export const NOT_SURE = 'not_sure';
 
-export type OwnerRelationship = 'owner' | 'researching' | 'other';
+export type OwnerRelationship = 'owner' | 'researching' | 'curious' | 'other';
 export type RepresentedElsewhere = 'yes' | 'no' | 'not_sure';
 
 export type HomeValueRequestBody = {
@@ -39,6 +39,71 @@ export type HomeValueRequestBody = {
 };
 
 export type HomeValueStatus = 'submitted' | 'under_review' | 'report_ready';
+export type HomeValueReportOutcome =
+  | 'estimated_range'
+  | 'needs_more_information'
+  | 'unable_to_estimate_reliably';
+export type HomeValueDataSupport = 'strong' | 'moderate' | 'limited';
+export type HomeValueEvidenceType = 'sold_comparable' | 'active_listing' | 'other';
+export type HomeValueFollowUpType = 'correction' | 'more_information' | 'consultation';
+export type HomeValueFollowUpStatus = 'open' | 'in_review' | 'resolved';
+
+export type HomeValueAiDraftSuggestions = {
+  normalized_property_facts: string[];
+  missing_information: string[];
+  conflict_suggestions: string[];
+  assumptions: string[];
+  unknowns: string[];
+  local_market_context: string | null;
+  value_factors: string[];
+  reconciliation: string | null;
+  report_summary: string | null;
+};
+
+export type HomeValueFollowUp = {
+  id: string;
+  home_value_request_id: string;
+  report_version_id: string | null;
+  request_type: HomeValueFollowUpType;
+  message: string;
+  status: HomeValueFollowUpStatus;
+  created_at: string;
+  resolved_at: string | null;
+};
+
+export type HomeValueFollowUpStaff = HomeValueFollowUp & {
+  homeowner_user_id: string;
+  reviewer_user_id: string | null;
+  resolution_notes: string | null;
+};
+
+export type HomeValuePublishedEvidence = {
+  id: string;
+  summary: string;
+};
+export type HomeValueReportVersion = {
+  id: string;
+  version_number: number;
+  report_outcome: HomeValueReportOutcome;
+  value_low: number | null;
+  value_high: number | null;
+  published_at: string;
+  publisher_display_name: string | null;
+  report_summary: string | null;
+  outcome_explanation: string | null;
+  data_support: HomeValueDataSupport | null;
+  data_support_explanation: string | null;
+  approved_property_facts: string[] | null;
+  assumptions: string[] | null;
+  unknowns: string[] | null;
+  conflicts: string[] | null;
+  local_market_context: string | null;
+  value_factors: string[] | null;
+  reconciliation: string | null;
+  report_as_of_date: string | null;
+  published_evidence: HomeValuePublishedEvidence[];
+  disclaimer: string;
+};
 
 export type HomeValueRequestRead = {
   id: string;
@@ -68,6 +133,20 @@ export type HomeValueRequestRead = {
   value_high: number | null;
   limitations: string | null;
   report_summary: string | null;
+  report_outcome?: HomeValueReportOutcome | null;
+  outcome_explanation?: string | null;
+  data_support?: HomeValueDataSupport | null;
+  data_support_explanation?: string | null;
+  approved_property_facts?: string[] | null;
+  assumptions?: string[] | null;
+  unknowns?: string[] | null;
+  conflicts?: string[] | null;
+  local_market_context?: string | null;
+  value_factors?: string[] | null;
+  reconciliation?: string | null;
+  report_as_of_date?: string | null;
+  report_version_number?: number | null;
+  published_evidence?: HomeValuePublishedEvidence[];
   published_at: string | null;
   created_at: string;
 };
@@ -84,6 +163,9 @@ export type HomeValueRequestStaff = HomeValueRequestRead & {
   internal_notes: string | null;
   compliance_cleared_at: string | null;
   compliance_cleared_by_user_id: string | null;
+  representation_review_status?: 'not_required' | 'required' | 'acknowledged';
+  representation_reviewed_at?: string | null;
+  representation_reviewed_by_user_id?: string | null;
 };
 
 /** A reviewer's work in progress. Never visible to the requester. */
@@ -92,6 +174,18 @@ export type HomeValueDraftBody = {
   value_high?: number | null;
   limitations?: string | null;
   report_summary?: string | null;
+  report_outcome?: HomeValueReportOutcome | null;
+  outcome_explanation?: string | null;
+  data_support?: HomeValueDataSupport | null;
+  data_support_explanation?: string | null;
+  approved_property_facts?: string[] | null;
+  assumptions?: string[] | null;
+  unknowns?: string[] | null;
+  conflicts?: string[] | null;
+  local_market_context?: string | null;
+  value_factors?: string[] | null;
+  reconciliation?: string | null;
+  report_as_of_date?: string | null;
   internal_notes?: string | null;
 };
 
@@ -101,8 +195,45 @@ export type HomeValueDraftBody = {
  * rather than whatever happened to be saved.
  */
 export type HomeValuePublishBody = {
-  value_low: number;
-  value_high: number;
-  limitations: string;
-  report_summary: string;
+  report_outcome: HomeValueReportOutcome;
+  value_low?: number | null;
+  value_high?: number | null;
+  limitations?: string | null;
+  report_summary?: string | null;
+  outcome_explanation?: string | null;
+  data_support?: HomeValueDataSupport | null;
+  data_support_explanation?: string | null;
+  approved_property_facts?: string[] | null;
+  assumptions?: string[] | null;
+  unknowns?: string[] | null;
+  conflicts?: string[] | null;
+  local_market_context?: string | null;
+  value_factors?: string[] | null;
+  reconciliation?: string | null;
+  report_as_of_date?: string | null;
 };
+
+export type HomeValueEvidence = {
+  id: string;
+  home_value_request_id: string;
+  evidence_type: HomeValueEvidenceType;
+  reference: string | null;
+  address: string | null;
+  source_date: string | null;
+  value: number | null;
+  why_relevant: string;
+  similarities: string | null;
+  differences: string | null;
+  adjustments: string | null;
+  limitations: string | null;
+  internal_source_notes: string | null;
+  is_publishable: boolean;
+  publishable_summary: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type HomeValueEvidenceBody = Omit<
+  HomeValueEvidence,
+  'id' | 'home_value_request_id' | 'created_at' | 'updated_at'
+>;

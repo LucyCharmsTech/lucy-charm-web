@@ -304,6 +304,8 @@ export const DOCUMENT_CATEGORY_LABELS: Record<DocumentCategory, string> = {
   identity: 'ID document',
   proof_of_funds: 'Proof of funds',
   pre_approval: 'Mortgage pre-approval',
+  property_photo: 'Property photo',
+  supporting_property_document: 'Supporting property document',
 
 
   other: 'Document',
