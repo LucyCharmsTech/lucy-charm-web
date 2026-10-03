@@ -5,7 +5,7 @@
  */
 
 import { create } from 'zustand';
-import { devtools, persist } from 'zustand/middleware';
+import { createJSONStorage, devtools, persist } from 'zustand/middleware';
 import type { AuthUser } from '@/types/api';
 
 // ---------------------------------------------------------------------------
@@ -71,17 +71,32 @@ export const useAuthStore = create<AuthState>()(
       }),
       {
         name: 'lucy-auth', // localStorage key
+        storage: createJSONStorage(() => {
+          const browserStorage = window.localStorage;
+          return {
+            getItem: (name) => {
+              const value = browserStorage.getItem(name);
+              if (value === null) return null;
+              try {
+                JSON.parse(value);
+                return value;
+              } catch {
+                // A damaged saved session must fall back to signed-out, not
+                // leave persist.hasHydrated() false and every role gate stuck.
+                browserStorage.removeItem(name);
+                return null;
+              }
+            },
+            setItem: (name, value) => browserStorage.setItem(name, value),
+            removeItem: (name) => browserStorage.removeItem(name),
+          };
+        }),
         // Only persist the token fields; derived methods are re-created on load
         partialize: (state) => ({
           accessToken: state.accessToken,
           refreshToken: state.refreshToken,
           user: state.user,
         }),
-        onRehydrateStorage: () => (state) => {
-          if (state && !state.hasHydrated) {
-            useAuthStore.setState({ hasHydrated: true });
-          }
-        },
       },
     ),
     { name: 'authStore' },
