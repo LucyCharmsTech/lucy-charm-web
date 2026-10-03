@@ -47,6 +47,11 @@ export async function fetchStaffHomeValueRequests(): Promise<HomeValueRequestSta
   return res.data;
 }
 
+export async function fetchHomeValueConsultationContext(followUpId: string): Promise<string> {
+  const res = await api.get<{ request_id: string }>(`/home_value/follow-ups/${followUpId}/context`);
+  return res.data.request_id;
+}
+
 /** Admin only. `null` returns the request to the central brokerage queue. */
 export async function assignHomeValueRequest(
   id: string,

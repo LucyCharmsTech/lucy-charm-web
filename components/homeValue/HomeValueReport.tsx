@@ -6,6 +6,11 @@ import { createHomeValueFollowUp } from '@/services/homeValueService';
 import { HomeValueAttachments } from '@/components/homeValue/HomeValueAttachments';
 import type { HomeValueFollowUpType, HomeValueRequestRead } from '@/types/homeValue';
 
+function formatDateOnly(value: string): string {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString();
+}
+
 /**
  * A published Home Value report, in the requester's portal.
  *
@@ -159,7 +164,7 @@ export function HomeValueReport({ request }: { request: HomeValueRequestRead }) 
       <p className="mt-4 text-xs text-zinc-500 dark:text-zinc-400">
         Prepared by a Lucy Charms representative
         {request.report_version_number ? ` · Version ${request.report_version_number}` : ''}
-        {request.report_as_of_date ? ` · As of ${new Date(request.report_as_of_date).toLocaleDateString()}` : ''}
+        {request.report_as_of_date ? ` · As of ${formatDateOnly(request.report_as_of_date)}` : ''}
         {request.published_at
           ? ` on ${new Date(request.published_at).toLocaleDateString()}`
           : ''}
@@ -176,14 +181,19 @@ export function HomeValueReport({ request }: { request: HomeValueRequestRead }) 
         </div>
         {followUpType && <form className="mt-3 space-y-2" onSubmit={(event) => {
           event.preventDefault();
+          const trimmedMessage = message.trim();
+          if (!trimmedMessage || trimmedMessage.length > 12000) {
+            setFollowUpError('Enter a message of up to 12,000 characters.');
+            return;
+          }
           setSubmitting(true); setFollowUpError(null);
-          void createHomeValueFollowUp(request.id, followUpType, message).then(() => {
+          void createHomeValueFollowUp(request.id, followUpType, trimmedMessage).then(() => {
             setMessage(''); setFollowUpNotice('Your request was sent to the review team.'); setFollowUpType(null);
           }).catch(() => setFollowUpError('Could not send your request. Please try again.')).finally(() => setSubmitting(false));
         }}>
           <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100" htmlFor={`home-value-follow-up-${request.id}`}>How can we help?</label>
-          <textarea id={`home-value-follow-up-${request.id}`} required value={message} onChange={(event) => setMessage(event.target.value)} rows={3} className="w-full rounded-lg border border-zinc-300 p-2 text-sm dark:border-zinc-700 dark:bg-zinc-950" />
-          <button disabled={submitting} type="submit" className="rounded-lg bg-primarycolor px-3 py-2 text-sm font-semibold text-primarycolor-foreground disabled:opacity-60">Send request</button>
+          <textarea id={`home-value-follow-up-${request.id}`} required maxLength={12000} value={message} onChange={(event) => setMessage(event.target.value)} rows={3} className="w-full rounded-lg border border-zinc-300 p-2 text-sm dark:border-zinc-700 dark:bg-zinc-950" />
+          <button disabled={submitting || !message.trim() || message.trim().length > 12000} type="submit" className="rounded-lg bg-primarycolor px-3 py-2 text-sm font-semibold text-primarycolor-foreground disabled:opacity-60">Send request</button>
         </form>}
         {followUpNotice && <p className="mt-2 text-sm text-emerald-700 dark:text-emerald-400">{followUpNotice}</p>}
         {followUpError && <p className="mt-2 text-sm text-red-700 dark:text-red-400">{followUpError}</p>}
@@ -195,7 +205,7 @@ export function HomeValueReport({ request }: { request: HomeValueRequestRead }) 
 
 function ReportList({ title, values }: { title: string; values?: string[] | null }) {
   if (!values || values.length === 0) return null;
-  return <section className="mt-3"><h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{title}</h4><ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-zinc-700 dark:text-zinc-300">{values.map((value) => <li key={value}>{value}</li>)}</ul></section>;
+  return <section className="mt-3"><h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{title}</h4><ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-zinc-700 dark:text-zinc-300">{values.map((value, index) => <li key={`${value}-${index}`}>{value}</li>)}</ul></section>;
 }
 
 function ReportText({ title, value }: { title: string; value: string }) {

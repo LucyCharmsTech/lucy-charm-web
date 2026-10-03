@@ -1,12 +1,19 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { HomeValueQueue } from '@/components/homeValue/HomeValueQueue';
+import { fetchDocuments } from '@/services/documentService';
 import {
   clearHomeValueCompliance,
+  createHomeValueEvidence,
+  deleteHomeValueEvidence,
+  fetchHomeValueConsultationContext,
+  fetchHomeValueEvidence,
   fetchStaffHomeValueRequests,
+  generateHomeValueAiDraft,
   publishHomeValueReport,
   saveHomeValueDraft,
+  updateHomeValueEvidence,
 } from '@/services/homeValueService';
-import type { HomeValueRequestStaff } from '@/types/homeValue';
+import type { HomeValueEvidence, HomeValueRequestStaff } from '@/types/homeValue';
 
 /**
  * The reviewer's queue — plan item 4.2.
@@ -23,6 +30,12 @@ jest.mock('@/services/homeValueService', () => ({
   clearHomeValueCompliance: jest.fn(),
   publishHomeValueReport: jest.fn(),
   assignHomeValueRequest: jest.fn(),
+  fetchHomeValueConsultationContext: jest.fn(),
+  generateHomeValueAiDraft: jest.fn(),
+  fetchHomeValueEvidence: jest.fn(),
+  createHomeValueEvidence: jest.fn(),
+  updateHomeValueEvidence: jest.fn(),
+  deleteHomeValueEvidence: jest.fn(),
 }));
 
 const mockList = fetchStaffHomeValueRequests as jest.MockedFunction<
@@ -35,6 +48,20 @@ const mockClear = clearHomeValueCompliance as jest.MockedFunction<
 const mockPublish = publishHomeValueReport as jest.MockedFunction<
   typeof publishHomeValueReport
 >;
+const mockContext = fetchHomeValueConsultationContext as jest.MockedFunction<typeof fetchHomeValueConsultationContext>;
+const mockAi = generateHomeValueAiDraft as jest.MockedFunction<typeof generateHomeValueAiDraft>;
+const mockEvidence = fetchHomeValueEvidence as jest.MockedFunction<typeof fetchHomeValueEvidence>;
+const mockCreateEvidence = createHomeValueEvidence as jest.MockedFunction<typeof createHomeValueEvidence>;
+const mockUpdateEvidence = updateHomeValueEvidence as jest.MockedFunction<typeof updateHomeValueEvidence>;
+const mockDeleteEvidence = deleteHomeValueEvidence as jest.MockedFunction<typeof deleteHomeValueEvidence>;
+
+jest.mock('@/services/documentService', () => ({
+  fetchDocuments: jest.fn().mockResolvedValue([]),
+  downloadDocumentFile: jest.fn(),
+  formatBytes: jest.fn(),
+  isStaffDocument: jest.fn(),
+}));
+const mockDocuments = fetchDocuments as jest.MockedFunction<typeof fetchDocuments>;
 
 function makeRequest(
   overrides: Partial<HomeValueRequestStaff> = {},
@@ -80,6 +107,9 @@ beforeEach(() => {
   mockDraft.mockResolvedValue(makeRequest());
   mockClear.mockResolvedValue(makeRequest());
   mockPublish.mockResolvedValue(makeRequest({ status: 'report_ready' }));
+  mockContext.mockResolvedValue('r1');
+  mockDocuments.mockResolvedValue([]);
+  mockEvidence.mockResolvedValue([]);
 });
 
 function fillReport() {
@@ -268,6 +298,96 @@ test('a Daily Work request_id focuses the referenced Home Value request', async 
   await waitFor(() => expect(screen.getByText('98 Focused Avenue')).toBeTruthy());
   expect(screen.queryByText('12 Elm Street')).toBeNull();
   expect(screen.getByText(/opened from Daily Work/i)).toBeTruthy();
+  expect(screen.getByRole('link', { name: 'View all requests' }).getAttribute('href')).toBe('/agent/home-value');
+  fireEvent.click(screen.getByRole('link', { name: 'View all requests' }));
+  await waitFor(() => expect(screen.getByText('12 Elm Street')).toBeTruthy());
+});
+
+test('a consultation deep link resolves its parent request through the authorized API', async () => {
+  window.history.replaceState({}, '', '/agent/home-value?follow_up_id=f1');
+  mockContext.mockResolvedValue('r2');
+  mockList.mockResolvedValue([
+    makeRequest({ id: 'r1', address: '12 Elm Street' }),
+    makeRequest({ id: 'r2', address: '98 Focused Avenue' }),
+  ]);
+  render(<HomeValueQueue role="agent" />);
+  await waitFor(() => expect(screen.getByText('98 Focused Avenue')).toBeTruthy());
+  expect(mockContext).toHaveBeenCalledWith('f1');
+  expect(screen.queryByText('12 Elm Street')).toBeNull();
+});
+
+test('reviewer attachments load only when explicitly opened', async () => {
+  mockList.mockResolvedValue([
+    makeRequest({ id: 'r1' }), makeRequest({ id: 'r2', address: 'Other Avenue' }),
+  ]);
+  render(<HomeValueQueue role="admin" />);
+  await waitFor(() => screen.getByText('Other Avenue'));
+  expect(mockDocuments).not.toHaveBeenCalled();
+  fireEvent.click(screen.getAllByRole('button', { name: 'View attachments' })[1]);
+  await waitFor(() => expect(mockDocuments).toHaveBeenCalledWith('home_value_request', 'r2'));
+  expect(mockDocuments).toHaveBeenCalledTimes(1);
+});
+
+test('saving a temporary non-range draft preserves the prior range; publication clears it', async () => {
+  mockList.mockResolvedValue([makeRequest({ value_low: 900000, value_high: 950000, limitations: 'Exterior only.' })]);
+  render(<HomeValueQueue role="admin" />);
+  await waitFor(() => screen.getByText('12 Elm Street'));
+  fireEvent.change(screen.getByLabelText('Report outcome *'), { target: { value: 'needs_more_information' } });
+  fireEvent.change(screen.getByLabelText('Client explanation *'), { target: { value: 'Please clarify renovations.' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+  await waitFor(() => expect(mockDraft).toHaveBeenCalled());
+  const draft = mockDraft.mock.calls[0][1];
+  expect(draft).not.toHaveProperty('value_low');
+  expect(draft).not.toHaveProperty('value_high');
+  expect(draft).not.toHaveProperty('limitations');
+  fireEvent.change(screen.getByLabelText('Report outcome *'), { target: { value: 'estimated_range' } });
+  expect((screen.getByLabelText('Lower value') as HTMLInputElement).value).toBe('900000');
+});
+
+test('AI suggestion is applied only when the reviewer selects Use suggestion', async () => {
+  mockAi.mockResolvedValue({
+    normalized_property_facts: [], missing_information: [], conflict_suggestions: [],
+    assumptions: [], unknowns: [], local_market_context: null, value_factors: [],
+    reconciliation: null, report_summary: 'Check recent sales.',
+  });
+  render(<HomeValueQueue role="admin" />);
+  await waitFor(() => screen.getByText('12 Elm Street'));
+  fireEvent.click(screen.getByRole('button', { name: 'Generate AI suggestions' }));
+  await waitFor(() => screen.getByText('Check recent sales.'));
+  expect((screen.getByLabelText('Client-visible summary') as HTMLTextAreaElement).value).toBe('');
+  fireEvent.click(screen.getByRole('button', { name: 'Use suggestion' }));
+  expect((screen.getByLabelText('Client-visible summary') as HTMLTextAreaElement).value).toBe('Check recent sales.');
+});
+
+test('reviewer can add, edit, and remove manual evidence', async () => {
+  const evidence = {
+    id: 'e1', home_value_request_id: 'r1', evidence_type: 'sold_comparable',
+    reference: null, address: null, source_date: null, value: null,
+    why_relevant: 'Nearby sold property', similarities: null, differences: null,
+    adjustments: null, limitations: null, internal_source_notes: null,
+    is_publishable: false, publishable_summary: null,
+    created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-01T00:00:00Z',
+  } satisfies HomeValueEvidence;
+  let rows: HomeValueEvidence[] = [];
+  mockEvidence.mockImplementation(async () => rows);
+  mockCreateEvidence.mockImplementation(async () => { rows = [evidence]; return evidence; });
+  mockUpdateEvidence.mockImplementation(async () => { rows = [{ ...evidence, why_relevant: 'Updated reason' }]; return rows[0]; });
+  mockDeleteEvidence.mockImplementation(async () => { rows = []; });
+  render(<HomeValueQueue role="admin" />);
+  await waitFor(() => screen.getByText('12 Elm Street'));
+  fireEvent.click(screen.getByRole('button', { name: 'Manage evidence' }));
+  fireEvent.change(screen.getByLabelText(/Why relevant/), { target: { value: 'Nearby sold property' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Add evidence' }));
+  await waitFor(() => expect(mockCreateEvidence).toHaveBeenCalledWith('r1', expect.objectContaining({ why_relevant: 'Nearby sold property' })));
+  await waitFor(() => screen.getByText(/sold comparable.*Nearby sold property/i));
+  fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+  fireEvent.change(screen.getByLabelText(/Why relevant/), { target: { value: 'Updated reason' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Update evidence' }));
+  await waitFor(() => expect(mockUpdateEvidence).toHaveBeenCalledWith('r1', 'e1', expect.objectContaining({ why_relevant: 'Updated reason' })));
+  await waitFor(() => screen.getByText(/Updated reason/));
+  fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
+  await waitFor(() => expect(mockDeleteEvidence).toHaveBeenCalledWith('r1', 'e1'));
+  await waitFor(() => expect(screen.queryByText(/Updated reason/)).toBeNull());
 });
 
 test('an unavailable Daily Work request_id leaves the permitted queue usable', async () => {

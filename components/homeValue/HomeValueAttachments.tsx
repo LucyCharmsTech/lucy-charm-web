@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 import ClientDocumentCard from '@/components/documents/ClientDocumentCard';
 import DocumentUploadButton from '@/components/documents/DocumentUploadButton';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { deleteDocument, fetchDocuments } from '@/services/documentService';
 import type { AppDocument } from '@/types/api';
 
@@ -11,6 +12,26 @@ import type { AppDocument } from '@/types/api';
 export function HomeValueAttachments({ requestId }: { requestId: string }) {
   const [documents, setDocuments] = useState<AppDocument[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [pendingRemovalId, setPendingRemovalId] = useState<string | null>(null);
+  const [removing, setRemoving] = useState(false);
+
+  const removeAttachment = async () => {
+    if (!pendingRemovalId || removing) return;
+    setRemoving(true);
+    setError(null);
+    try {
+      await deleteDocument(pendingRemovalId);
+      setPendingRemovalId(null);
+      setNotice('Attachment removed.');
+      reload();
+    } catch {
+      setPendingRemovalId(null);
+      setError('This attachment cannot be removed.');
+    } finally {
+      setRemoving(false);
+    }
+  };
 
   const reload = () => {
     fetchDocuments('home_value_request', requestId)
@@ -44,6 +65,7 @@ export function HomeValueAttachments({ requestId }: { requestId: string }) {
         />
       </div>
       {error && <p role="alert" className="mt-2 text-xs text-red-700 dark:text-red-400">{error}</p>}
+      {notice && <p role="status" className="mt-2 text-xs text-emerald-700 dark:text-emerald-400">{notice}</p>}
       {documents && documents.length > 0 && (
         <div className="mt-3 space-y-2">
           {documents.map((document) => (
@@ -56,9 +78,8 @@ export function HomeValueAttachments({ requestId }: { requestId: string }) {
               <button
                 type="button"
                 className="mt-1 text-xs font-medium text-red-700 dark:text-red-400"
-                onClick={() => void deleteDocument(document.id)
-                  .then(reload)
-                  .catch(() => setError('This attachment cannot be removed.'))}
+                disabled={removing}
+                onClick={() => { setNotice(null); setPendingRemovalId(document.id); }}
               >
                 Remove attachment
               </button>
@@ -66,6 +87,16 @@ export function HomeValueAttachments({ requestId }: { requestId: string }) {
           ))}
         </div>
       )}
+      <ConfirmDialog
+        open={pendingRemovalId !== null}
+        title="Remove attachment?"
+        description="This removes the attachment from your Home Value request."
+        confirmLabel="Remove attachment"
+        tone="danger"
+        busy={removing}
+        onConfirm={() => void removeAttachment()}
+        onCancel={() => { if (!removing) setPendingRemovalId(null); }}
+      />
     </section>
   );
 }

@@ -1,6 +1,9 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { HomeValueReport } from '@/components/homeValue/HomeValueReport';
+import { createHomeValueFollowUp } from '@/services/homeValueService';
 import type { HomeValueRequestRead } from '@/types/homeValue';
+
+jest.mock('@/services/homeValueService', () => ({ createHomeValueFollowUp: jest.fn() }));
 
 /**
  * The published report — plan item 4.2.
@@ -136,4 +139,31 @@ test('published evidence shows only its reviewer-authored safe summary', () => {
   })} />);
   expect(screen.getByText('Supporting evidence')).toBeTruthy();
   expect(screen.getByText(/similar nearby sale/)).toBeTruthy();
+});
+
+test('date-only as-of value does not shift in a negative UTC offset', () => {
+  const originalTimezone = process.env.TZ;
+  process.env.TZ = 'America/Los_Angeles';
+  try {
+    render(<HomeValueReport request={makeRequest({ report_as_of_date: '2026-09-25' })} />);
+    expect(screen.getByText(/As of 9\/25\/2026/)).toBeTruthy();
+  } finally {
+    if (originalTimezone === undefined) delete process.env.TZ;
+    else process.env.TZ = originalTimezone;
+  }
+});
+
+test('homeowner follow-up rejects whitespace and submits trimmed valid text', async () => {
+  const mockFollowUp = createHomeValueFollowUp as jest.MockedFunction<typeof createHomeValueFollowUp>;
+  mockFollowUp.mockResolvedValue({} as Awaited<ReturnType<typeof createHomeValueFollowUp>>);
+  render(<HomeValueReport request={makeRequest()} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Request a correction' }));
+  const input = screen.getByLabelText('How can we help?') as HTMLTextAreaElement;
+  expect(input.maxLength).toBe(12000);
+  fireEvent.change(input, { target: { value: '   ' } });
+  expect((screen.getByRole('button', { name: 'Send request' }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.change(input, { target: { value: '  Please correct the lot size.  ' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Send request' }));
+  await waitFor(() => expect(mockFollowUp).toHaveBeenCalledWith('r1', 'correction', 'Please correct the lot size.'));
+  expect(screen.getByText(/Your request was sent to the review team/)).toBeTruthy();
 });

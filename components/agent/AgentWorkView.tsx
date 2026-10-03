@@ -23,6 +23,7 @@ function contextHref(item: WorkItem): string {
     case 'lead': return `/agent/leads?lead_id=${id}`;
     case 'showing_request': return `/agent/showings?showing_request_id=${id}`;
     case 'home_value_request': return `/agent/home-value?request_id=${id}`;
+    case 'home_value_follow_up': return `/agent/home-value?follow_up_id=${id}`;
     case 'property_review_request': return `/agent/property-reviews?request_id=${id}`;
     case 'ai_escalation': return `/agent?ai_escalation_id=${id}`;
     case 'document': return `/agent?document_id=${id}`;

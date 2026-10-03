@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { LoaderIcon, LockIcon, ShieldCheckIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,7 @@ import {
   deleteHomeValueEvidence,
   fetchHomeValueEvidence,
   fetchHomeValueFollowUps,
+  fetchHomeValueConsultationContext,
   generateHomeValueAiDraft,
   fetchHomeValueReportVersions,
   fetchStaffHomeValueRequests,
@@ -66,10 +68,25 @@ export function HomeValueQueue({ role }: HomeValueQueueProps) {
   const [items, setItems] = useState<HomeValueRequestStaff[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [consultationRequestId, setConsultationRequestId] = useState<string | null>(null);
+  const [dismissedFocusKey, setDismissedFocusKey] = useState<string | null>(null);
   const requestedId =
     typeof window === 'undefined'
       ? null
       : new URLSearchParams(window.location.search).get('request_id');
+  const followUpId =
+    typeof window === 'undefined'
+      ? null
+      : new URLSearchParams(window.location.search).get('follow_up_id');
+
+  useEffect(() => {
+    if (!followUpId) return;
+    let active = true;
+    fetchHomeValueConsultationContext(followUpId)
+      .then((requestId) => { if (active) setConsultationRequestId(requestId); })
+      .catch(() => { if (active) setConsultationRequestId(null); });
+    return () => { active = false; };
+  }, [followUpId]);
 
   useEffect(() => {
     let active = true;
@@ -121,8 +138,12 @@ export function HomeValueQueue({ role }: HomeValueQueueProps) {
   // permission boundary: only an item already returned for this reviewer can
   // be focused.  A stale or inaccessible id therefore reveals nothing and
   // leaves the ordinary permitted queue usable.
-  const requestedItem = requestedId
-    ? items.find((item) => item.id === requestedId) ?? null
+  const focusKey = requestedId ?? followUpId;
+  const focusedId = focusKey && dismissedFocusKey !== focusKey
+    ? requestedId ?? consultationRequestId
+    : null;
+  const requestedItem = focusedId
+    ? items.find((item) => item.id === focusedId) ?? null
     : null;
   const visibleItems = requestedItem ? [requestedItem] : items;
 
@@ -133,11 +154,10 @@ export function HomeValueQueue({ role }: HomeValueQueueProps) {
           The requested Home Value item is unavailable. Showing your permitted queue.
         </p>
       )}
-      {requestedItem && (
-        <p role="status" className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
-          Showing the Home Value request opened from Daily Work.
-        </p>
-      )}
+      {requestedItem && <div className="mb-4 flex flex-wrap items-center gap-3 text-sm text-zinc-500 dark:text-zinc-400">
+        <span role="status">Showing the Home Value request opened from Daily Work.</span>
+        <Link href={role === 'admin' ? '/admin/home-value' : '/agent/home-value'} onClick={() => setDismissedFocusKey(focusKey)} className="font-semibold text-primarycolor-text hover:underline">View all requests</Link>
+      </div>}
       <ul className="space-y-4">
       {visibleItems.map((item) => (
         <HomeValueQueueItem
@@ -188,6 +208,7 @@ function HomeValueQueueItem({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [showEvidence, setShowEvidence] = useState(false);
+  const [showAttachments, setShowAttachments] = useState(false);
   const [versions, setVersions] = useState<HomeValueReportVersion[] | null>(null);
   const [followUps, setFollowUps] = useState<HomeValueFollowUpStaff[] | null>(null);
   const [aiSuggestions, setAiSuggestions] = useState<HomeValueAiDraftSuggestions | null>(null);
@@ -207,15 +228,17 @@ function HomeValueQueueItem({
   );
 
   const lines = (value: string) => value.split('\n').map((line) => line.trim()).filter(Boolean);
-  const reportFields = () => ({
+  const reportFields = (forDraft = false) => ({
     report_outcome: outcome,
-    value_low: outcome === 'estimated_range' && low ? Number(low) : null,
-    value_high: outcome === 'estimated_range' && high ? Number(high) : null,
-    limitations: outcome === 'estimated_range' ? limitations || null : null,
+    ...(outcome === 'estimated_range' || !forDraft ? {
+      value_low: outcome === 'estimated_range' && low ? Number(low) : null,
+      value_high: outcome === 'estimated_range' && high ? Number(high) : null,
+      limitations: outcome === 'estimated_range' ? limitations || null : null,
+      data_support: outcome === 'estimated_range' ? dataSupport || null : null,
+      data_support_explanation: outcome === 'estimated_range' ? dataSupportExplanation || null : null,
+    } : {}),
     report_summary: summary || null,
     outcome_explanation: outcomeExplanation || null,
-    data_support: outcome === 'estimated_range' ? dataSupport || null : null,
-    data_support_explanation: outcome === 'estimated_range' ? dataSupportExplanation || null : null,
     approved_property_facts: lines(approvedFacts),
     assumptions: lines(assumptions),
     unknowns: lines(unknowns),
@@ -310,9 +333,12 @@ function HomeValueQueueItem({
           ))}
       </dl>
 
-      {(role === 'admin' || item.assigned_agent_id) && (
-        <HomeValueReviewerAttachments requestId={item.id} />
-      )}
+      {(role === 'admin' || item.assigned_agent_id) && <div className="mt-3">
+        <Button type="button" variant="outline" className="h-9 rounded-xl" onClick={() => setShowAttachments((shown) => !shown)}>
+          {showAttachments ? 'Hide attachments' : 'View attachments'}
+        </Button>
+        {showAttachments && <HomeValueReviewerAttachments requestId={item.id} />}
+      </div>}
 
       {item.renovations && (
         <p className="mt-2 whitespace-pre-line text-xs text-zinc-700 dark:text-zinc-300">
@@ -423,7 +449,7 @@ function HomeValueQueueItem({
         )}
 
         <div className="space-y-1.5">
-          <Label htmlFor={`sum-${item.id}`}>Client-visible summary *</Label>
+          <Label htmlFor={`sum-${item.id}`}>Client-visible summary</Label>
           <Textarea
             id={`sum-${item.id}`}
             rows={3}
@@ -552,7 +578,7 @@ function HomeValueQueueItem({
             void run(
               () =>
                 saveHomeValueDraft(item.id, {
-                  ...reportFields(),
+                  ...reportFields(true),
                   internal_notes: notes || null,
                 }),
               'Draft saved. The client cannot see it.',
@@ -649,7 +675,7 @@ function ReportListField({
 
 function AiSuggestion({ title, values, onUse }: { title: string; values: string[]; onUse?: () => void }) {
   if (values.length === 0) return null;
-  return <div className="rounded-md bg-zinc-50 p-2 dark:bg-zinc-900"><p className="font-medium">{title}</p><ul className="mt-1 list-disc pl-5 text-zinc-700 dark:text-zinc-300">{values.map((value) => <li key={value}>{value}</li>)}</ul>{onUse && <Button type="button" variant="outline" className="mt-2 h-8 rounded-lg text-xs" onClick={onUse}>Use suggestion</Button>}</div>;
+  return <div className="rounded-md bg-zinc-50 p-2 dark:bg-zinc-900"><p className="font-medium">{title}</p><ul className="mt-1 list-disc pl-5 text-zinc-700 dark:text-zinc-300">{values.map((value, index) => <li key={`${value}-${index}`}>{value}</li>)}</ul>{onUse && <Button type="button" variant="outline" className="mt-2 h-8 rounded-lg text-xs" onClick={onUse}>Use suggestion</Button>}</div>;
 }
 
 function AiTextSuggestion({ title, value, onUse }: { title: string; value: string | null; onUse: () => void }) {
