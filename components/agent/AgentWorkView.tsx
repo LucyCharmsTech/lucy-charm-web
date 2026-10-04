@@ -26,7 +26,7 @@ function contextHref(item: WorkItem): string {
     case 'home_value_follow_up': return `/agent/home-value?follow_up_id=${id}`;
     case 'property_review_request': return `/agent/property-reviews?request_id=${id}`;
     case 'ai_escalation': return `/agent?ai_escalation_id=${id}`;
-    case 'document': return `/agent?document_id=${id}`;
+    case 'document': return `/documents/${id}`;
     default: return '/agent';
   }
 }

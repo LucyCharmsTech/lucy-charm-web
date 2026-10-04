@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 
 import { downloadDocumentFile, fetchDocuments, formatBytes, isStaffDocument } from '@/services/documentService';
 import type { AppDocument } from '@/types/api';
@@ -33,7 +34,10 @@ export function HomeValueReviewerAttachments({ requestId }: { requestId: string 
             {document.size_bytes ? ` · ${formatBytes(document.size_bytes)}` : ''}
             {isStaffDocument(document) ? ` · ${document.scan_status}` : ''}
           </span>
-          <button type="button" className="font-semibold text-primarycolor-text" onClick={() => void downloadDocumentFile(document.id).catch(() => setError('This attachment cannot be downloaded yet.'))}>Download</button>
+          <div className="flex items-center gap-3">
+            <Link href={`/documents/${encodeURIComponent(document.id)}`} className="font-semibold text-primarycolor-text">Open review</Link>
+            <button type="button" className="font-semibold text-primarycolor-text" onClick={() => void downloadDocumentFile(document.id).catch(() => setError('This attachment cannot be downloaded yet.'))}>Download</button>
+          </div>
         </li>)}
       </ul>}
     </section>
