@@ -15,6 +15,7 @@ import {
   createHomeValueEvidence,
   deleteHomeValueEvidence,
   fetchHomeValueEvidence,
+  fetchHomeValueReviewSnapshot,
   fetchHomeValueFollowUps,
   fetchHomeValueConsultationContext,
   generateHomeValueAiDraft,
@@ -34,6 +35,7 @@ import type {
   HomeValueReportVersion,
   HomeValueReportOutcome,
   HomeValueRequestStaff,
+  HomeValueReviewSnapshot,
 } from '@/types/homeValue';
 
 /**
@@ -224,6 +226,10 @@ function HomeValueQueueItem({
   const [versions, setVersions] = useState<HomeValueReportVersion[] | null>(null);
   const [followUps, setFollowUps] = useState<HomeValueFollowUpStaff[] | null>(null);
   const [aiSuggestions, setAiSuggestions] = useState<HomeValueAiDraftSuggestions | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewSnapshot, setReviewSnapshot] = useState<HomeValueReviewSnapshot | null>(null);
+  const [reviewOriginRevision, setReviewOriginRevision] = useState<string | null>(null);
   function loadSavedDraft(saved: HomeValueRequestStaff) {
     setLow(saved.value_low?.toString() ?? '');
     setHigh(saved.value_high?.toString() ?? '');
@@ -287,8 +293,66 @@ function HomeValueQueueItem({
     return JSON.stringify(value ?? (Array.isArray(comparableSaved) ? [] : null)) !==
       JSON.stringify(comparableSaved ?? (Array.isArray(value) ? [] : null));
   }) || (notes || null) !== (item.internal_notes || null);
-  const canClear = Boolean(item.draft_revision) && reportValid && !hasUnsavedChanges && !busy && !evidenceBusy;
+  const canOpenReview = Boolean(item.draft_revision) && reportValid && !hasUnsavedChanges && !busy && !evidenceBusy &&
+    (role === 'admin' || Boolean(item.assigned_agent_id));
   const canPublish = complianceCleared && reportValid && !hasUnsavedChanges && !busy && !evidenceBusy;
+
+  function invalidateReview() {
+    setReviewSnapshot(null);
+    setReviewOpen(false);
+    setReviewOriginRevision(null);
+  }
+  const effectiveReviewOpen = reviewOpen && !hasUnsavedChanges &&
+    item.draft_revision === reviewOriginRevision;
+
+  async function openReview() {
+    if (!canOpenReview) return;
+    invalidateReview();
+    setReviewOpen(true);
+    setReviewOriginRevision(item.draft_revision);
+    setReviewLoading(true);
+    setError(null);
+    try {
+      const snapshot = await fetchHomeValueReviewSnapshot(item.id);
+      if (!completeReviewSnapshot(snapshot, item.id)) {
+        setError('The saved review snapshot is incomplete. Please try again.');
+        return;
+      }
+      setReviewSnapshot(snapshot);
+    } catch (err: unknown) {
+      setError(serverMessage(err, 'Could not load the saved review snapshot.'));
+    } finally {
+      setReviewLoading(false);
+    }
+  }
+
+  async function approveReview() {
+    if (!reviewSnapshot || !effectiveReviewOpen || reviewLoading || !canOpenReview) return;
+    const reviewedRevision = reviewSnapshot.revision;
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await clearHomeValueCompliance(item.id, reviewedRevision);
+      invalidateReview();
+      const refreshed = await onChanged();
+      if (refreshed) loadSavedDraft(refreshed);
+      setNotice('Compliance cleared for the saved report and evidence you reviewed.');
+    } catch (err: unknown) {
+      const stale = (err as { response?: { status?: number } })?.response?.status === 409;
+      invalidateReview();
+      if (stale) {
+        setShowEvidence(false);
+        setError('The saved report or evidence changed since you opened the review. Review the updated version before clearing compliance.');
+        const refreshed = await onChanged();
+        if (refreshed) loadSavedDraft(refreshed);
+      } else {
+        setError(serverMessage(err, 'Could not clear compliance.'));
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function run<T>(action: () => Promise<T>, success: string): Promise<T | undefined> {
     setBusy(true);
@@ -390,7 +454,7 @@ function HomeValueQueueItem({
       )}
 
       {/* ── The report ─────────────────────────────────────────────────────── */}
-      <fieldset className="mt-4 space-y-3 rounded-xl bg-zinc-50 p-3 dark:bg-zinc-900">
+      <fieldset disabled={busy} onChange={invalidateReview} className="mt-4 space-y-3 rounded-xl bg-zinc-50 p-3 dark:bg-zinc-900">
         <legend className="px-1 text-xs font-bold uppercase tracking-wide text-zinc-500">
           Valuation
         </legend>
@@ -512,15 +576,15 @@ function HomeValueQueueItem({
             <p className="text-xs text-zinc-500 dark:text-zinc-400">Optional reviewer drafting help. It cannot set values, support level, compliance, or publish.</p>
           </div>
           {aiSuggestions && <div className="mt-3 space-y-2 text-sm">
-            <AiSuggestion title="Normalized property facts" values={aiSuggestions.normalized_property_facts} onUse={() => setApprovedFacts(aiSuggestions.normalized_property_facts.join('\n'))} />
+            <AiSuggestion title="Normalized property facts" values={aiSuggestions.normalized_property_facts} onUse={() => { invalidateReview(); setApprovedFacts(aiSuggestions.normalized_property_facts.join('\n')); }} />
             <AiSuggestion title="Missing information" values={aiSuggestions.missing_information} />
-            <AiSuggestion title="Potential conflicts" values={aiSuggestions.conflict_suggestions} onUse={() => setConflicts(aiSuggestions.conflict_suggestions.join('\n'))} />
-            <AiSuggestion title="Assumptions" values={aiSuggestions.assumptions} onUse={() => setAssumptions(aiSuggestions.assumptions.join('\n'))} />
-            <AiSuggestion title="Unknowns" values={aiSuggestions.unknowns} onUse={() => setUnknowns(aiSuggestions.unknowns.join('\n'))} />
-            <AiSuggestion title="Value factors" values={aiSuggestions.value_factors} onUse={() => setValueFactors(aiSuggestions.value_factors.join('\n'))} />
-            <AiTextSuggestion title="Local market context" value={aiSuggestions.local_market_context} onUse={() => setMarketContext(aiSuggestions.local_market_context ?? '')} />
-            <AiTextSuggestion title="Why this range" value={aiSuggestions.reconciliation} onUse={() => setReconciliation(aiSuggestions.reconciliation ?? '')} />
-            <AiTextSuggestion title="Homeowner-facing summary" value={aiSuggestions.report_summary} onUse={() => setSummary(aiSuggestions.report_summary ?? '')} />
+            <AiSuggestion title="Potential conflicts" values={aiSuggestions.conflict_suggestions} onUse={() => { invalidateReview(); setConflicts(aiSuggestions.conflict_suggestions.join('\n')); }} />
+            <AiSuggestion title="Assumptions" values={aiSuggestions.assumptions} onUse={() => { invalidateReview(); setAssumptions(aiSuggestions.assumptions.join('\n')); }} />
+            <AiSuggestion title="Unknowns" values={aiSuggestions.unknowns} onUse={() => { invalidateReview(); setUnknowns(aiSuggestions.unknowns.join('\n')); }} />
+            <AiSuggestion title="Value factors" values={aiSuggestions.value_factors} onUse={() => { invalidateReview(); setValueFactors(aiSuggestions.value_factors.join('\n')); }} />
+            <AiTextSuggestion title="Local market context" value={aiSuggestions.local_market_context} onUse={() => { invalidateReview(); setMarketContext(aiSuggestions.local_market_context ?? ''); }} />
+            <AiTextSuggestion title="Why this range" value={aiSuggestions.reconciliation} onUse={() => { invalidateReview(); setReconciliation(aiSuggestions.reconciliation ?? ''); }} />
+            <AiTextSuggestion title="Homeowner-facing summary" value={aiSuggestions.report_summary} onUse={() => { invalidateReview(); setSummary(aiSuggestions.report_summary ?? ''); }} />
           </div>}
         </div>
 
@@ -548,7 +612,10 @@ function HomeValueQueueItem({
           <Button type="button" variant="outline" className="h-9 rounded-xl" onClick={() => setShowEvidence((shown) => !shown)}>
             {showEvidence ? 'Hide evidence' : 'Manage evidence'}
           </Button>
-          {showEvidence && <HomeValueEvidenceEditor requestId={item.id} disabled={busy} onChanged={onChanged} onBusyChange={setEvidenceBusy} />}
+          {showEvidence && <HomeValueEvidenceEditor requestId={item.id} disabled={busy} onChanged={onChanged} onBusyChange={(changing) => {
+            setEvidenceBusy(changing);
+            if (changing) invalidateReview();
+          }} />}
         </div>
 
         {published && <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
@@ -617,7 +684,8 @@ function HomeValueQueueItem({
           type="button"
           variant="outline"
           disabled={!hasUnsavedChanges || busy || evidenceBusy}
-          onClick={() =>
+          onClick={() => {
+            invalidateReview();
             void run(
               () =>
                 saveHomeValueDraft(item.id, {
@@ -625,38 +693,26 @@ function HomeValueQueueItem({
                   internal_notes: notes || null,
                 }),
               'Draft saved. The client cannot see it.',
-            )
-          }
+            );
+          }}
           className="h-10 rounded-xl"
         >
           Save draft
         </Button>
 
-        {complianceCleared ? (
+        {complianceCleared && (
           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
             <ShieldCheckIcon className="size-3.5" aria-hidden="true" />
             Compliance cleared{' '}
             {new Date(item.compliance_cleared_at as string).toLocaleDateString()}
           </span>
-        ) : (
-          <Button
-            type="button"
-            variant="outline"
-            disabled={!canClear}
-            onClick={() =>
-              void run(
-                () => clearHomeValueCompliance(item.id),
-                'Compliance cleared. This report can now be published.',
-              )
-            }
-            className="h-10 rounded-xl"
-          >
-            <span className="inline-flex items-center gap-1.5">
-              <LockIcon className="size-3.5" aria-hidden="true" />
-              Clear compliance
-            </span>
-          </Button>
         )}
+        <Button type="button" variant="outline" disabled={!canOpenReview} onClick={() => void openReview()} className="h-10 rounded-xl">
+          <span className="inline-flex items-center gap-1.5">
+            <LockIcon className="size-3.5" aria-hidden="true" />
+            {complianceCleared ? 'Review saved report again' : 'Review saved report for compliance'}
+          </span>
+        </Button>
 
         <Button
           type="button"
@@ -681,6 +737,17 @@ function HomeValueQueueItem({
         </Button>
       </div>
 
+      {effectiveReviewOpen && (
+        <HomeValueComplianceReview
+          requestId={item.id}
+          snapshot={reviewSnapshot}
+          loading={reviewLoading}
+          approving={busy}
+          onApprove={() => void approveReview()}
+          onClose={invalidateReview}
+        />
+      )}
+
       {!canPublish && (
         /*
           Says which step is missing rather than leaving a disabled button to
@@ -704,6 +771,111 @@ function HomeValueQueueItem({
       )}
     </li>
   );
+}
+
+const REVIEW_REPORT_FIELDS = [
+  'report_outcome', 'value_low', 'value_high', 'limitations', 'report_summary',
+  'outcome_explanation', 'data_support', 'data_support_explanation',
+  'approved_property_facts', 'assumptions', 'unknowns', 'conflicts',
+  'local_market_context', 'value_factors', 'reconciliation', 'report_as_of_date',
+] as const;
+const REVIEW_EVIDENCE_FIELDS = [
+  'id', 'evidence_type', 'reference', 'address', 'source_date', 'value',
+  'why_relevant', 'similarities', 'differences', 'adjustments', 'limitations',
+  'is_publishable', 'publishable_summary', 'created_at', 'updated_at',
+] as const;
+
+function completeReviewSnapshot(snapshot: HomeValueReviewSnapshot, requestId: string): boolean {
+  return snapshot.request_id === requestId && /^[0-9a-f]{64}$/.test(snapshot.revision) &&
+    Boolean(snapshot.report && REVIEW_REPORT_FIELDS.every((field) => field in snapshot.report)) &&
+    Array.isArray(snapshot.selected_evidence) &&
+    snapshot.selected_evidence.every((evidence) =>
+      evidence.is_publishable === true && REVIEW_EVIDENCE_FIELDS.every((field) => field in evidence)) &&
+    Boolean(snapshot.disclaimer && snapshot.publisher_display_name);
+}
+
+function ReviewField({ label, value }: {
+  label: string;
+  value: string | number | boolean | string[] | null | undefined;
+}) {
+  return <div className="min-w-0 rounded-lg border border-zinc-200 p-2 dark:border-zinc-800">
+    <dt className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">{label}</dt>
+    <dd className="mt-1 whitespace-pre-wrap break-words text-sm text-zinc-900 dark:text-zinc-100">
+      {Array.isArray(value) ? (value.length ? <ul className="list-disc pl-5">{value.map((entry, index) => <li key={`${entry}-${index}`}>{entry}</li>)}</ul> : '—') :
+        value === null || value === undefined || value === '' ? '—' : String(value)}
+    </dd>
+  </div>;
+}
+
+function HomeValueComplianceReview({ requestId, snapshot, loading, approving, onApprove, onClose }: {
+  requestId: string;
+  snapshot: HomeValueReviewSnapshot | null;
+  loading: boolean;
+  approving: boolean;
+  onApprove: () => void;
+  onClose: () => void;
+}) {
+  const report = snapshot?.report;
+  return <section aria-label="Saved Home Value compliance review" className="mt-4 space-y-4 rounded-xl border-2 border-primarycolor p-4">
+    <div className="flex flex-wrap items-start justify-between gap-2">
+      <div><h4 className="font-semibold">Review the saved report and selected evidence</h4>
+        <p className="text-sm text-zinc-600 dark:text-zinc-300">This is the authoritative saved snapshot, not unsaved editor content. Approve only after reviewing it.</p></div>
+      <Button type="button" variant="outline" onClick={onClose} disabled={approving}>Close review</Button>
+    </div>
+    {loading && <p role="status">Loading saved review snapshot…</p>}
+    {!loading && !snapshot && <p role="status">The review snapshot is unavailable. Close and open a fresh review to try again.</p>}
+    {report && snapshot && <>
+      <p className="break-words text-xs text-zinc-500">Request {snapshot.request_id} · saved revision {snapshot.revision}</p>
+      <dl className="grid gap-2 sm:grid-cols-2">
+        <ReviewField label="Outcome" value={report.report_outcome} />
+        <ReviewField label="Lower value" value={report.value_low} />
+        <ReviewField label="Upper value" value={report.value_high} />
+        <ReviewField label="Limitations" value={report.limitations} />
+        <ReviewField label="Client-visible summary" value={report.report_summary} />
+        <ReviewField label="Outcome explanation" value={report.outcome_explanation} />
+        <ReviewField label="Data support / confidence" value={report.data_support} />
+        <ReviewField label="Data-support explanation" value={report.data_support_explanation} />
+        <ReviewField label="Approved property facts" value={report.approved_property_facts} />
+        <ReviewField label="Assumptions" value={report.assumptions} />
+        <ReviewField label="Unknowns" value={report.unknowns} />
+        <ReviewField label="Conflicts" value={report.conflicts} />
+        <ReviewField label="Local market context" value={report.local_market_context} />
+        <ReviewField label="Value factors" value={report.value_factors} />
+        <ReviewField label="Reconciliation" value={report.reconciliation} />
+        <ReviewField label="Report as-of date" value={report.report_as_of_date} />
+        <ReviewField label="Publisher label" value={snapshot.publisher_display_name} />
+        <ReviewField label="Disclaimer" value={snapshot.disclaimer} />
+      </dl>
+      <div><h5 className="font-semibold">Selected publishable evidence ({snapshot.selected_evidence.length})</h5>
+        {snapshot.selected_evidence.length === 0 && <p className="text-sm text-zinc-500">No evidence is selected for publication.</p>}
+        <ul className="mt-2 space-y-3">{snapshot.selected_evidence.map((evidence) => <li key={evidence.id} className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+          <dl className="grid gap-2 sm:grid-cols-2">
+            <ReviewField label="Evidence ID" value={evidence.id} />
+            <ReviewField label="Type" value={evidence.evidence_type} />
+            <ReviewField label="Reference" value={evidence.reference} />
+            <ReviewField label="Address" value={evidence.address} />
+            <ReviewField label="Source date" value={evidence.source_date} />
+            <ReviewField label="Value" value={evidence.value} />
+            <ReviewField label="Why relevant" value={evidence.why_relevant} />
+            <ReviewField label="Similarities" value={evidence.similarities} />
+            <ReviewField label="Differences" value={evidence.differences} />
+            <ReviewField label="Adjustments" value={evidence.adjustments} />
+            <ReviewField label="Evidence limitations" value={evidence.limitations} />
+            <ReviewField label="Selected for publication" value={evidence.is_publishable ? 'Yes' : 'No'} />
+            <ReviewField label="Requester-facing summary" value={evidence.publishable_summary} />
+            <ReviewField label="Created" value={evidence.created_at} />
+            <ReviewField label="Last updated" value={evidence.updated_at} />
+          </dl>
+        </li>)}</ul>
+      </div>
+      <div><p className="text-xs text-zinc-500">Property attachments are separate from the report revision and are never published automatically. Their existing access checks still apply.</p>
+        <HomeValueReviewerAttachments requestId={requestId} />
+      </div>
+      <Button type="button" disabled={approving || loading || !completeReviewSnapshot(snapshot, requestId)} onClick={onApprove} className="h-10 rounded-xl">
+        {approving ? 'Approving…' : 'Clear compliance for this saved snapshot'}
+      </Button>
+    </>}
+  </section>;
 }
 
 function ReportListField({

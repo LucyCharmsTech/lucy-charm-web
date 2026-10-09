@@ -222,3 +222,13 @@ export type HomeValueEvidenceBody = Omit<
   HomeValueEvidence,
   'id' | 'home_value_request_id' | 'created_at' | 'updated_at'
 >;
+
+/** A server-consistent, read-only compliance review of the saved report. */
+export type HomeValueReviewSnapshot = {
+  request_id: string;
+  revision: string;
+  report: Required<Omit<HomeValueDraftBody, 'internal_notes'>>;
+  selected_evidence: Array<Omit<HomeValueEvidence, 'home_value_request_id' | 'internal_source_notes'>>;
+  disclaimer: string;
+  publisher_display_name: string;
+};

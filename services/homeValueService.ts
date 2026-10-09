@@ -16,6 +16,7 @@ import type {
   HomeValueRequestRead,
   HomeValueRequestStaff,
   HomeValueReportVersion,
+  HomeValueReviewSnapshot,
 } from '@/types/homeValue';
 
 export async function submitHomeValueRequest(
@@ -81,11 +82,17 @@ export async function saveHomeValueDraft(
 }
 
 /** Records who approved publication, and when. */
+export async function fetchHomeValueReviewSnapshot(id: string): Promise<HomeValueReviewSnapshot> {
+  const res = await api.get<HomeValueReviewSnapshot>(`/home_value/requests/${id}/review-snapshot`);
+  return res.data;
+}
+
 export async function clearHomeValueCompliance(
-  id: string,
+  id: string, expectedRevision: string,
 ): Promise<HomeValueRequestStaff> {
   const res = await api.post<HomeValueRequestStaff>(
     `/home_value/requests/${id}/clear-compliance`,
+    { expected_revision: expectedRevision },
   );
   return res.data;
 }
