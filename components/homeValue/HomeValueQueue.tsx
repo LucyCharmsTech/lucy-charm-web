@@ -67,7 +67,6 @@ type HomeValueQueueProps = {
 export function HomeValueQueue({ role }: HomeValueQueueProps) {
   const [items, setItems] = useState<HomeValueRequestStaff[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
   const [consultationRequestId, setConsultationRequestId] = useState<string | null>(null);
   const [dismissedFocusKey, setDismissedFocusKey] = useState<string | null>(null);
   const requestedId =
@@ -103,7 +102,19 @@ export function HomeValueQueue({ role }: HomeValueQueueProps) {
     return () => {
       active = false;
     };
-  }, [reloadKey]);
+  }, []);
+
+  async function refreshItems(requestId: string): Promise<HomeValueRequestStaff | null> {
+    try {
+      const rows = await fetchStaffHomeValueRequests();
+      setLoadError(null);
+      setItems(rows);
+      return rows.find((row) => row.id === requestId) ?? null;
+    } catch (err: unknown) {
+      setLoadError(serverMessage(err, 'Could not load Home Value requests.'));
+      return null;
+    }
+  }
 
   if (items === null) {
     return (
@@ -164,7 +175,7 @@ export function HomeValueQueue({ role }: HomeValueQueueProps) {
           key={item.id}
           item={item}
           role={role}
-          onChanged={() => setReloadKey((key) => key + 1)}
+          onChanged={() => refreshItems(item.id)}
         />
       ))}
       </ul>
@@ -179,7 +190,7 @@ function HomeValueQueueItem({
 }: {
   item: HomeValueRequestStaff;
   role: 'admin' | 'agent';
-  onChanged: () => void;
+  onChanged: () => Promise<HomeValueRequestStaff | null>;
 }) {
   const [low, setLow] = useState(item.value_low?.toString() ?? '');
   const [high, setHigh] = useState(item.value_high?.toString() ?? '');
@@ -205,6 +216,7 @@ function HomeValueQueueItem({
   const [reportAsOfDate, setReportAsOfDate] = useState(item.report_as_of_date ?? '');
   const [notes, setNotes] = useState(item.internal_notes ?? '');
   const [busy, setBusy] = useState(false);
+  const [evidenceBusy, setEvidenceBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [showEvidence, setShowEvidence] = useState(false);
@@ -212,9 +224,31 @@ function HomeValueQueueItem({
   const [versions, setVersions] = useState<HomeValueReportVersion[] | null>(null);
   const [followUps, setFollowUps] = useState<HomeValueFollowUpStaff[] | null>(null);
   const [aiSuggestions, setAiSuggestions] = useState<HomeValueAiDraftSuggestions | null>(null);
+  function loadSavedDraft(saved: HomeValueRequestStaff) {
+    setLow(saved.value_low?.toString() ?? '');
+    setHigh(saved.value_high?.toString() ?? '');
+    setLimitations(saved.limitations ?? '');
+    setSummary(saved.report_summary ?? '');
+    setOutcome(saved.report_outcome ?? 'estimated_range');
+    setOutcomeExplanation(saved.outcome_explanation ?? '');
+    setDataSupport(saved.data_support ?? '');
+    setDataSupportExplanation(saved.data_support_explanation ?? '');
+    setApprovedFacts((saved.approved_property_facts ?? []).join('\n'));
+    setAssumptions((saved.assumptions ?? []).join('\n'));
+    setUnknowns((saved.unknowns ?? []).join('\n'));
+    setConflicts((saved.conflicts ?? []).join('\n'));
+    setMarketContext(saved.local_market_context ?? '');
+    setValueFactors((saved.value_factors ?? []).join('\n'));
+    setReconciliation(saved.reconciliation ?? '');
+    setReportAsOfDate(saved.report_as_of_date ?? '');
+    setNotes(saved.internal_notes ?? '');
+  }
 
   const published = item.status === 'report_ready';
-  const complianceCleared = Boolean(item.compliance_cleared_at);
+  const complianceCleared = Boolean(
+    item.compliance_cleared_at && item.draft_revision &&
+    item.compliance_approved_revision === item.draft_revision,
+  );
   const hasValidRange =
     Number(low) > 0 &&
     Number(high) > 0 &&
@@ -223,9 +257,7 @@ function HomeValueQueueItem({
     dataSupport !== '' &&
     dataSupportExplanation.trim().length > 0;
   const hasUsefulNonEstimateExplanation = outcomeExplanation.trim().length > 0;
-  const canPublish = complianceCleared && !busy && (
-    outcome === 'estimated_range' ? hasValidRange : hasUsefulNonEstimateExplanation
-  );
+  const reportValid = outcome === 'estimated_range' ? hasValidRange : hasUsefulNonEstimateExplanation;
 
   const lines = (value: string) => value.split('\n').map((line) => line.trim()).filter(Boolean);
   const reportFields = (forDraft = false) => ({
@@ -249,6 +281,15 @@ function HomeValueQueueItem({
     report_as_of_date: reportAsOfDate || null,
   });
 
+  const hasUnsavedChanges = Object.entries(reportFields(true)).some(([field, value]) => {
+    const saved = item[field as keyof HomeValueRequestStaff];
+    const comparableSaved = field === 'report_outcome' ? saved ?? 'estimated_range' : saved;
+    return JSON.stringify(value ?? (Array.isArray(comparableSaved) ? [] : null)) !==
+      JSON.stringify(comparableSaved ?? (Array.isArray(value) ? [] : null));
+  }) || (notes || null) !== (item.internal_notes || null);
+  const canClear = Boolean(item.draft_revision) && reportValid && !hasUnsavedChanges && !busy && !evidenceBusy;
+  const canPublish = complianceCleared && reportValid && !hasUnsavedChanges && !busy && !evidenceBusy;
+
   async function run<T>(action: () => Promise<T>, success: string): Promise<T | undefined> {
     setBusy(true);
     setError(null);
@@ -256,10 +297,12 @@ function HomeValueQueueItem({
     try {
       const result = await action();
       setNotice(success);
-      onChanged();
+      await onChanged();
       return result;
     } catch (err: unknown) {
-      setError(serverMessage(err, 'That did not work. Please try again.'));
+      setError(`${serverMessage(err, 'That did not work. Please try again.')} The latest saved request is being reloaded.`);
+      const refreshed = await onChanged();
+      if (success.startsWith('Published.') && refreshed) loadSavedDraft(refreshed);
     } finally {
       setBusy(false);
     }
@@ -505,7 +548,7 @@ function HomeValueQueueItem({
           <Button type="button" variant="outline" className="h-9 rounded-xl" onClick={() => setShowEvidence((shown) => !shown)}>
             {showEvidence ? 'Hide evidence' : 'Manage evidence'}
           </Button>
-          {showEvidence && <HomeValueEvidenceEditor requestId={item.id} disabled={busy} />}
+          {showEvidence && <HomeValueEvidenceEditor requestId={item.id} disabled={busy} onChanged={onChanged} onBusyChange={setEvidenceBusy} />}
         </div>
 
         {published && <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
@@ -573,7 +616,7 @@ function HomeValueQueueItem({
         <Button
           type="button"
           variant="outline"
-          disabled={busy}
+          disabled={!hasUnsavedChanges || busy || evidenceBusy}
           onClick={() =>
             void run(
               () =>
@@ -599,7 +642,7 @@ function HomeValueQueueItem({
           <Button
             type="button"
             variant="outline"
-            disabled={busy}
+            disabled={!canClear}
             onClick={() =>
               void run(
                 () => clearHomeValueCompliance(item.id),
@@ -620,8 +663,15 @@ function HomeValueQueueItem({
           disabled={!canPublish}
           onClick={() =>
             void run(
-              () =>
-                publishHomeValueReport(item.id, reportFields()),
+              async () => {
+                const publishedReport = await publishHomeValueReport(
+                  item.id, { approved_revision: item.compliance_approved_revision as string },
+                );
+                void fetchHomeValueReportVersions(item.id).then(setVersions).catch((err: unknown) =>
+                  setError(serverMessage(err, 'Published, but could not refresh report history.')),
+                );
+                return publishedReport;
+              },
               'Published. The client can see it in their account.',
             )
           }
@@ -631,7 +681,7 @@ function HomeValueQueueItem({
         </Button>
       </div>
 
-      {!complianceCleared && (
+      {!canPublish && (
         /*
           Says which step is missing rather than leaving a disabled button to
           be puzzled over. The server refuses publication either way — that is
@@ -640,7 +690,11 @@ function HomeValueQueueItem({
           that they missed a step.
         */
         <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-          Publishing is unavailable until compliance is cleared.
+          {hasUnsavedChanges
+            ? 'Save your draft changes, then clear compliance again if needed.'
+            : !item.draft_revision
+              ? 'Save a valid report draft before clearing compliance.'
+              : 'Publishing is unavailable until compliance is cleared for this saved draft.'}
         </p>
       )}
       {role === 'agent' && !item.assigned_agent_id && (
@@ -719,7 +773,12 @@ function evidenceBody(evidence: HomeValueEvidence): HomeValueEvidenceBody {
   };
 }
 
-function HomeValueEvidenceEditor({ requestId, disabled }: { requestId: string; disabled: boolean }) {
+function HomeValueEvidenceEditor({ requestId, disabled, onChanged, onBusyChange }: {
+  requestId: string;
+  disabled: boolean;
+  onChanged: () => Promise<HomeValueRequestStaff | null>;
+  onBusyChange: (busy: boolean) => void;
+}) {
   const [items, setItems] = useState<HomeValueEvidence[] | null>(null);
   const [form, setForm] = useState<HomeValueEvidenceBody>(blankEvidence);
   const [editing, setEditing] = useState<string | null>(null);
@@ -743,14 +802,14 @@ function HomeValueEvidenceEditor({ requestId, disabled }: { requestId: string; d
   }, [requestId]);
 
   async function save() {
-    setBusy(true); setError(null);
+    setBusy(true); onBusyChange(true); setError(null);
     try {
       if (editing) await updateHomeValueEvidence(requestId, editing, form);
       else await createHomeValueEvidence(requestId, form);
-      setForm(blankEvidence()); setEditing(null); await reload();
+      setForm(blankEvidence()); setEditing(null); await reload(); await onChanged();
     } catch (err: unknown) {
       setError(serverMessage(err, 'Could not save evidence.'));
-    } finally { setBusy(false); }
+    } finally { setBusy(false); onBusyChange(false); }
   }
 
   return (
@@ -779,7 +838,7 @@ function HomeValueEvidenceEditor({ requestId, disabled }: { requestId: string; d
       {form.is_publishable && <div className="mt-3"><EvidenceText id={`safe-summary-${requestId}`} label="Safe requester-facing summary *" value={form.publishable_summary ?? ''} onChange={(value) => setForm({ ...form, publishable_summary: value || null })} disabled={busy || disabled} /></div>}
       {error && <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
       <div className="mt-3 flex flex-wrap gap-2"><Button type="button" disabled={busy || disabled || !form.why_relevant.trim() || (form.is_publishable && !(form.publishable_summary ?? '').trim())} onClick={() => void save()} className="h-9 rounded-xl">{editing ? 'Update evidence' : 'Add evidence'}</Button>{editing && <Button type="button" variant="outline" disabled={busy || disabled} onClick={() => { setEditing(null); setForm(blankEvidence()); }} className="h-9 rounded-xl">Cancel edit</Button>}</div>
-      {items && items.length > 0 && <ul className="mt-3 space-y-2">{items.map((evidence) => <li key={evidence.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-zinc-50 p-2 text-xs dark:bg-zinc-900"><span>{evidence.evidence_type.replace('_', ' ')} — {evidence.why_relevant}</span><span className="flex gap-2"><Button type="button" variant="outline" className="h-7" disabled={busy || disabled} onClick={() => { setEditing(evidence.id); setForm(evidenceBody(evidence)); }}>Edit</Button><Button type="button" variant="outline" className="h-7 text-red-700" disabled={busy || disabled} onClick={() => void (async () => { setBusy(true); try { await deleteHomeValueEvidence(requestId, evidence.id); await reload(); } catch (err: unknown) { setError(serverMessage(err, 'Could not remove evidence.')); } finally { setBusy(false); } })()}>Remove</Button></span></li>)}</ul>}
+       {items && items.length > 0 && <ul className="mt-3 space-y-2">{items.map((evidence) => <li key={evidence.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-zinc-50 p-2 text-xs dark:bg-zinc-900"><span>{evidence.evidence_type.replace('_', ' ')} — {evidence.why_relevant}</span><span className="flex gap-2"><Button type="button" variant="outline" className="h-7" disabled={busy || disabled} onClick={() => { setEditing(evidence.id); setForm(evidenceBody(evidence)); }}>Edit</Button><Button type="button" variant="outline" className="h-7 text-red-700" disabled={busy || disabled} onClick={() => void (async () => { setBusy(true); onBusyChange(true); try { await deleteHomeValueEvidence(requestId, evidence.id); await reload(); await onChanged(); } catch (err: unknown) { setError(serverMessage(err, 'Could not remove evidence.')); } finally { setBusy(false); onBusyChange(false); } })()}>Remove</Button></span></li>)}</ul>}
     </section>
   );
 }

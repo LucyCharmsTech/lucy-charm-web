@@ -93,9 +93,8 @@ export async function clearHomeValueCompliance(
 /**
  * The only step that makes a valuation visible to the person who asked.
  *
- * Refused by the server until compliance is cleared. Every client-visible
- * field is required: a range without its limitations is the "instant valuation
- * number" the scope rules out, merely typed by a person.
+ * Refused by the server unless the saved draft and selected evidence still
+ * match the exact revision approved by compliance.
  */
 export async function publishHomeValueReport(
   id: string,

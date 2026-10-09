@@ -163,6 +163,8 @@ export type HomeValueRequestStaff = HomeValueRequestRead & {
   internal_notes: string | null;
   compliance_cleared_at: string | null;
   compliance_cleared_by_user_id: string | null;
+  draft_revision: string | null;
+  compliance_approved_revision: string | null;
   representation_review_status?: 'not_required' | 'required' | 'acknowledged';
   representation_reviewed_at?: string | null;
   representation_reviewed_by_user_id?: string | null;
@@ -190,27 +192,10 @@ export type HomeValueDraftBody = {
 };
 
 /**
- * Publication. Every field required — publishing is the moment a person puts
- * their name to a valuation opinion, and it should take the complete thing
- * rather than whatever happened to be saved.
+ * Publication references the exact saved report and evidence approved by compliance.
  */
 export type HomeValuePublishBody = {
-  report_outcome: HomeValueReportOutcome;
-  value_low?: number | null;
-  value_high?: number | null;
-  limitations?: string | null;
-  report_summary?: string | null;
-  outcome_explanation?: string | null;
-  data_support?: HomeValueDataSupport | null;
-  data_support_explanation?: string | null;
-  approved_property_facts?: string[] | null;
-  assumptions?: string[] | null;
-  unknowns?: string[] | null;
-  conflicts?: string[] | null;
-  local_market_context?: string | null;
-  value_factors?: string[] | null;
-  reconciliation?: string | null;
-  report_as_of_date?: string | null;
+  approved_revision: string;
 };
 
 export type HomeValueEvidence = {

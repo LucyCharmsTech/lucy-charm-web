@@ -7,6 +7,7 @@ import {
   deleteHomeValueEvidence,
   fetchHomeValueConsultationContext,
   fetchHomeValueEvidence,
+  fetchHomeValueReportVersions,
   fetchStaffHomeValueRequests,
   generateHomeValueAiDraft,
   publishHomeValueReport,
@@ -33,6 +34,7 @@ jest.mock('@/services/homeValueService', () => ({
   fetchHomeValueConsultationContext: jest.fn(),
   generateHomeValueAiDraft: jest.fn(),
   fetchHomeValueEvidence: jest.fn(),
+  fetchHomeValueReportVersions: jest.fn(),
   createHomeValueEvidence: jest.fn(),
   updateHomeValueEvidence: jest.fn(),
   deleteHomeValueEvidence: jest.fn(),
@@ -51,6 +53,7 @@ const mockPublish = publishHomeValueReport as jest.MockedFunction<
 const mockContext = fetchHomeValueConsultationContext as jest.MockedFunction<typeof fetchHomeValueConsultationContext>;
 const mockAi = generateHomeValueAiDraft as jest.MockedFunction<typeof generateHomeValueAiDraft>;
 const mockEvidence = fetchHomeValueEvidence as jest.MockedFunction<typeof fetchHomeValueEvidence>;
+const mockVersions = fetchHomeValueReportVersions as jest.MockedFunction<typeof fetchHomeValueReportVersions>;
 const mockCreateEvidence = createHomeValueEvidence as jest.MockedFunction<typeof createHomeValueEvidence>;
 const mockUpdateEvidence = updateHomeValueEvidence as jest.MockedFunction<typeof updateHomeValueEvidence>;
 const mockDeleteEvidence = deleteHomeValueEvidence as jest.MockedFunction<typeof deleteHomeValueEvidence>;
@@ -96,8 +99,25 @@ function makeRequest(
     internal_notes: null,
     compliance_cleared_at: null,
     compliance_cleared_by_user_id: null,
+    draft_revision: null,
+    compliance_approved_revision: null,
     ...overrides,
   };
+}
+
+function makeSavedRange(overrides: Partial<HomeValueRequestStaff> = {}): HomeValueRequestStaff {
+  return makeRequest({
+    status: 'under_review',
+    value_low: 900000,
+    value_high: 950000,
+    limitations: 'Exterior only.',
+    report_summary: 'Comparables support this range.',
+    report_outcome: 'estimated_range',
+    data_support: 'moderate',
+    data_support_explanation: 'Nearby recent sales are comparable.',
+    draft_revision: 'rev1',
+    ...overrides,
+  });
 }
 
 beforeEach(() => {
@@ -110,6 +130,7 @@ beforeEach(() => {
   mockContext.mockResolvedValue('r1');
   mockDocuments.mockResolvedValue([]);
   mockEvidence.mockResolvedValue([]);
+  mockVersions.mockResolvedValue([]);
 });
 
 function fillReport() {
@@ -140,39 +161,43 @@ test('publishing is unavailable until compliance is cleared', async () => {
   expect(publish.disabled).toBe(true);
   // Says which step is missing rather than leaving a disabled button to be
   // puzzled over.
-  expect(screen.getByText(/unavailable until compliance is cleared/i)).toBeTruthy();
+  expect(screen.getByText(/Save your draft changes/i)).toBeTruthy();
+  expect((screen.getByRole('button', { name: /Clear compliance/ }) as HTMLButtonElement).disabled).toBe(true);
 });
 
 test('clearing compliance enables publishing', async () => {
   mockList
-    .mockResolvedValueOnce([makeRequest()])
-    .mockResolvedValue([makeRequest({ compliance_cleared_at: '2026-09-02T00:00:00Z' })]);
+    .mockResolvedValueOnce([makeSavedRange()])
+    .mockResolvedValue([makeSavedRange({
+      compliance_cleared_at: '2026-09-02T00:00:00Z',
+      compliance_approved_revision: 'rev1',
+    })]);
   render(<HomeValueQueue role="admin" />);
   await waitFor(() => screen.getByText('12 Elm Street'));
 
   fireEvent.click(screen.getByRole('button', { name: /Clear compliance/ }));
 
   await waitFor(() => expect(mockClear).toHaveBeenCalledWith('r1'));
-  await waitFor(() => screen.getByText(/Compliance cleared/));
+  await waitFor(() => expect(screen.getAllByText(/Compliance cleared/).length).toBeGreaterThan(0));
 
-  fillReport();
-  expect(
+  await waitFor(() => expect(
     (screen.getByRole('button', { name: 'Publish to client' }) as HTMLButtonElement)
       .disabled,
-  ).toBe(false);
+  ).toBe(false));
 });
 
 test('a range cannot be published without its limitations', async () => {
   // A range without them is an automatic-looking number, which is what this
   // workflow exists to avoid — merely typed by a person.
   mockList.mockResolvedValue([
-    makeRequest({ compliance_cleared_at: '2026-09-02T00:00:00Z' }),
+    makeSavedRange({ compliance_cleared_at: '2026-09-02T00:00:00Z', compliance_approved_revision: 'rev1' }),
   ]);
   render(<HomeValueQueue role="admin" />);
   await waitFor(() => screen.getByText('12 Elm Street'));
 
   fireEvent.change(screen.getByLabelText('Lower value'), { target: { value: '900000' } });
   fireEvent.change(screen.getByLabelText('Upper value'), { target: { value: '950000' } });
+  fireEvent.change(screen.getByLabelText(/Limitations/), { target: { value: '' } });
   fireEvent.change(screen.getByLabelText(/Client-visible summary/), {
     target: { value: 'Comparables support this range.' },
   });
@@ -187,7 +212,7 @@ test('a reversed range cannot be published', async () => {
   // It reads as a valid figure and would go out as one — the kind of typo that
   // only surfaces in front of the client.
   mockList.mockResolvedValue([
-    makeRequest({ compliance_cleared_at: '2026-09-02T00:00:00Z' }),
+    makeSavedRange({ compliance_cleared_at: '2026-09-02T00:00:00Z', compliance_approved_revision: 'rev1' }),
   ]);
   render(<HomeValueQueue role="admin" />);
   await waitFor(() => screen.getByText('12 Elm Street'));
@@ -239,35 +264,30 @@ test('an unassigned request is flagged as being in the central queue', async () 
 
 test('a needs-more-information outcome can publish without a value range', async () => {
   mockList.mockResolvedValue([
-    makeRequest({ compliance_cleared_at: '2026-09-02T00:00:00Z' }),
+    makeRequest({
+      report_outcome: 'needs_more_information',
+      outcome_explanation: 'Please provide renovation details.',
+      report_summary: 'We need one additional detail.',
+      draft_revision: 'rev2',
+      compliance_approved_revision: 'rev2',
+      compliance_cleared_at: '2026-09-02T00:00:00Z',
+    }),
   ]);
   render(<HomeValueQueue role="admin" />);
   await waitFor(() => screen.getByText('12 Elm Street'));
-
-  fireEvent.change(screen.getByLabelText('Report outcome *'), {
-    target: { value: 'needs_more_information' },
-  });
-  fireEvent.change(screen.getByLabelText('Client explanation *'), {
-    target: { value: 'Please provide renovation details.' },
-  });
 
   const publish = screen.getByRole('button', { name: 'Publish to client' });
   expect((publish as HTMLButtonElement).disabled).toBe(false);
   fireEvent.click(publish);
-  await waitFor(() => expect(mockPublish).toHaveBeenCalledWith('r1', expect.objectContaining({
-    report_outcome: 'needs_more_information',
-    value_low: null,
-    value_high: null,
-  })));
+  await waitFor(() => expect(mockPublish).toHaveBeenCalledWith('r1', { approved_revision: 'rev2' }));
 });
 
 test('estimated ranges require a data-support explanation in addition to limitations', async () => {
   mockList.mockResolvedValue([
-    makeRequest({ compliance_cleared_at: '2026-09-02T00:00:00Z' }),
+    makeSavedRange({ compliance_cleared_at: '2026-09-02T00:00:00Z', compliance_approved_revision: 'rev1' }),
   ]);
   render(<HomeValueQueue role="admin" />);
   await waitFor(() => screen.getByText('12 Elm Street'));
-  fillReport();
   fireEvent.change(screen.getByLabelText('Why this support level *'), {
     target: { value: '' },
   });
@@ -301,6 +321,52 @@ test('a Daily Work request_id focuses the referenced Home Value request', async 
   expect(screen.getByRole('link', { name: 'View all requests' }).getAttribute('href')).toBe('/agent/home-value');
   fireEvent.click(screen.getByRole('link', { name: 'View all requests' }));
   await waitFor(() => expect(screen.getByText('12 Elm Street')).toBeTruthy());
+});
+
+test('an approved draft cannot be published after an unsaved local edit', async () => {
+  mockList.mockResolvedValue([makeSavedRange({
+    compliance_cleared_at: '2026-09-02T00:00:00Z',
+    compliance_approved_revision: 'rev1',
+  })]);
+  render(<HomeValueQueue role="admin" />);
+  await waitFor(() => expect(screen.getAllByText(/Compliance cleared/).length).toBeGreaterThan(0));
+  expect((screen.getByRole('button', { name: 'Publish to client' }) as HTMLButtonElement).disabled).toBe(false);
+  fireEvent.change(screen.getByLabelText(/Client-visible summary/), {
+    target: { value: 'Unsaved alternate wording.' },
+  });
+  expect((screen.getByRole('button', { name: 'Publish to client' }) as HTMLButtonElement).disabled).toBe(true);
+  expect(mockPublish).not.toHaveBeenCalled();
+});
+
+test('stale approval response refreshes the authoritative request', async () => {
+  mockList
+    .mockResolvedValueOnce([makeSavedRange({
+      compliance_cleared_at: '2026-09-02T00:00:00Z', compliance_approved_revision: 'rev1',
+    })])
+    .mockResolvedValue([makeSavedRange({ report_summary: 'Latest saved wording.' })]);
+  mockPublish.mockRejectedValueOnce({ response: { data: { detail: 'Compliance must be cleared.' } } });
+  render(<HomeValueQueue role="admin" />);
+  await waitFor(() => screen.getByText(/Compliance cleared/));
+  fireEvent.click(screen.getByRole('button', { name: 'Publish to client' }));
+  await waitFor(() => expect(mockList).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect((screen.getByRole('button', { name: 'Publish to client' }) as HTMLButtonElement).disabled).toBe(true));
+  expect(screen.getByRole('alert').textContent).toMatch(/Compliance must be cleared/);
+  await waitFor(() => expect((screen.getByLabelText('Client-visible summary') as HTMLTextAreaElement).value).toBe('Latest saved wording.'));
+});
+
+test('publication refreshes open version history', async () => {
+  mockList.mockResolvedValue([makeSavedRange({
+    status: 'report_ready',
+    compliance_cleared_at: '2026-09-02T00:00:00Z',
+    compliance_approved_revision: 'rev1',
+  })]);
+  render(<HomeValueQueue role="admin" />);
+  await waitFor(() => screen.getByText(/Compliance cleared/));
+  fireEvent.click(screen.getByRole('button', { name: 'View publication history' }));
+  await waitFor(() => expect(mockVersions).toHaveBeenCalledTimes(1));
+  fireEvent.click(screen.getByRole('button', { name: 'Republish' }));
+  await waitFor(() => expect(mockPublish).toHaveBeenCalledWith('r1', { approved_revision: 'rev1' }));
+  await waitFor(() => expect(mockVersions).toHaveBeenCalledTimes(2));
 });
 
 test('a consultation deep link resolves its parent request through the authorized API', async () => {
@@ -388,6 +454,34 @@ test('reviewer can add, edit, and remove manual evidence', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
   await waitFor(() => expect(mockDeleteEvidence).toHaveBeenCalledWith('r1', 'e1'));
   await waitFor(() => expect(screen.queryByText(/Updated reason/)).toBeNull());
+});
+
+test('evidence mutation refreshes the parent approval and disables publication', async () => {
+  mockList
+    .mockResolvedValueOnce([makeSavedRange({
+      compliance_cleared_at: '2026-09-02T00:00:00Z', compliance_approved_revision: 'rev1',
+    })])
+    .mockResolvedValue([makeSavedRange({ draft_revision: 'rev2' })]);
+  mockCreateEvidence.mockResolvedValue({
+    id: 'e1', home_value_request_id: 'r1', evidence_type: 'other',
+    reference: null, address: null, source_date: null, value: null,
+    why_relevant: 'Nearby sale', similarities: null, differences: null,
+    adjustments: null, limitations: null, internal_source_notes: null,
+    is_publishable: true, publishable_summary: 'Safe summary.',
+    created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-01T00:00:00Z',
+  });
+  render(<HomeValueQueue role="admin" />);
+  await waitFor(() => screen.getByText(/Compliance cleared/));
+  fireEvent.click(screen.getByRole('button', { name: 'Manage evidence' }));
+  fireEvent.change(screen.getByLabelText(/Why relevant/), { target: { value: 'Nearby sale' } });
+  fireEvent.click(screen.getByRole('checkbox', { name: /Publish a safe summary/ }));
+  fireEvent.change(screen.getByLabelText(/Safe requester-facing summary/), {
+    target: { value: 'Safe summary.' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Add evidence' }));
+  await waitFor(() => expect(mockCreateEvidence).toHaveBeenCalled());
+  await waitFor(() => expect(mockList).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect((screen.getByRole('button', { name: 'Publish to client' }) as HTMLButtonElement).disabled).toBe(true));
 });
 
 test('an unavailable Daily Work request_id leaves the permitted queue usable', async () => {
