@@ -72,23 +72,43 @@ export const useAuthStore = create<AuthState>()(
       {
         name: 'lucy-auth', // localStorage key
         storage: createJSONStorage(() => {
-          const browserStorage = window.localStorage;
+          const browserStorage = () => {
+            try {
+              return typeof window === 'undefined' ? null : window.localStorage;
+            } catch {
+              return null;
+            }
+          };
           return {
             getItem: (name) => {
-              const value = browserStorage.getItem(name);
-              if (value === null) return null;
               try {
-                JSON.parse(value);
+                const value = browserStorage()?.getItem(name) ?? null;
+                if (value === null) return null;
+                const saved = JSON.parse(value) as { state?: Partial<AuthState> };
+                const state = saved?.state;
+                if (!state || typeof state !== 'object' ||
+                  (state.accessToken !== null && typeof state.accessToken !== 'string') ||
+                  (state.refreshToken !== null && typeof state.refreshToken !== 'string') ||
+                  (state.user !== null && (!state.user || typeof state.user.user_id !== 'string' ||
+                    !['client', 'agent', 'superadmin'].includes(state.user.role ?? ''))) ||
+                  Boolean(state.accessToken) !== Boolean(state.refreshToken) ||
+                  Boolean(state.accessToken) !== Boolean(state.user)) {
+                  throw new Error('Invalid saved authentication');
+                }
                 return value;
               } catch {
                 // A damaged saved session must fall back to signed-out, not
                 // leave persist.hasHydrated() false and every role gate stuck.
-                browserStorage.removeItem(name);
+                try { browserStorage()?.removeItem(name); } catch { /* storage is unavailable */ }
                 return null;
               }
             },
-            setItem: (name, value) => browserStorage.setItem(name, value),
-            removeItem: (name) => browserStorage.removeItem(name),
+            setItem: (name, value) => {
+              try { browserStorage()?.setItem(name, value); } catch { /* runtime auth remains usable */ }
+            },
+            removeItem: (name) => {
+              try { browserStorage()?.removeItem(name); } catch { /* runtime logout still clears state */ }
+            },
           };
         }),
         // Only persist the token fields; derived methods are re-created on load

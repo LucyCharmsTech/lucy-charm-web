@@ -18,7 +18,9 @@ jest.mock('@/services/documentService', () => ({
   fetchDocument: jest.fn(), fetchDocuments: jest.fn(), reviewDocument: jest.fn(), downloadDocumentFile: jest.fn(),
 }));
 jest.mock('@/components/documents/DocumentHistoryList', () => function MockDocumentHistoryList() { return <div>Document history</div>; });
-jest.mock('@/components/documents/DocumentPreviewDialog', () => function MockDocumentPreviewDialog() { return <div>Document preview</div>; });
+jest.mock('@/components/documents/DocumentPreviewDialog', () => function MockDocumentPreviewDialog({ onReady, onPreviewError }: { onReady?: () => void; onPreviewError?: () => void }) {
+  return <div>Document preview<button onClick={onReady}>Preview ready</button><button onClick={onPreviewError}>Preview failed</button></div>;
+});
 jest.mock('@/components/documents/ClientDocumentCard', () => function MockClientDocumentCard() { return <div>Client document</div>; });
 
 const work = {
@@ -65,10 +67,22 @@ it('shows an authorized staff document and submits its real review action', asyn
   expect(await screen.findByText('Review document')).toBeTruthy();
   expect((screen.getByRole('button', { name: 'Submit review' }) as HTMLButtonElement).disabled).toBe(true);
   fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
+  expect((screen.getByRole('button', { name: 'Submit review' }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Preview ready' }));
   fireEvent.click(screen.getByRole('button', { name: 'Submit review' }));
   await waitFor(() => expect(reviewDocument).toHaveBeenCalledWith('doc-1', {
     outcome: 'accepted', client_reason: null, review_note: null,
   }));
+});
+
+it('a failed preview cannot unlock review, but a successful retry can', async () => {
+  render(<DocumentDetailPage />);
+  await screen.findByText('Review document');
+  fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Preview failed' }));
+  expect((screen.getByRole('button', { name: 'Submit review' }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Preview ready' }));
+  expect((screen.getByRole('button', { name: 'Submit review' }) as HTMLButtonElement).disabled).toBe(false);
 });
 
 it('opens the same review surface from the Home Value reviewer attachments', async () => {

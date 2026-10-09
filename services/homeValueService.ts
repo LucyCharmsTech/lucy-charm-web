@@ -3,6 +3,7 @@
  */
 
 import api from '@/lib/axios';
+import type { PaginatedItems } from '@/types/api';
 import type {
   HomeValueDraftBody,
   HomeValueAiDraftSuggestions,
@@ -16,6 +17,7 @@ import type {
   HomeValueRequestRead,
   HomeValueRequestStaff,
   HomeValueReportVersion,
+  HomeValueClientReportVersion,
   HomeValueReviewSnapshot,
 } from '@/types/homeValue';
 
@@ -207,5 +209,45 @@ export async function updateHomeValueFollowUp(
     `/home_value/requests/${requestId}/follow-ups/${followUpId}`,
     { status, resolution_notes: resolutionNotes },
   );
+  return res.data;
+}
+
+export async function fetchMyHomeValueRequestsPage(page = 1, size = 10): Promise<PaginatedItems<HomeValueRequestRead>> {
+  const res = await api.get<PaginatedItems<HomeValueRequestRead>>('/home_value/requests/mine/page', { params: { page, size } });
+  return res.data;
+}
+
+export async function fetchStaffHomeValueRequestsPage(page = 1, size = 10): Promise<PaginatedItems<HomeValueRequestStaff>> {
+  const res = await api.get<PaginatedItems<HomeValueRequestStaff>>('/home_value/requests/page', { params: { page, size } });
+  return res.data;
+}
+
+export async function fetchStaffHomeValueRequest(id: string): Promise<HomeValueRequestStaff> {
+  const res = await api.get<HomeValueRequestStaff>(`/home_value/requests/${id}`);
+  return res.data;
+}
+
+export async function fetchHomeValueEvidencePage(id: string, page = 1, size = 20): Promise<PaginatedItems<HomeValueEvidence>> {
+  const res = await api.get<PaginatedItems<HomeValueEvidence>>(`/home_value/requests/${id}/evidence/page`, { params: { page, size } });
+  return res.data;
+}
+
+export async function fetchHomeValueReportVersionsPage(id: string, page = 1, size = 10): Promise<PaginatedItems<HomeValueReportVersion>> {
+  const res = await api.get<PaginatedItems<HomeValueReportVersion>>(`/home_value/requests/${id}/versions/page`, { params: { page, size } });
+  return res.data;
+}
+
+export async function fetchMyHomeValueVersionsPage(id: string, page = 1, size = 10): Promise<PaginatedItems<HomeValueClientReportVersion>> {
+  const res = await api.get<PaginatedItems<HomeValueClientReportVersion>>(`/home_value/requests/mine/${id}/versions/page`, { params: { page, size } });
+  return res.data;
+}
+
+export async function fetchMyHomeValueFollowUpsPage(id: string, page = 1, size = 10): Promise<PaginatedItems<HomeValueFollowUp>> {
+  const res = await api.get<PaginatedItems<HomeValueFollowUp>>(`/home_value/requests/mine/${id}/follow-ups/page`, { params: { page, size } });
+  return res.data;
+}
+
+export async function fetchHomeValueFollowUpsPage(id: string, page = 1, size = 10): Promise<PaginatedItems<HomeValueFollowUpStaff>> {
+  const res = await api.get<PaginatedItems<HomeValueFollowUpStaff>>(`/home_value/requests/${id}/follow-ups/page`, { params: { page, size } });
   return res.data;
 }

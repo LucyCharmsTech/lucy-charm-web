@@ -9,18 +9,20 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { serverMessage } from '@/lib/formStates';
 import { HomeValueReviewerAttachments } from '@/components/homeValue/HomeValueReviewerAttachments';
+import { HomeValuePageControls } from '@/components/homeValue/HomeValuePageControls';
 import {
   acknowledgeHomeValueRepresentationReview,
   clearHomeValueCompliance,
   createHomeValueEvidence,
   deleteHomeValueEvidence,
-  fetchHomeValueEvidence,
+  fetchHomeValueEvidencePage,
   fetchHomeValueReviewSnapshot,
-  fetchHomeValueFollowUps,
+  fetchHomeValueFollowUpsPage,
   fetchHomeValueConsultationContext,
   generateHomeValueAiDraft,
-  fetchHomeValueReportVersions,
-  fetchStaffHomeValueRequests,
+  fetchHomeValueReportVersionsPage,
+  fetchStaffHomeValueRequest,
+  fetchStaffHomeValueRequestsPage,
   publishHomeValueReport,
   saveHomeValueDraft,
   updateHomeValueEvidence,
@@ -68,6 +70,10 @@ type HomeValueQueueProps = {
 
 export function HomeValueQueue({ role }: HomeValueQueueProps) {
   const [items, setItems] = useState<HomeValueRequestStaff[] | null>(null);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [focusedItem, setFocusedItem] = useState<HomeValueRequestStaff | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [consultationRequestId, setConsultationRequestId] = useState<string | null>(null);
   const [dismissedFocusKey, setDismissedFocusKey] = useState<string | null>(null);
@@ -91,9 +97,13 @@ export function HomeValueQueue({ role }: HomeValueQueueProps) {
 
   useEffect(() => {
     let active = true;
-    fetchStaffHomeValueRequests()
-      .then((rows) => {
-        if (active) setItems(rows);
+    fetchStaffHomeValueRequestsPage(page)
+      .then((result) => {
+        if (active) {
+          setItems(result.items);
+          setTotal(result.total);
+          setSelectedId((current) => current ?? result.items[0]?.id ?? null);
+        }
       })
       .catch((err: unknown) => {
         if (active) {
@@ -104,14 +114,29 @@ export function HomeValueQueue({ role }: HomeValueQueueProps) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [page]);
+
+  useEffect(() => {
+    const id = requestedId ?? consultationRequestId;
+    if (!id || items === null || items.some((item) => item.id === id)) return;
+    let active = true;
+    fetchStaffHomeValueRequest(id)
+      .then((item) => { if (active) setFocusedItem(item); })
+      .catch(() => { if (active) setFocusedItem(null); });
+    return () => { active = false; };
+  }, [requestedId, consultationRequestId, items]);
 
   async function refreshItems(requestId: string): Promise<HomeValueRequestStaff | null> {
     try {
-      const rows = await fetchStaffHomeValueRequests();
+      const result = await fetchStaffHomeValueRequestsPage(page);
       setLoadError(null);
-      setItems(rows);
-      return rows.find((row) => row.id === requestId) ?? null;
+      setItems(result.items);
+      setTotal(result.total);
+      const row = result.items.find((entry) => entry.id === requestId)
+        ?? await fetchStaffHomeValueRequest(requestId).catch(() => null);
+      if (row && focusedItem?.id === row.id) setFocusedItem(row);
+      if (!result.items.length && page > 1) setPage(page - 1);
+      return row;
     } catch (err: unknown) {
       setLoadError(serverMessage(err, 'Could not load Home Value requests.'));
       return null;
@@ -139,7 +164,7 @@ export function HomeValueQueue({ role }: HomeValueQueueProps) {
     );
   }
 
-  if (items.length === 0) {
+  if (items.length === 0 && !focusedItem) {
     return (
       <p className="p-6 text-sm text-zinc-500 dark:text-zinc-400">
         No Home Value requests yet.
@@ -156,7 +181,7 @@ export function HomeValueQueue({ role }: HomeValueQueueProps) {
     ? requestedId ?? consultationRequestId
     : null;
   const requestedItem = focusedId
-    ? items.find((item) => item.id === focusedId) ?? null
+    ? items.find((item) => item.id === focusedId) ?? (focusedItem?.id === focusedId ? focusedItem : null)
     : null;
   const visibleItems = requestedItem ? [requestedItem] : items;
 
@@ -173,14 +198,19 @@ export function HomeValueQueue({ role }: HomeValueQueueProps) {
       </div>}
       <ul className="space-y-4">
       {visibleItems.map((item) => (
-        <HomeValueQueueItem
-          key={item.id}
-          item={item}
-          role={role}
-          onChanged={() => refreshItems(item.id)}
-        />
+        selectedId === item.id || requestedItem?.id === item.id ? (
+          <HomeValueQueueItem key={item.id} item={item} role={role} onChanged={() => refreshItems(item.id)} />
+        ) : (
+          <li key={item.id} className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
+            <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+              <div><p className="font-semibold">{item.address}</p><p>{item.full_name} · {item.status.replaceAll('_', ' ')}</p></div>
+              <Button type="button" variant="outline" onClick={() => setSelectedId(item.id)}>Open review</Button>
+            </div>
+          </li>
+        )
       ))}
       </ul>
+      {!requestedItem && <HomeValuePageControls page={page} total={total} pageSize={10} onPage={(next) => { setSelectedId(null); setItems(null); setPage(next); }} />}
     </>
   );
 }
@@ -224,11 +254,29 @@ function HomeValueQueueItem({
   const [showEvidence, setShowEvidence] = useState(false);
   const [showAttachments, setShowAttachments] = useState(false);
   const [versions, setVersions] = useState<HomeValueReportVersion[] | null>(null);
+  const [versionsPage, setVersionsPage] = useState(0);
+  const [versionsTotal, setVersionsTotal] = useState(0);
   const [followUps, setFollowUps] = useState<HomeValueFollowUpStaff[] | null>(null);
+  const [followUpsPage, setFollowUpsPage] = useState(0);
+  const [followUpsTotal, setFollowUpsTotal] = useState(0);
   const [aiSuggestions, setAiSuggestions] = useState<HomeValueAiDraftSuggestions | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewSnapshot, setReviewSnapshot] = useState<HomeValueReviewSnapshot | null>(null);
+
+  async function loadVersions(next = 1) {
+    const result = await fetchHomeValueReportVersionsPage(item.id, next);
+    setVersions((prior) => next === 1 ? result.items : [...(prior ?? []), ...result.items]);
+    setVersionsPage(next);
+    setVersionsTotal(result.total);
+  }
+
+  async function loadFollowUps(next = 1) {
+    const result = await fetchHomeValueFollowUpsPage(item.id, next);
+    setFollowUps((prior) => next === 1 ? result.items : [...(prior ?? []), ...result.items]);
+    setFollowUpsPage(next);
+    setFollowUpsTotal(result.total);
+  }
   const [reviewOriginRevision, setReviewOriginRevision] = useState<string | null>(null);
   function loadSavedDraft(saved: HomeValueRequestStaff) {
     setLow(saved.value_low?.toString() ?? '');
@@ -619,7 +667,7 @@ function HomeValueQueueItem({
         </div>
 
         {published && <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
-          <Button type="button" variant="outline" className="h-9 rounded-xl" onClick={() => void fetchHomeValueReportVersions(item.id).then(setVersions).catch((err: unknown) => setError(serverMessage(err, 'Could not load report history.')))}>View publication history</Button>
+          <Button type="button" variant="outline" className="h-9 rounded-xl" onClick={() => void loadVersions().catch((err: unknown) => setError(serverMessage(err, 'Could not load report history.')))}>View publication history</Button>
           {versions && <div className="mt-3 space-y-2">
             {versions.map((version) => <details key={version.id} className="rounded-md bg-zinc-50 p-2 text-xs dark:bg-zinc-900">
               <summary className="cursor-pointer font-medium text-zinc-800 dark:text-zinc-100">
@@ -636,18 +684,20 @@ function HomeValueQueueItem({
                 <div>{version.disclaimer}</div>
               </dl>
             </details>)}
+            {versions.length < versionsTotal && <Button type="button" variant="outline" onClick={() => void loadVersions(versionsPage + 1).catch((err: unknown) => setError(serverMessage(err, 'Could not load report history.')))}>Load more versions</Button>}
           </div>}
         </div>}
 
         <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
-          <Button type="button" variant="outline" className="h-9 rounded-xl" onClick={() => void fetchHomeValueFollowUps(item.id).then(setFollowUps).catch((err: unknown) => setError(serverMessage(err, 'Could not load follow-ups.')))}>View homeowner follow-ups</Button>
+          <Button type="button" variant="outline" className="h-9 rounded-xl" onClick={() => void loadFollowUps().catch((err: unknown) => setError(serverMessage(err, 'Could not load follow-ups.')))}>View homeowner follow-ups</Button>
           {followUps && <div className="mt-3 space-y-2 text-sm">
             {followUps.length === 0 && <p className="text-zinc-500">No homeowner follow-ups.</p>}
             {followUps.map((followUp) => <div key={followUp.id} className="rounded-md bg-zinc-50 p-2 dark:bg-zinc-900">
               <p className="font-medium">{followUp.request_type.replaceAll('_', ' ')} · {followUp.status.replaceAll('_', ' ')}</p>
               <p className="mt-1 whitespace-pre-line text-zinc-700 dark:text-zinc-300">{followUp.message}</p>
-              {followUp.status !== 'resolved' && <Button type="button" variant="outline" className="mt-2 h-8 rounded-lg text-xs" onClick={() => void updateHomeValueFollowUp(item.id, followUp.id, 'resolved').then(() => fetchHomeValueFollowUps(item.id)).then(setFollowUps).catch((err: unknown) => setError(serverMessage(err, 'Could not update follow-up.')))}>Mark resolved</Button>}
+              {followUp.status !== 'resolved' && <Button type="button" variant="outline" className="mt-2 h-8 rounded-lg text-xs" onClick={() => void updateHomeValueFollowUp(item.id, followUp.id, 'resolved').then(() => loadFollowUps()).catch((err: unknown) => setError(serverMessage(err, 'Could not update follow-up.')))}>Mark resolved</Button>}
             </div>)}
+            {followUps.length < followUpsTotal && <Button type="button" variant="outline" onClick={() => void loadFollowUps(followUpsPage + 1).catch((err: unknown) => setError(serverMessage(err, 'Could not load follow-ups.')))}>Load more follow-ups</Button>}
           </div>}
         </div>
 
@@ -723,7 +773,7 @@ function HomeValueQueueItem({
                 const publishedReport = await publishHomeValueReport(
                   item.id, { approved_revision: item.compliance_approved_revision as string },
                 );
-                void fetchHomeValueReportVersions(item.id).then(setVersions).catch((err: unknown) =>
+                void loadVersions().catch((err: unknown) =>
                   setError(serverMessage(err, 'Published, but could not refresh report history.')),
                 );
                 return publishedReport;
@@ -952,6 +1002,8 @@ function HomeValueEvidenceEditor({ requestId, disabled, onChanged, onBusyChange 
   onBusyChange: (busy: boolean) => void;
 }) {
   const [items, setItems] = useState<HomeValueEvidence[] | null>(null);
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
   const [form, setForm] = useState<HomeValueEvidenceBody>(blankEvidence);
   const [editing, setEditing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -959,7 +1011,8 @@ function HomeValueEvidenceEditor({ requestId, disabled, onChanged, onBusyChange 
 
   async function reload() {
     try {
-      setItems(await fetchHomeValueEvidence(requestId));
+      const result = await fetchHomeValueEvidencePage(requestId);
+      setItems(result.items); setPage(1); setTotal(result.total);
     } catch (err: unknown) {
       setError(serverMessage(err, 'Could not load evidence.'));
     }
@@ -967,8 +1020,8 @@ function HomeValueEvidenceEditor({ requestId, disabled, onChanged, onBusyChange 
 
   useEffect(() => {
     let active = true;
-    fetchHomeValueEvidence(requestId)
-      .then((rows) => { if (active) setItems(rows); })
+    fetchHomeValueEvidencePage(requestId)
+      .then((result) => { if (active) { setItems(result.items); setPage(1); setTotal(result.total); } })
       .catch((err: unknown) => { if (active) setError(serverMessage(err, 'Could not load evidence.')); });
     return () => { active = false; };
   }, [requestId]);
@@ -1010,7 +1063,8 @@ function HomeValueEvidenceEditor({ requestId, disabled, onChanged, onBusyChange 
       {form.is_publishable && <div className="mt-3"><EvidenceText id={`safe-summary-${requestId}`} label="Safe requester-facing summary *" value={form.publishable_summary ?? ''} onChange={(value) => setForm({ ...form, publishable_summary: value || null })} disabled={busy || disabled} /></div>}
       {error && <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
       <div className="mt-3 flex flex-wrap gap-2"><Button type="button" disabled={busy || disabled || !form.why_relevant.trim() || (form.is_publishable && !(form.publishable_summary ?? '').trim())} onClick={() => void save()} className="h-9 rounded-xl">{editing ? 'Update evidence' : 'Add evidence'}</Button>{editing && <Button type="button" variant="outline" disabled={busy || disabled} onClick={() => { setEditing(null); setForm(blankEvidence()); }} className="h-9 rounded-xl">Cancel edit</Button>}</div>
-       {items && items.length > 0 && <ul className="mt-3 space-y-2">{items.map((evidence) => <li key={evidence.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-zinc-50 p-2 text-xs dark:bg-zinc-900"><span>{evidence.evidence_type.replace('_', ' ')} — {evidence.why_relevant}</span><span className="flex gap-2"><Button type="button" variant="outline" className="h-7" disabled={busy || disabled} onClick={() => { setEditing(evidence.id); setForm(evidenceBody(evidence)); }}>Edit</Button><Button type="button" variant="outline" className="h-7 text-red-700" disabled={busy || disabled} onClick={() => void (async () => { setBusy(true); onBusyChange(true); try { await deleteHomeValueEvidence(requestId, evidence.id); await reload(); await onChanged(); } catch (err: unknown) { setError(serverMessage(err, 'Could not remove evidence.')); } finally { setBusy(false); onBusyChange(false); } })()}>Remove</Button></span></li>)}</ul>}
+      {items && items.length > 0 && <ul className="mt-3 space-y-2">{items.map((evidence) => <li key={evidence.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-zinc-50 p-2 text-xs dark:bg-zinc-900"><span>{evidence.evidence_type.replace('_', ' ')} — {evidence.why_relevant}</span><span className="flex gap-2"><Button type="button" variant="outline" className="h-7" disabled={busy || disabled} onClick={() => { setEditing(evidence.id); setForm(evidenceBody(evidence)); }}>Edit</Button><Button type="button" variant="outline" className="h-7 text-red-700" disabled={busy || disabled} onClick={() => void (async () => { setBusy(true); onBusyChange(true); try { await deleteHomeValueEvidence(requestId, evidence.id); await reload(); await onChanged(); } catch (err: unknown) { setError(serverMessage(err, 'Could not remove evidence.')); } finally { setBusy(false); onBusyChange(false); } })()}>Remove</Button></span></li>)}</ul>}
+      {items && items.length < total && <Button type="button" variant="outline" className="mt-3" onClick={() => void fetchHomeValueEvidencePage(requestId, page + 1).then((result) => { setItems([...items, ...result.items]); setPage(page + 1); setTotal(result.total); }).catch((err: unknown) => setError(serverMessage(err, 'Could not load more evidence.')))}>Load more evidence</Button>}
     </section>
   );
 }

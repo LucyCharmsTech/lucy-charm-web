@@ -87,6 +87,7 @@ export type HomeValueReportVersion = {
   report_outcome: HomeValueReportOutcome;
   value_low: number | null;
   value_high: number | null;
+  limitations: string | null;
   published_at: string;
   publisher_display_name: string | null;
   report_summary: string | null;
@@ -197,6 +198,8 @@ export type HomeValueDraftBody = {
 export type HomeValuePublishBody = {
   approved_revision: string;
 };
+
+export type HomeValueClientReportVersion = Omit<HomeValueReportVersion, 'publisher_display_name'>;
 
 export type HomeValueEvidence = {
   id: string;

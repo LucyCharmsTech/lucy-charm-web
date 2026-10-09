@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { FileTextIcon, InfoIcon } from 'lucide-react';
-import { createHomeValueFollowUp } from '@/services/homeValueService';
+import { createHomeValueFollowUp, fetchMyHomeValueFollowUpsPage, fetchMyHomeValueVersionsPage } from '@/services/homeValueService';
 import { HomeValueAttachments } from '@/components/homeValue/HomeValueAttachments';
-import type { HomeValueFollowUpType, HomeValueRequestRead } from '@/types/homeValue';
+import type { HomeValueClientReportVersion, HomeValueFollowUp, HomeValueFollowUpType, HomeValueRequestRead } from '@/types/homeValue';
 
 function formatDateOnly(value: string): string {
   const [year, month, day] = value.split('-').map(Number);
@@ -45,6 +45,24 @@ export function HomeValueReport({ request }: { request: HomeValueRequestRead }) 
   const [followUpNotice, setFollowUpNotice] = useState<string | null>(null);
   const [followUpError, setFollowUpError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [versions, setVersions] = useState<HomeValueClientReportVersion[] | null>(null);
+  const [versionsPage, setVersionsPage] = useState(0);
+  const [versionsTotal, setVersionsTotal] = useState(0);
+  const [followUps, setFollowUps] = useState<HomeValueFollowUp[] | null>(null);
+  const [followUpsPage, setFollowUpsPage] = useState(0);
+  const [followUpsTotal, setFollowUpsTotal] = useState(0);
+
+  async function loadVersions(next = 1) {
+    const result = await fetchMyHomeValueVersionsPage(request.id, next);
+    setVersions((prior) => next === 1 ? result.items : [...(prior ?? []), ...result.items]);
+    setVersionsPage(next); setVersionsTotal(result.total);
+  }
+
+  async function loadFollowUps(next = 1) {
+    const result = await fetchMyHomeValueFollowUpsPage(request.id, next);
+    setFollowUps((prior) => next === 1 ? result.items : [...(prior ?? []), ...result.items]);
+    setFollowUpsPage(next); setFollowUpsTotal(result.total);
+  }
   const address = request.unit
     ? `${request.address}, unit ${request.unit}`
     : request.address;
@@ -189,6 +207,7 @@ export function HomeValueReport({ request }: { request: HomeValueRequestRead }) 
           setSubmitting(true); setFollowUpError(null);
           void createHomeValueFollowUp(request.id, followUpType, trimmedMessage).then(() => {
             setMessage(''); setFollowUpNotice('Your request was sent to the review team.'); setFollowUpType(null);
+            if (followUps) void loadFollowUps();
           }).catch(() => setFollowUpError('Could not send your request. Please try again.')).finally(() => setSubmitting(false));
         }}>
           <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100" htmlFor={`home-value-follow-up-${request.id}`}>How can we help?</label>
@@ -197,6 +216,21 @@ export function HomeValueReport({ request }: { request: HomeValueRequestRead }) 
         </form>}
         {followUpNotice && <p className="mt-2 text-sm text-emerald-700 dark:text-emerald-400">{followUpNotice}</p>}
         {followUpError && <p className="mt-2 text-sm text-red-700 dark:text-red-400">{followUpError}</p>}
+      </section>
+      <section className="mt-4 space-y-2 border-t border-zinc-200 pt-4 text-sm dark:border-zinc-800">
+        <button type="button" className="font-semibold text-primarycolor-text" onClick={() => void loadVersions().catch(() => setFollowUpError('Could not load report history.'))}>View report history</button>
+        {versions?.map((version) => <details key={version.id} className="rounded border p-2 dark:border-zinc-800">
+          <summary>Version {version.version_number} · {new Date(version.published_at).toLocaleDateString()}</summary>
+          {version.value_low !== null && version.value_high !== null && <p>{formatMoney(version.value_low)} – {formatMoney(version.value_high)}</p>}
+          {version.limitations && <p className="whitespace-pre-line">{version.limitations}</p>}
+          {version.outcome_explanation && <p className="whitespace-pre-line">{version.outcome_explanation}</p>}
+          {version.report_summary && <p className="whitespace-pre-line">{version.report_summary}</p>}
+          {version.published_evidence.map((item) => <p key={item.id}>{item.summary}</p>)}
+        </details>)}
+        {versions && versions.length < versionsTotal && <button type="button" className="block font-semibold text-primarycolor-text" onClick={() => void loadVersions(versionsPage + 1)}>Load more versions</button>}
+        <button type="button" className="block font-semibold text-primarycolor-text" onClick={() => void loadFollowUps().catch(() => setFollowUpError('Could not load follow-ups.'))}>View follow-up history</button>
+        {followUps?.map((item) => <p key={item.id} className="rounded border p-2 dark:border-zinc-800">{item.request_type.replaceAll('_', ' ')} · {item.status.replaceAll('_', ' ')}<br />{item.message}</p>)}
+        {followUps && followUps.length < followUpsTotal && <button type="button" className="block font-semibold text-primarycolor-text" onClick={() => void loadFollowUps(followUpsPage + 1)}>Load more follow-ups</button>}
       </section>
       <HomeValueAttachments requestId={request.id} />
     </article>

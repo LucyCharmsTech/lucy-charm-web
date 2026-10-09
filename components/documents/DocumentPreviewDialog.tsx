@@ -26,14 +26,24 @@ export default function DocumentPreviewDialog({
   filename,
   open,
   onClose,
+  onReady,
+  onPreviewError,
+  onDownloaded,
 }: {
   documentId: string;
   filename: string | null;
   open: boolean;
   onClose: () => void;
+  onReady?: () => void;
+  onPreviewError?: () => void;
+  onDownloaded?: () => void;
 }) {
   const [state, setState] = useState<PreviewState>({ kind: 'loading' });
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const previewFailed = useCallback(() => {
+    onPreviewError?.();
+    setState({ kind: 'error', message: 'Could not open the preview.' });
+  }, [onPreviewError]);
 
   const mint = useCallback(async () => {
     try {
@@ -44,19 +54,25 @@ export default function DocumentPreviewDialog({
         // Not an error to the user — offer the download instead.
         setState({ kind: 'unsupported' });
       } else {
+        onPreviewError?.();
         setState({
           kind: 'error',
           message: err instanceof DocumentError ? documentErrorMessage(err) : 'Could not open the preview.',
         });
       }
     }
-  }, [documentId]);
+  }, [documentId, onPreviewError]);
 
   useEffect(() => {
     if (!open) return;
-    setState({ kind: 'loading' });
-    setDownloadError(null);
-    void mint();
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      setState({ kind: 'loading' });
+      setDownloadError(null);
+      void mint();
+    });
+    return () => { active = false; };
   }, [open, mint]);
 
   // Re-mint before the signed URL dies so a long-open preview doesn't break.
@@ -73,6 +89,7 @@ export default function DocumentPreviewDialog({
     setDownloadError(null);
     try {
       await downloadDocumentFile(documentId);
+      onDownloaded?.();
     } catch (err: unknown) {
       setDownloadError(
         err instanceof DocumentError ? documentErrorMessage(err) : 'Download failed. Try again.',
@@ -148,6 +165,8 @@ export default function DocumentPreviewDialog({
                 src={state.url}
                 title="Document preview"
                 sandbox=""
+                onLoad={onReady}
+                onError={previewFailed}
                 className="h-full w-full rounded-lg border border-zinc-200 dark:border-zinc-800"
               />
             ) : (
@@ -155,6 +174,8 @@ export default function DocumentPreviewDialog({
               <img
                 src={state.url}
                 alt="Document preview"
+                onLoad={onReady}
+                onError={previewFailed}
                 className="max-h-full max-w-full rounded-lg object-contain"
               />
             ))}

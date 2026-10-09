@@ -173,3 +173,47 @@ test('malformed persisted JSON is discarded and cannot trap the gate in loading'
     view.cleanup();
   }
 });
+
+test('storage read and removal exceptions still hydrate signed out', () => {
+  const read = jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked'); });
+  const remove = jest.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => { throw new Error('blocked'); });
+  try {
+    const modules = loadRealStoreAndGate();
+    expect(modules.useAuthStore.persist.hasHydrated()).toBe(true);
+    expect(modules.useAuthStore.getState().accessToken).toBeNull();
+    const view = renderGate(modules, 'agent');
+    expect(mockReplace).toHaveBeenCalledWith('/login?redirect=%2Fagent');
+    view.cleanup();
+  } finally { read.mockRestore(); remove.mockRestore(); }
+});
+
+test('storage write and removal exceptions do not break runtime login or logout', () => {
+  const write = jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked'); });
+  const remove = jest.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => { throw new Error('blocked'); });
+  try {
+    const modules = loadRealStoreAndGate();
+    modules.useAuthStore.getState().setAuth('access', 'refresh', agent);
+    expect(modules.useAuthStore.getState().isAuthenticated()).toBe(true);
+    modules.useAuthStore.getState().clearAuth();
+    expect(modules.useAuthStore.getState().isAuthenticated()).toBe(false);
+  } finally { write.mockRestore(); remove.mockRestore(); }
+});
+
+test('restricted localStorage getter cannot trap hydration', () => {
+  const descriptor = Object.getOwnPropertyDescriptor(window, 'localStorage');
+  Object.defineProperty(window, 'localStorage', { configurable: true, get: () => { throw new Error('restricted'); } });
+  try {
+    const modules = loadRealStoreAndGate();
+    expect(modules.useAuthStore.persist.hasHydrated()).toBe(true);
+    expect(modules.useAuthStore.getState().accessToken).toBeNull();
+  } finally { if (descriptor) Object.defineProperty(window, 'localStorage', descriptor); }
+});
+
+test('a structurally invalid persisted identity cannot authenticate', () => {
+  localStorage.setItem('lucy-auth', JSON.stringify({
+    state: { accessToken: 'access', refreshToken: 'refresh', user: { user_id: 'u', role: 'unknown' } }, version: 0,
+  }));
+  const modules = loadRealStoreAndGate();
+  expect(modules.useAuthStore.persist.hasHydrated()).toBe(true);
+  expect(modules.useAuthStore.getState().accessToken).toBeNull();
+});

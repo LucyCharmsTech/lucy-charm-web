@@ -1,9 +1,13 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { HomeValueReport } from '@/components/homeValue/HomeValueReport';
-import { createHomeValueFollowUp } from '@/services/homeValueService';
+import { createHomeValueFollowUp, fetchMyHomeValueVersionsPage, fetchMyHomeValueFollowUpsPage } from '@/services/homeValueService';
 import type { HomeValueRequestRead } from '@/types/homeValue';
 
-jest.mock('@/services/homeValueService', () => ({ createHomeValueFollowUp: jest.fn() }));
+jest.mock('@/services/homeValueService', () => ({
+  createHomeValueFollowUp: jest.fn(),
+  fetchMyHomeValueVersionsPage: jest.fn(),
+  fetchMyHomeValueFollowUpsPage: jest.fn(),
+}));
 
 /**
  * The published report — plan item 4.2.
@@ -166,4 +170,32 @@ test('homeowner follow-up rejects whitespace and submits trimmed valid text', as
   fireEvent.click(screen.getByRole('button', { name: 'Send request' }));
   await waitFor(() => expect(mockFollowUp).toHaveBeenCalledWith('r1', 'correction', 'Please correct the lot size.'));
   expect(screen.getByText(/Your request was sent to the review team/)).toBeTruthy();
+});
+
+test('homeowner histories load only when opened and can fetch a second page', async () => {
+  const versions = fetchMyHomeValueVersionsPage as jest.Mock;
+  const followUps = fetchMyHomeValueFollowUpsPage as jest.Mock;
+  versions.mockImplementation(async (_id: string, page: number) => ({
+    items: page === 1
+      ? Array.from({ length: 10 }, (_, index) => ({ id: `v${index}`, version_number: index + 1, published_at: '2026-09-01T00:00:00Z', value_low: null, value_high: null, published_evidence: [] }))
+      : [{ id: 'v10', version_number: 11, published_at: '2026-09-01T00:00:00Z', value_low: null, value_high: null, published_evidence: [] }],
+    total: 11, page, page_size: 10,
+  }));
+  followUps.mockImplementation(async (_id: string, page: number) => ({
+    items: page === 1
+      ? Array.from({ length: 10 }, (_, index) => ({ id: `f${index}`, request_type: 'correction', status: 'resolved', message: `Correction ${index}` }))
+      : [{ id: 'f10', request_type: 'correction', status: 'resolved', message: 'Correction 10' }],
+    total: 11, page, page_size: 10,
+  }));
+  render(<HomeValueReport request={makeRequest()} />);
+  expect(versions).not.toHaveBeenCalled();
+  expect(followUps).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'View report history' }));
+  await screen.findByRole('button', { name: 'Load more versions' });
+  fireEvent.click(screen.getByRole('button', { name: 'Load more versions' }));
+  await waitFor(() => expect(versions).toHaveBeenCalledWith('r1', 2));
+  fireEvent.click(screen.getByRole('button', { name: 'View follow-up history' }));
+  await screen.findByRole('button', { name: 'Load more follow-ups' });
+  fireEvent.click(screen.getByRole('button', { name: 'Load more follow-ups' }));
+  await waitFor(() => expect(followUps).toHaveBeenCalledWith('r1', 2));
 });

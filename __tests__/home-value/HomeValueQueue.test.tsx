@@ -7,9 +7,13 @@ import {
   deleteHomeValueEvidence,
   fetchHomeValueConsultationContext,
   fetchHomeValueEvidence,
+  fetchHomeValueEvidencePage,
   fetchHomeValueReviewSnapshot,
   fetchHomeValueReportVersions,
+  fetchHomeValueReportVersionsPage,
   fetchStaffHomeValueRequests,
+  fetchStaffHomeValueRequestsPage,
+  fetchStaffHomeValueRequest,
   generateHomeValueAiDraft,
   publishHomeValueReport,
   saveHomeValueDraft,
@@ -28,6 +32,8 @@ import type { HomeValueEvidence, HomeValueRequestStaff, HomeValueReviewSnapshot 
 
 jest.mock('@/services/homeValueService', () => ({
   fetchStaffHomeValueRequests: jest.fn(),
+  fetchStaffHomeValueRequestsPage: jest.fn(),
+  fetchStaffHomeValueRequest: jest.fn(),
   saveHomeValueDraft: jest.fn(),
   clearHomeValueCompliance: jest.fn(),
   publishHomeValueReport: jest.fn(),
@@ -35,8 +41,11 @@ jest.mock('@/services/homeValueService', () => ({
   fetchHomeValueConsultationContext: jest.fn(),
   generateHomeValueAiDraft: jest.fn(),
   fetchHomeValueEvidence: jest.fn(),
+  fetchHomeValueEvidencePage: jest.fn(),
+  fetchHomeValueFollowUpsPage: jest.fn(),
   fetchHomeValueReviewSnapshot: jest.fn(),
   fetchHomeValueReportVersions: jest.fn(),
+  fetchHomeValueReportVersionsPage: jest.fn(),
   createHomeValueEvidence: jest.fn(),
   updateHomeValueEvidence: jest.fn(),
   deleteHomeValueEvidence: jest.fn(),
@@ -60,6 +69,7 @@ const mockVersions = fetchHomeValueReportVersions as jest.MockedFunction<typeof 
 const mockCreateEvidence = createHomeValueEvidence as jest.MockedFunction<typeof createHomeValueEvidence>;
 const mockUpdateEvidence = updateHomeValueEvidence as jest.MockedFunction<typeof updateHomeValueEvidence>;
 const mockDeleteEvidence = deleteHomeValueEvidence as jest.MockedFunction<typeof deleteHomeValueEvidence>;
+const pageResult = <T,>(items: T[]) => ({ items, page: 1, page_size: 10, total: items.length });
 
 jest.mock('@/services/documentService', () => ({
   fetchDocuments: jest.fn().mockResolvedValue([]),
@@ -146,6 +156,10 @@ function makeSnapshot(overrides: Partial<HomeValueReviewSnapshot> = {}): HomeVal
 
 beforeEach(() => {
   jest.clearAllMocks();
+  (fetchStaffHomeValueRequestsPage as jest.Mock).mockImplementation(async () => pageResult(await mockList()));
+  (fetchStaffHomeValueRequest as jest.Mock).mockImplementation(async (id: string) => (await mockList()).find((item) => item.id === id));
+  (fetchHomeValueEvidencePage as jest.Mock).mockImplementation(async (id: string) => pageResult(await mockEvidence(id)));
+  (fetchHomeValueReportVersionsPage as jest.Mock).mockImplementation(async (id: string) => pageResult(await mockVersions(id)));
   window.history.replaceState({}, '', '/agent/home-value');
   mockList.mockResolvedValue([makeRequest()]);
   mockDraft.mockResolvedValue(makeRequest());
@@ -531,7 +545,8 @@ test('reviewer attachments load only when explicitly opened', async () => {
   render(<HomeValueQueue role="admin" />);
   await waitFor(() => screen.getByText('Other Avenue'));
   expect(mockDocuments).not.toHaveBeenCalled();
-  fireEvent.click(screen.getAllByRole('button', { name: 'View attachments' })[1]);
+  fireEvent.click(screen.getByRole('button', { name: 'Open review' }));
+  fireEvent.click(screen.getByRole('button', { name: 'View attachments' }));
   await waitFor(() => expect(mockDocuments).toHaveBeenCalledWith('home_value_request', 'r2'));
   expect(mockDocuments).toHaveBeenCalledTimes(1);
 });
@@ -650,4 +665,56 @@ test('a failed load is reported rather than looking empty', async () => {
   mockList.mockRejectedValue({ response: { data: { detail: 'Nope.' } } });
   render(<HomeValueQueue role="admin" />);
   await waitFor(() => expect(screen.getByRole('alert').textContent).toBe('Nope.'));
+});
+
+test('staff pagination requests page two and mounts only the selected editor', async () => {
+  const paged = fetchStaffHomeValueRequestsPage as jest.Mock;
+  paged.mockImplementation(async (page: number) => ({
+    items: page === 1
+      ? [makeRequest(), makeRequest({ id: 'r2', address: 'Other Avenue' })]
+      : [makeRequest({ id: 'r3', address: 'Later Avenue' })],
+    page, page_size: 10, total: 11,
+  }));
+  render(<HomeValueQueue role="admin" />);
+  await screen.findByText('Other Avenue');
+  expect(mockDocuments).not.toHaveBeenCalled();
+  expect(screen.getAllByRole('button', { name: 'Open review' })).toHaveLength(1);
+  expect((screen.getByRole('button', { name: 'Previous' }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+  await screen.findByText('Later Avenue');
+  expect(paged).toHaveBeenCalledWith(2);
+  expect((screen.getByRole('button', { name: 'Next' }) as HTMLButtonElement).disabled).toBe(true);
+});
+
+test('publication and follow-up histories load additional pages only on request', async () => {
+  mockList.mockResolvedValue([makeSavedRange({ status: 'report_ready' })]);
+  const versionPage = fetchHomeValueReportVersionsPage as jest.Mock;
+  const followUpPage = jest.requireMock('@/services/homeValueService').fetchHomeValueFollowUpsPage as jest.Mock;
+  const version = (number: number) => ({
+    id: `v${number}`, version_number: number, published_at: '2026-09-01T00:00:00Z',
+    report_outcome: 'estimated_range', value_low: null, value_high: null,
+    published_evidence: [], disclaimer: 'Human-reviewed opinion.',
+  });
+  versionPage.mockImplementation(async (_id: string, page: number) => ({
+    items: page === 1 ? Array.from({ length: 10 }, (_, index) => version(index + 1)) : [version(11)],
+    total: 11, page, page_size: 10,
+  }));
+  followUpPage.mockImplementation(async (_id: string, page: number) => ({
+    items: page === 1
+      ? Array.from({ length: 10 }, (_, index) => ({ id: `f${index}`, request_type: 'correction', status: 'resolved', message: `Message ${index}` }))
+      : [{ id: 'f10', request_type: 'correction', status: 'resolved', message: 'Message 10' }],
+    total: 11, page, page_size: 10,
+  }));
+  render(<HomeValueQueue role="admin" />);
+  await screen.findByText('12 Elm Street');
+  expect(versionPage).not.toHaveBeenCalled();
+  expect(followUpPage).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'View publication history' }));
+  await screen.findByRole('button', { name: 'Load more versions' });
+  fireEvent.click(screen.getByRole('button', { name: 'Load more versions' }));
+  await waitFor(() => expect(versionPage).toHaveBeenCalledWith('r1', 2));
+  fireEvent.click(screen.getByRole('button', { name: 'View homeowner follow-ups' }));
+  await screen.findByRole('button', { name: 'Load more follow-ups' });
+  fireEvent.click(screen.getByRole('button', { name: 'Load more follow-ups' }));
+  await waitFor(() => expect(followUpPage).toHaveBeenCalledWith('r1', 2));
 });
