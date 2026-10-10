@@ -7,6 +7,8 @@ import {
   DocumentError,
   documentErrorMessage,
   downloadDocumentFile,
+  downloadVerifiedDocumentFile,
+  fetchVerifiedDocumentBlob,
   mintPreviewUrl,
 } from '@/services/documentService';
 
@@ -24,22 +26,27 @@ type PreviewState =
 export default function DocumentPreviewDialog({
   documentId,
   filename,
+  contentType,
   open,
   onClose,
   onReady,
   onPreviewError,
   onDownloaded,
+  verifiedContent = false,
 }: {
   documentId: string;
   filename: string | null;
+  contentType?: string | null;
   open: boolean;
   onClose: () => void;
   onReady?: () => void;
   onPreviewError?: () => void;
   onDownloaded?: () => void;
+  verifiedContent?: boolean;
 }) {
   const [state, setState] = useState<PreviewState>({ kind: 'loading' });
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [pdfLoaded, setPdfLoaded] = useState(false);
   const previewFailed = useCallback(() => {
     onPreviewError?.();
     setState({ kind: 'error', message: 'Could not open the preview.' });
@@ -64,7 +71,7 @@ export default function DocumentPreviewDialog({
   }, [documentId, onPreviewError]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || verifiedContent) return;
     let active = true;
     queueMicrotask(() => {
       if (!active) return;
@@ -73,22 +80,62 @@ export default function DocumentPreviewDialog({
       void mint();
     });
     return () => { active = false; };
-  }, [open, mint]);
+  }, [open, mint, verifiedContent]);
+
+  useEffect(() => {
+    if (!open || !verifiedContent) return;
+    const controller = new AbortController();
+    let objectUrl: string | null = null;
+    queueMicrotask(() => {
+      if (controller.signal.aborted) return;
+      if (contentType && contentType !== 'application/pdf' && !contentType.startsWith('image/')) {
+        setState({ kind: 'unsupported' });
+        return;
+      }
+      setState({ kind: 'loading' });
+      setPdfLoaded(false);
+      setDownloadError(null);
+      void fetchVerifiedDocumentBlob(documentId, controller.signal)
+        .then((blob) => {
+          if (controller.signal.aborted) return;
+          if (blob.type !== 'application/pdf' && !blob.type.startsWith('image/')) {
+            setState({ kind: 'unsupported' });
+            return;
+          }
+          objectUrl = URL.createObjectURL(blob);
+          setState({ kind: 'ready', url: objectUrl, contentType: blob.type, expiresIn: 0 });
+        })
+        .catch((err: unknown) => {
+          if (controller.signal.aborted) return;
+          onPreviewError?.();
+          setState({ kind: 'error', message: err instanceof DocumentError
+            ? documentErrorMessage(err) : 'Could not open the preview.' });
+        });
+    });
+    return () => {
+      controller.abort();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [contentType, documentId, open, onPreviewError, verifiedContent]);
 
   // Re-mint before the signed URL dies so a long-open preview doesn't break.
   useEffect(() => {
-    if (!open || state.kind !== 'ready') return;
+    if (!open || verifiedContent || state.kind !== 'ready') return;
     const ms = Math.max(30_000, state.expiresIn * 1000 * 0.8);
     const timer = setTimeout(() => void mint(), ms);
     return () => clearTimeout(timer);
-  }, [open, state, mint]);
+  }, [open, state, mint, verifiedContent]);
 
   if (!open) return null;
 
   async function handleDownload() {
     setDownloadError(null);
     try {
-      await downloadDocumentFile(documentId);
+      if (verifiedContent) {
+        await downloadVerifiedDocumentFile(documentId, filename ?? 'document');
+      } else {
+        await downloadDocumentFile(documentId);
+      }
       onDownloaded?.();
     } catch (err: unknown) {
       setDownloadError(
@@ -165,7 +212,7 @@ export default function DocumentPreviewDialog({
                 src={state.url}
                 title="Document preview"
                 sandbox=""
-                onLoad={onReady}
+                onLoad={verifiedContent ? () => setPdfLoaded(true) : onReady}
                 onError={previewFailed}
                 className="h-full w-full rounded-lg border border-zinc-200 dark:border-zinc-800"
               />
@@ -180,6 +227,11 @@ export default function DocumentPreviewDialog({
               />
             ))}
         </div>
+        {verifiedContent && state.kind === 'ready' && state.contentType === 'application/pdf' && pdfLoaded && onReady && (
+          <button type="button" onClick={onReady} className="mx-4 mb-3 rounded-lg bg-primarycolor px-3 py-2 text-sm font-semibold text-primarycolor-foreground">
+            I can read this PDF
+          </button>
+        )}
       </div>
     </div>
   );

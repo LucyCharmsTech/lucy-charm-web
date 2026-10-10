@@ -5,7 +5,7 @@ import DocumentDetailPage from '@/app/documents/[id]/page';
 import { HomeValueReviewerAttachments } from '@/components/homeValue/HomeValueReviewerAttachments';
 import { fetchMyWorkPage } from '@/services/workItemService';
 import { fetchAgentsAdmin } from '@/services/superadminService';
-import { fetchDocument, fetchDocuments, reviewDocument } from '@/services/documentService';
+import { downloadVerifiedDocumentFile, fetchDocument, fetchDocuments, reviewDocument } from '@/services/documentService';
 import type { StaffDocument } from '@/types/api';
 
 jest.mock('next/navigation', () => ({ useParams: () => ({ id: 'doc-1' }) }));
@@ -16,6 +16,7 @@ jest.mock('@/services/superadminService', () => ({ fetchAgentsAdmin: jest.fn() }
 jest.mock('@/services/documentService', () => ({
   ...jest.requireActual('@/services/documentService'),
   fetchDocument: jest.fn(), fetchDocuments: jest.fn(), reviewDocument: jest.fn(), downloadDocumentFile: jest.fn(),
+  downloadVerifiedDocumentFile: jest.fn(),
 }));
 jest.mock('@/components/documents/DocumentHistoryList', () => function MockDocumentHistoryList() { return <div>Document history</div>; });
 jest.mock('@/components/documents/DocumentPreviewDialog', () => function MockDocumentPreviewDialog({ onReady, onPreviewError }: { onReady?: () => void; onPreviewError?: () => void }) {
@@ -50,6 +51,7 @@ beforeEach(() => {
   (fetchDocument as jest.Mock).mockResolvedValue(staffDocument);
   (fetchDocuments as jest.Mock).mockResolvedValue([staffDocument]);
   (reviewDocument as jest.Mock).mockResolvedValue({ ...staffDocument, status: 'accepted' });
+  (downloadVerifiedDocumentFile as jest.Mock).mockResolvedValue(undefined);
 });
 
 it('opens the exact document from Agent My Work', async () => {
@@ -83,6 +85,27 @@ it('a failed preview cannot unlock review, but a successful retry can', async ()
   expect((screen.getByRole('button', { name: 'Submit review' }) as HTMLButtonElement).disabled).toBe(true);
   fireEvent.click(screen.getByRole('button', { name: 'Preview ready' }));
   expect((screen.getByRole('button', { name: 'Submit review' }) as HTMLButtonElement).disabled).toBe(false);
+});
+
+it('failed verified download stays locked until a successful retry', async () => {
+  (downloadVerifiedDocumentFile as jest.Mock).mockRejectedValueOnce(new Error('expired')).mockResolvedValueOnce(undefined);
+  render(<DocumentDetailPage />);
+  await screen.findByText('Review document');
+  fireEvent.click(screen.getByRole('button', { name: 'Download' }));
+  await screen.findByText('Download failed. Try again.');
+  expect((screen.getByRole('button', { name: 'Submit review' }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Download' }));
+  await waitFor(() => expect((screen.getByRole('button', { name: 'Submit review' }) as HTMLButtonElement).disabled).toBe(false));
+});
+
+it('a new preview session does not reuse the previous viewed state', async () => {
+  render(<DocumentDetailPage />);
+  await screen.findByText('Review document');
+  fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Preview ready' }));
+  expect((screen.getByRole('button', { name: 'Submit review' }) as HTMLButtonElement).disabled).toBe(false);
+  fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
+  expect((screen.getByRole('button', { name: 'Submit review' }) as HTMLButtonElement).disabled).toBe(true);
 });
 
 it('opens the same review surface from the Home Value reviewer attachments', async () => {

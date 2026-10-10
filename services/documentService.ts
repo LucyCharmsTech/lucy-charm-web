@@ -209,6 +209,33 @@ export async function downloadDocumentFile(id: string): Promise<void> {
   anchor.remove();
 }
 
+/** Fetch the actual authorized bytes once; URL issuance is not proof of access. */
+export async function fetchVerifiedDocumentBlob(id: string, signal?: AbortSignal): Promise<Blob> {
+  const blob = await call(() => api.get<Blob>(`/documents/${id}/verified-content`, {
+    responseType: 'blob', signal,
+  }));
+  if (!(blob instanceof Blob) || blob.size < 1 || blob.size > DOCUMENT_MAX_BYTES) {
+    throw new DocumentError(503, 'Document content is unavailable.', 'storage_down');
+  }
+  return blob;
+}
+
+/** Download from bytes already received by this browser, without a second GET. */
+export async function downloadVerifiedDocumentFile(id: string, filename: string): Promise<void> {
+  const blob = await fetchVerifiedDocumentBlob(id);
+  const url = URL.createObjectURL(blob);
+  try {
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  } finally {
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Upload validation — mirrors the server for instant feedback; the server
 // stays the authority (it also checks magic bytes, which the browser cannot).

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeftIcon, ShieldCheckIcon } from 'lucide-react';
 
 import ClientDocumentCard from '@/components/documents/ClientDocumentCard';
@@ -12,7 +12,7 @@ import DocumentHistoryList from '@/components/documents/DocumentHistoryList';
 import {
   DocumentError,
   documentErrorMessage,
-  downloadDocumentFile,
+  downloadVerifiedDocumentFile,
   fetchDocument,
   isStaffDocument,
   reviewDocument,
@@ -98,7 +98,7 @@ export default function DocumentDetailPage() {
       {!loading && doc && (
         <div className="mt-6 space-y-4">
           {isStaffDocument(doc) ? (
-            <StaffDocumentReview document={doc} onChanged={() => void load()} />
+            <StaffDocumentReview key={doc.id} document={doc} onChanged={() => void load()} />
           ) : (
             <ClientDocumentCard
               document={doc}
@@ -122,8 +122,8 @@ export default function DocumentDetailPage() {
 function StaffDocumentReview({ document: doc, onChanged }: { document: StaffDocument; onChanged: () => void }) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [viewed, setViewed] = useState(false);
-  const markViewed = useCallback(() => setViewed(true), []);
-  const clearViewed = useCallback(() => setViewed(false), []);
+  const session = useRef(0);
+  const [reviewSession, setReviewSession] = useState(0);
   const [outcome, setOutcome] = useState<DocumentReviewOutcome>('accepted');
   const [clientReason, setClientReason] = useState('');
   const [reviewNote, setReviewNote] = useState('');
@@ -132,6 +132,13 @@ function StaffDocumentReview({ document: doc, onChanged }: { document: StaffDocu
   const reviewable = (doc.status === 'uploaded' || doc.status === 'under_review') &&
     (doc.scan_status === 'clean' || doc.scan_status === 'skipped');
   const reasonRequired = outcome !== 'accepted';
+  const renderedSession = reviewSession;
+  const markViewed = useCallback(() => {
+    if (session.current === renderedSession) setViewed(true);
+  }, [renderedSession]);
+  const clearViewed = useCallback(() => {
+    if (session.current === renderedSession) setViewed(false);
+  }, [renderedSession]);
 
   async function submitReview(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -161,8 +168,15 @@ function StaffDocumentReview({ document: doc, onChanged }: { document: StaffDocu
       <p className="mt-2 text-xs text-zinc-500">Security scan: {doc.scan_status.replace('_', ' ')}</p>
       <div className="mt-3 flex flex-wrap gap-3 text-sm">
         {doc.original_filename && <>
-          <button type="button" onClick={() => { setViewed(false); setPreviewOpen(true); }} className="font-semibold text-primarycolor-text">Preview</button>
-          <button type="button" onClick={() => void downloadDocumentFile(doc.id).then(() => setViewed(true)).catch(() => setError('Download failed. Try again.'))} className="font-semibold text-primarycolor-text">Download</button>
+          <button type="button" onClick={() => { const next = ++session.current; setReviewSession(next); setViewed(false); setPreviewOpen(true); }} className="font-semibold text-primarycolor-text">Preview</button>
+          <button type="button" onClick={() => {
+            const attempt = ++session.current;
+            setReviewSession(attempt);
+            setViewed(false);
+            void downloadVerifiedDocumentFile(doc.id, doc.original_filename ?? 'document')
+              .then(() => { if (session.current === attempt) setViewed(true); })
+              .catch(() => { if (session.current === attempt) setError('Download failed. Try again.'); });
+          }} className="font-semibold text-primarycolor-text">Download</button>
         </>}
       </div>
       {doc.client_reason && <p className="mt-2 text-sm">Reason shared with the client: {doc.client_reason}</p>}
@@ -185,7 +199,9 @@ function StaffDocumentReview({ document: doc, onChanged }: { document: StaffDocu
         <button type="submit" disabled={busy || !viewed || (reasonRequired && !clientReason.trim())} className="rounded bg-primarycolor px-3 py-2 text-sm font-semibold text-primarycolor-foreground disabled:opacity-50">{busy ? 'Saving…' : 'Submit review'}</button>
       </form>}
       {!reviewable && error && <p role="alert" className="mt-2 text-sm text-red-600">{error}</p>}
-      <DocumentPreviewDialog documentId={doc.id} filename={doc.original_filename} open={previewOpen} onClose={() => setPreviewOpen(false)} onReady={markViewed} onPreviewError={clearViewed} onDownloaded={markViewed} />
+      <DocumentPreviewDialog key={`${doc.id}:${reviewSession}`} documentId={doc.id} filename={doc.original_filename} contentType={doc.content_type}
+        open={previewOpen} verifiedContent onClose={() => setPreviewOpen(false)}
+        onReady={markViewed} onPreviewError={clearViewed} onDownloaded={markViewed} />
     </section>
   );
 }
