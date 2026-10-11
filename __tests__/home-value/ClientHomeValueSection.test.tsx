@@ -1,7 +1,15 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import ClientHomeValueSection from '@/components/profile/ClientHomeValueSection';
-import { fetchMyHomeValueRequests } from '@/services/homeValueService';
+import { fetchMyHomeValueRequests, fetchMyHomeValueRequestsPage } from '@/services/homeValueService';
 import type { HomeValueRequestRead } from '@/types/homeValue';
+
+const mockAttachmentMount = jest.fn();
+jest.mock('@/components/homeValue/HomeValueAttachments', () => ({
+  HomeValueAttachments: ({ requestId }: { requestId: string }) => {
+    mockAttachmentMount(requestId);
+    return <div>Attachments for {requestId}</div>;
+  },
+}));
 
 /**
  * Portal delivery — plan item 4.2's *"the report appears in the portal"*.
@@ -15,6 +23,8 @@ jest.mock('next/link', () => ({
 }));
 jest.mock('@/services/homeValueService', () => ({
   fetchMyHomeValueRequests: jest.fn(),
+  fetchMyHomeValueRequestsPage: jest.fn(),
+  fetchMyHomeValueRequest: jest.fn(),
 }));
 
 const mockFetch = fetchMyHomeValueRequests as jest.MockedFunction<
@@ -51,12 +61,19 @@ function makeRequest(o: Partial<HomeValueRequestRead> = {}): HomeValueRequestRea
   };
 }
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  (fetchMyHomeValueRequestsPage as jest.Mock).mockImplementation(async () => {
+    const items = await mockFetch();
+    return { items, total: items.length, page: 1, page_size: 10 };
+  });
+});
 
 test('a published report is rendered with its limitations', async () => {
   mockFetch.mockResolvedValue([makeRequest()]);
   render(<ClientHomeValueSection />);
 
+  fireEvent.click(await screen.findByRole('button', { name: 'Open report' }));
   await waitFor(() => expect(screen.getByText(/\$900,000/)).toBeTruthy());
   expect(screen.getByText(/Exterior viewing only/)).toBeTruthy();
 });
@@ -92,6 +109,7 @@ test('an unpublished request shows its status and no figures', async () => {
   ]);
   render(<ClientHomeValueSection />);
 
+  fireEvent.click(await screen.findByRole('button', { name: 'Open report' }));
   await waitFor(() => expect(screen.getByText(/preparing your valuation/i)).toBeTruthy());
   expect(document.body.textContent).not.toMatch(/\$[\d,]/);
 });
@@ -101,4 +119,24 @@ test('a failed load is reported rather than looking like no requests', async () 
   render(<ClientHomeValueSection />);
 
   await waitFor(() => expect(screen.getByRole('alert').textContent).toBe('Server error.'));
+});
+
+test('homeowner pagination keeps reports lazy and requests the selected page', async () => {
+  const paged = fetchMyHomeValueRequestsPage as jest.Mock;
+  paged.mockImplementation(async (page: number) => ({
+    items: [makeRequest({ id: `r${page}`, address: `Page ${page} Street` })],
+    total: 11, page, page_size: 10,
+  }));
+  render(<ClientHomeValueSection />);
+  await screen.findByText('Page 1 Street');
+  expect(screen.queryByText(/\$900,000/)).toBeNull();
+  expect(mockAttachmentMount).not.toHaveBeenCalled();
+  expect((screen.getByRole('button', { name: 'Previous' }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+  await screen.findByText('Page 2 Street');
+  expect(paged).toHaveBeenCalledWith(2);
+  expect((screen.getByRole('button', { name: 'Next' }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Open report' }));
+  await screen.findByText(/\$900,000/);
+  expect(mockAttachmentMount).toHaveBeenCalledWith('r2');
 });

@@ -1,6 +1,13 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { HomeValueReport } from '@/components/homeValue/HomeValueReport';
+import { createHomeValueFollowUp, fetchMyHomeValueVersionsPage, fetchMyHomeValueFollowUpsPage } from '@/services/homeValueService';
 import type { HomeValueRequestRead } from '@/types/homeValue';
+
+jest.mock('@/services/homeValueService', () => ({
+  createHomeValueFollowUp: jest.fn(),
+  fetchMyHomeValueVersionsPage: jest.fn(),
+  fetchMyHomeValueFollowUpsPage: jest.fn(),
+}));
 
 /**
  * The published report — plan item 4.2.
@@ -113,4 +120,82 @@ test('a pending report promises no date', () => {
 test('a unit is shown with the address when there is one', () => {
   render(<HomeValueReport request={makeRequest({ unit: '4B' })} />);
   expect(screen.getByText(/12 Elm Street, unit 4B/)).toBeTruthy();
+});
+
+test('a needs-more-information outcome never renders a stale range', () => {
+  render(<HomeValueReport request={makeRequest({
+    report_outcome: 'needs_more_information',
+    value_low: null,
+    value_high: null,
+    limitations: null,
+    outcome_explanation: 'Please provide renovation details before we can estimate.',
+  })} />);
+
+  expect(screen.getByText(/More information is needed/)).toBeTruthy();
+  expect(screen.getByText(/Please provide renovation details/)).toBeTruthy();
+  expect(document.body.textContent).not.toMatch(/\$900,000/);
+});
+
+test('published evidence shows only its reviewer-authored safe summary', () => {
+  render(<HomeValueReport request={makeRequest({
+    report_outcome: 'estimated_range',
+    published_evidence: [{ id: 'e1', summary: 'A similar nearby sale informed the review.' }],
+  })} />);
+  expect(screen.getByText('Supporting evidence')).toBeTruthy();
+  expect(screen.getByText(/similar nearby sale/)).toBeTruthy();
+});
+
+test('date-only as-of value does not shift in a negative UTC offset', () => {
+  const originalTimezone = process.env.TZ;
+  process.env.TZ = 'America/Los_Angeles';
+  try {
+    render(<HomeValueReport request={makeRequest({ report_as_of_date: '2026-09-25' })} />);
+    expect(screen.getByText(/As of 9\/25\/2026/)).toBeTruthy();
+  } finally {
+    if (originalTimezone === undefined) delete process.env.TZ;
+    else process.env.TZ = originalTimezone;
+  }
+});
+
+test('homeowner follow-up rejects whitespace and submits trimmed valid text', async () => {
+  const mockFollowUp = createHomeValueFollowUp as jest.MockedFunction<typeof createHomeValueFollowUp>;
+  mockFollowUp.mockResolvedValue({} as Awaited<ReturnType<typeof createHomeValueFollowUp>>);
+  render(<HomeValueReport request={makeRequest()} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Request a correction' }));
+  const input = screen.getByLabelText('How can we help?') as HTMLTextAreaElement;
+  expect(input.maxLength).toBe(12000);
+  fireEvent.change(input, { target: { value: '   ' } });
+  expect((screen.getByRole('button', { name: 'Send request' }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.change(input, { target: { value: '  Please correct the lot size.  ' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Send request' }));
+  await waitFor(() => expect(mockFollowUp).toHaveBeenCalledWith('r1', 'correction', 'Please correct the lot size.'));
+  expect(screen.getByText(/Your request was sent to the review team/)).toBeTruthy();
+});
+
+test('homeowner histories load only when opened and can fetch a second page', async () => {
+  const versions = fetchMyHomeValueVersionsPage as jest.Mock;
+  const followUps = fetchMyHomeValueFollowUpsPage as jest.Mock;
+  versions.mockImplementation(async (_id: string, page: number) => ({
+    items: page === 1
+      ? Array.from({ length: 10 }, (_, index) => ({ id: `v${index}`, version_number: index + 1, published_at: '2026-09-01T00:00:00Z', value_low: null, value_high: null, published_evidence: [] }))
+      : [{ id: 'v10', version_number: 11, published_at: '2026-09-01T00:00:00Z', value_low: null, value_high: null, published_evidence: [] }],
+    total: 11, page, page_size: 10,
+  }));
+  followUps.mockImplementation(async (_id: string, page: number) => ({
+    items: page === 1
+      ? Array.from({ length: 10 }, (_, index) => ({ id: `f${index}`, request_type: 'correction', status: 'resolved', message: `Correction ${index}` }))
+      : [{ id: 'f10', request_type: 'correction', status: 'resolved', message: 'Correction 10' }],
+    total: 11, page, page_size: 10,
+  }));
+  render(<HomeValueReport request={makeRequest()} />);
+  expect(versions).not.toHaveBeenCalled();
+  expect(followUps).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'View report history' }));
+  await screen.findByRole('button', { name: 'Load more versions' });
+  fireEvent.click(screen.getByRole('button', { name: 'Load more versions' }));
+  await waitFor(() => expect(versions).toHaveBeenCalledWith('r1', 2));
+  fireEvent.click(screen.getByRole('button', { name: 'View follow-up history' }));
+  await screen.findByRole('button', { name: 'Load more follow-ups' });
+  fireEvent.click(screen.getByRole('button', { name: 'Load more follow-ups' }));
+  await waitFor(() => expect(followUps).toHaveBeenCalledWith('r1', 2));
 });

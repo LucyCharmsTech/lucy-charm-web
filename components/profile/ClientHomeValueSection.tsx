@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { LoaderIcon } from 'lucide-react';
 import { HomeValueReport } from '@/components/homeValue/HomeValueReport';
+import { HomeValuePageControls } from '@/components/homeValue/HomeValuePageControls';
 import { serverMessage } from '@/lib/formStates';
-import { fetchMyHomeValueRequests } from '@/services/homeValueService';
+import { fetchMyHomeValueRequest, fetchMyHomeValueRequestsPage } from '@/services/homeValueService';
 import type { HomeValueRequestRead } from '@/types/homeValue';
 
 /**
@@ -27,13 +28,18 @@ import type { HomeValueRequestRead } from '@/types/homeValue';
  */
 export default function ClientHomeValueSection() {
   const [items, setItems] = useState<HomeValueRequestRead[] | null>(null);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [openedId, setOpenedId] = useState<string | null>(null);
+  const [focusedItem, setFocusedItem] = useState<HomeValueRequestRead | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const requestedId = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('home_value');
 
   useEffect(() => {
     let active = true;
-    fetchMyHomeValueRequests()
-      .then((rows) => {
-        if (active) setItems(rows);
+    fetchMyHomeValueRequestsPage(page)
+      .then((result) => {
+        if (active) { setItems(result.items); setTotal(result.total); }
       })
       .catch((err: unknown) => {
         if (!active) return;
@@ -43,7 +49,18 @@ export default function ClientHomeValueSection() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [page]);
+
+  useEffect(() => {
+    if (!requestedId || items === null) return;
+    const inPage = items.find((item) => item.id === requestedId);
+    if (inPage) return;
+    let active = true;
+    fetchMyHomeValueRequest(requestedId)
+      .then((item) => { if (active) setFocusedItem(item); })
+      .catch(() => { if (active) setFocusedItem(null); });
+    return () => { active = false; };
+  }, [requestedId, items]);
 
   if (items === null) {
     return (
@@ -68,7 +85,12 @@ export default function ClientHomeValueSection() {
 
   // Nothing to show, and nothing worth saying. A person who has never asked
   // for a valuation does not need a card telling them so on every visit.
-  if (items.length === 0 && !error) return null;
+  if (items.length === 0 && !error && !focusedItem) return null;
+
+  const focused = requestedId
+    ? items.find((item) => item.id === requestedId) ?? (focusedItem?.id === requestedId ? focusedItem : null)
+    : null;
+  const visibleItems = focused ? [focused] : items;
 
   return (
     <section id="home-value" aria-labelledby="home-value-heading">
@@ -86,10 +108,21 @@ export default function ClientHomeValueSection() {
       ) : (
         <>
           <div className="mt-3 space-y-4">
-            {items.map((request) => (
-              <HomeValueReport key={request.id} request={request} />
+            {visibleItems.map((request) => (
+              <div key={request.id}>
+                {openedId === request.id || focused?.id === request.id ? (
+                  <HomeValueReport request={request} />
+                ) : (
+                  <div className="rounded-xl border border-zinc-200 p-4 text-sm dark:border-zinc-800">
+                    <p className="font-semibold">{request.address}</p>
+                    <p>{request.status.replaceAll('_', ' ')}</p>
+                    <button type="button" className="mt-2 font-semibold text-primarycolor-text" onClick={() => setOpenedId(request.id)}>Open report</button>
+                  </div>
+                )}
+              </div>
             ))}
           </div>
+          {!focused && <HomeValuePageControls page={page} total={total} pageSize={10} onPage={(next) => { setOpenedId(null); setItems(null); setPage(next); }} />}
           <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">
             Want a valuation on another property?{' '}
             <Link href="/home-value" className="underline hover:no-underline">

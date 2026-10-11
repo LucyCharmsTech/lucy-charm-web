@@ -840,13 +840,15 @@ export type DocumentCategory =
   | 'identity' // the only one in use at launch
   | 'proof_of_funds'
   | 'pre_approval'
+  | 'property_photo'
+  | 'supporting_property_document'
   | 'other';
 
 export type DocumentVisibility = 'client_visible' | 'internal_only';
 export type DocumentScanStatus =
   'pending' | 'clean' | 'infected' | 'error' | 'skipped';
 export type DocumentResourceType =
-  'showing_request' | 'user' | 'seller_transaction';
+  'showing_request' | 'user' | 'seller_transaction' | 'home_value_request';
 export type DocumentReviewOutcome =
   'accepted' | 'rejected' | 'replacement_needed';
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import {
   fetchMyWorkPage,
   fetchWorkItemHistoryPage,
@@ -127,7 +128,7 @@ export default function AdminWorkPage() {
             {items.map((item) => (
               <Fragment key={item.id}>
                 <tr key={item.id}>
-                  <td className="px-4 py-3"><p className="font-medium text-zinc-900 dark:text-zinc-50">{item.title}</p><p className="text-xs capitalize text-zinc-500">{item.queue} · {item.priority}</p></td>
+                  <td className="px-4 py-3"><p className="font-medium text-zinc-900 dark:text-zinc-50">{item.title}</p><p className="text-xs capitalize text-zinc-500">{item.queue} · {item.priority}</p>{item.source_type === 'document' && <Link href={`/documents/${encodeURIComponent(item.source_id)}`} className="text-xs font-semibold text-primarycolor-text hover:underline">Open context</Link>}</td>
                   <td className="px-4 py-3 capitalize">{item.status.replace('_', ' ')}</td>
                   <td className="px-4 py-3"><p className="mb-1 text-xs text-zinc-500">{agentName(item.owner_user_id)}</p><select value={owner[item.id] ?? ''} onChange={(event) => setOwner((current) => ({ ...current, [item.id]: event.target.value }))} className="w-44 rounded border border-zinc-300 bg-white p-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"><option value="">Choose staff…</option>{agents.map((agent) => <option key={agent.user_id} value={agent.user_id}>{agent.name}</option>)}</select></td>
                   <td className="px-4 py-3"><p className="mb-1 text-xs text-zinc-500">{item.due_at ? new Date(item.due_at).toLocaleString() : 'Not scheduled'}</p><input type="datetime-local" value={deadline[item.id] ?? ''} onChange={(event) => setDeadline((current) => ({ ...current, [item.id]: event.target.value }))} className="rounded border border-zinc-300 bg-white p-2 text-sm dark:border-zinc-700 dark:bg-zinc-900" /></td>
