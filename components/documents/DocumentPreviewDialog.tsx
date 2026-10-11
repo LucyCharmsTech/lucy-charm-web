@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { DownloadIcon, XIcon } from 'lucide-react';
+import PdfCanvasPreview from './PdfCanvasPreview';
 
 import {
   DocumentError,
@@ -14,14 +15,14 @@ import {
 
 type PreviewState =
   | { kind: 'loading' }
-  | { kind: 'ready'; url: string; contentType: string; expiresIn: number }
+  | { kind: 'ready'; documentId: string; url?: string; blob?: Blob; contentType: string; expiresIn: number }
   | { kind: 'unsupported' }
   | { kind: 'error'; message: string };
 
 /**
- * In-browser preview over a short-lived signed URL. The URL is a bearer
- * credential: it lives only in this component's state, is re-minted before it
- * expires, and is never cached or rendered into a shareable surface.
+ * Homeowner previews start from a short-lived signed URL; staff previews use
+ * authenticated verified bytes. Signed URLs stay in component state only and
+ * are never cached or rendered into a shareable surface.
  */
 export default function DocumentPreviewDialog({
   documentId,
@@ -47,16 +48,24 @@ export default function DocumentPreviewDialog({
   const [state, setState] = useState<PreviewState>({ kind: 'loading' });
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [pdfLoaded, setPdfLoaded] = useState(false);
+  const [retryNonce, setRetryNonce] = useState(0);
+  const requestId = useRef(0);
+  const invalidateRequest = useCallback(() => { requestId.current++; }, []);
   const previewFailed = useCallback(() => {
+    setPdfLoaded(false);
     onPreviewError?.();
-    setState({ kind: 'error', message: 'Could not open the preview.' });
+    setState({ kind: 'error', message: 'Could not render the preview. You can retry or download the document.' });
   }, [onPreviewError]);
 
   const mint = useCallback(async () => {
+    const currentRequest = ++requestId.current;
     try {
       const { url, content_type, expires_in } = await mintPreviewUrl(documentId);
-      setState({ kind: 'ready', url, contentType: content_type, expiresIn: expires_in });
+      if (currentRequest === requestId.current) {
+        setState({ kind: 'ready', documentId, url, contentType: content_type, expiresIn: expires_in });
+      }
     } catch (err: unknown) {
+      if (currentRequest !== requestId.current) return;
       if (err instanceof DocumentError && err.code === 'not_previewable') {
         // Not an error to the user — offer the download instead.
         setState({ kind: 'unsupported' });
@@ -76,11 +85,12 @@ export default function DocumentPreviewDialog({
     queueMicrotask(() => {
       if (!active) return;
       setState({ kind: 'loading' });
+      setPdfLoaded(false);
       setDownloadError(null);
       void mint();
     });
-    return () => { active = false; };
-  }, [open, mint, verifiedContent]);
+    return () => { active = false; invalidateRequest(); };
+  }, [open, mint, verifiedContent, invalidateRequest]);
 
   useEffect(() => {
     if (!open || !verifiedContent) return;
@@ -102,8 +112,12 @@ export default function DocumentPreviewDialog({
             setState({ kind: 'unsupported' });
             return;
           }
-          objectUrl = URL.createObjectURL(blob);
-          setState({ kind: 'ready', url: objectUrl, contentType: blob.type, expiresIn: 0 });
+          if (blob.type === 'application/pdf') {
+            setState({ kind: 'ready', documentId, blob, contentType: blob.type, expiresIn: 0 });
+          } else {
+            objectUrl = URL.createObjectURL(blob);
+            setState({ kind: 'ready', documentId, url: objectUrl, contentType: blob.type, expiresIn: 0 });
+          }
         })
         .catch((err: unknown) => {
           if (controller.signal.aborted) return;
@@ -116,15 +130,36 @@ export default function DocumentPreviewDialog({
       controller.abort();
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [contentType, documentId, open, onPreviewError, verifiedContent]);
+  }, [contentType, documentId, open, onPreviewError, retryNonce, verifiedContent]);
 
-  // Re-mint before the signed URL dies so a long-open preview doesn't break.
+  // Images still display the signed URL directly, so re-mint it before expiry.
+  // PDF.js fetches the full PDF once; page navigation no longer needs the URL.
   useEffect(() => {
-    if (!open || verifiedContent || state.kind !== 'ready') return;
+    if (!open || verifiedContent || state.kind !== 'ready' || state.blob || state.contentType === 'application/pdf') return;
     const ms = Math.max(30_000, state.expiresIn * 1000 * 0.8);
     const timer = setTimeout(() => void mint(), ms);
     return () => clearTimeout(timer);
   }, [open, state, mint, verifiedContent]);
+
+  const pdfFailed = useCallback(() => {
+    // Signed S3 URLs may not permit PDF.js cross-origin fetches. The existing
+    // authenticated endpoint applies the same document authorization, scan and
+    // byte-size gates before returning content; use it only on signed-URL failure.
+    if (verifiedContent || state.kind !== 'ready' || state.blob) {
+      previewFailed();
+      return;
+    }
+    const currentRequest = ++requestId.current;
+    setState({ kind: 'loading' });
+    setPdfLoaded(false);
+    void fetchVerifiedDocumentBlob(documentId)
+      .then((blob) => {
+        if (currentRequest !== requestId.current) return;
+        if (blob.type !== 'application/pdf') throw new Error('Not a PDF');
+        setState({ kind: 'ready', documentId, blob, contentType: blob.type, expiresIn: 0 });
+      })
+      .catch(() => { if (currentRequest === requestId.current) previewFailed(); });
+  }, [documentId, previewFailed, state, verifiedContent]);
 
   if (!open) return null;
 
@@ -202,24 +237,31 @@ export default function DocumentPreviewDialog({
             </div>
           )}
           {state.kind === 'error' && (
-            <p className="text-sm text-red-600 dark:text-red-400" role="alert">
-              {state.message}
-            </p>
+            <div className="text-center">
+              <p className="text-sm text-red-600 dark:text-red-400" role="alert">{state.message}</p>
+              <button type="button" onClick={() => {
+                setPdfLoaded(false);
+                setState({ kind: 'loading' });
+                if (verifiedContent) setRetryNonce((n) => n + 1);
+                else void mint();
+              }} className="mt-3 rounded-lg bg-primarycolor px-4 py-2 text-sm font-semibold text-primarycolor-foreground">
+                Retry preview
+              </button>
+            </div>
           )}
-          {state.kind === 'ready' &&
+          {state.kind === 'ready' && state.documentId === documentId &&
             (state.contentType === 'application/pdf' ? (
-              <iframe
-                src={state.url}
-                title="Document preview"
-                sandbox=""
-                onLoad={verifiedContent ? () => setPdfLoaded(true) : onReady}
-                onError={previewFailed}
-                className="h-full w-full rounded-lg border border-zinc-200 dark:border-zinc-800"
+              <PdfCanvasPreview
+                key={`${documentId}:${state.url ?? 'verified'}`}
+                url={state.url}
+                blob={state.blob}
+                onRendered={verifiedContent ? () => setPdfLoaded(true) : () => onReady?.()}
+                onError={pdfFailed}
               />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element -- signed, short-lived S3 URL; next/image would proxy and cache it
               <img
-                src={state.url}
+                src={state.url ?? ''}
                 alt="Document preview"
                 onLoad={onReady}
                 onError={previewFailed}
@@ -227,7 +269,7 @@ export default function DocumentPreviewDialog({
               />
             ))}
         </div>
-        {verifiedContent && state.kind === 'ready' && state.contentType === 'application/pdf' && pdfLoaded && onReady && (
+        {verifiedContent && state.kind === 'ready' && state.documentId === documentId && state.contentType === 'application/pdf' && pdfLoaded && onReady && (
           <button type="button" onClick={onReady} className="mx-4 mb-3 rounded-lg bg-primarycolor px-3 py-2 text-sm font-semibold text-primarycolor-foreground">
             I can read this PDF
           </button>
