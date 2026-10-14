@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ContactForm } from '@/components/contact/ContactForm';
 import { submitContactForm } from '@/services/leadCaptureService';
+import { setAnalyticsConsent } from '@/lib/analytics';
 
 /**
  * Control 2.9 requires every form to have "validation, loading, success,
@@ -74,6 +75,15 @@ test('shows the reference returned by the API on success', async () => {
   // The reference exists only because the record is saved before we answer.
   expect(screen.getByText('LC-8D6BA960F1DE')).toBeTruthy();
   expect(screen.getByText(/quote this/)).toBeTruthy();
+});
+
+test('declining optional analytics does not prevent an essential contact submission', async () => {
+  setAnalyticsConsent('declined');
+  render(<ContactForm />);
+  fillIn();
+  fireEvent.click(screen.getByRole('button', { name: 'Send message' }));
+  await waitFor(() => expect(screen.getByText('Your message has been received')).toBeTruthy());
+  expect(mockSubmit).toHaveBeenCalledTimes(1);
 });
 
 test('a seller topic is captured as a seller, not a buyer', async () => {

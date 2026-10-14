@@ -20,6 +20,7 @@ jest.mock('posthog-js', () => ({
   __esModule: true,
   default: { init: jest.fn(), capture: jest.fn(), identify: jest.fn() },
 }));
+jest.mock('@/lib/axios', () => ({ __esModule: true, default: { post: jest.fn().mockResolvedValue({}) } }));
 
 const mockCapture = posthog.capture as jest.Mock;
 const mockIdentify = posthog.identify as jest.Mock;
@@ -65,12 +66,12 @@ test.each([
 test('every event carries the audience segment', async () => {
   await enableTracking();
   setAnalyticsAudience('agent');
-  track('listing_viewed', { listing_id: 'abc-123' });
+  track('listing_viewed', { listing_id: 'a440ee2d-37e6-4ced-a5e1-78492873c225' });
 
   expect(mockCapture).toHaveBeenCalledWith('listing_viewed', {
     is_authenticated: true,
     user_role: 'agent',
-    listing_id: 'abc-123',
+    listing_id: 'a440ee2d-37e6-4ced-a5e1-78492873c225',
   });
 });
 
@@ -88,7 +89,7 @@ test('anonymous events are labelled as visitor', async () => {
 test('call sites can never leak PII through the audience segment', async () => {
   await enableTracking();
   setAnalyticsAudience('client');
-  track('showing_requested', { listing_id: 'abc' });
+  track('showing_requested', { listing_id: 'a440ee2d-37e6-4ced-a5e1-78492873c225' });
 
   const [, props] = mockCapture.mock.calls[0];
   const serialised = JSON.stringify(props);
@@ -100,7 +101,7 @@ test('call sites can never leak PII through the audience segment', async () => {
 test('we never identify a person in PostHog', async () => {
   await enableTracking();
   setAnalyticsAudience('superadmin');
-  track('search_performed', { city: 'Calgary' });
+  track('search_performed');
 
   expect(mockIdentify).not.toHaveBeenCalled();
 });
@@ -110,9 +111,14 @@ test('a call-site property can never overwrite the protected audience segment', 
   setAnalyticsAudience('client');
   // A caller passing these keys (by accident or otherwise) must not be able
   // to make an event lie about who sent it.
-  track('listing_viewed', { user_role: 'superadmin', is_authenticated: false });
+  track('listing_viewed', {
+    listing_id: 'a440ee2d-37e6-4ced-a5e1-78492873c225',
+    user_role: 'superadmin',
+    is_authenticated: false,
+  });
 
   expect(mockCapture).toHaveBeenCalledWith('listing_viewed', {
+    listing_id: 'a440ee2d-37e6-4ced-a5e1-78492873c225',
     is_authenticated: true,
     user_role: 'client',
   });

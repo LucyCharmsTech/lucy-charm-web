@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { LockIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,7 @@ import { submitHomeValueRequest } from '@/services/homeValueService';
 import { useAuthStore } from '@/stores/authStore';
 import type { HomeValueRequestBody } from '@/types/homeValue';
 import { PrivacyLink } from '@/components/common/PrivacyLink';
+import { useFormAbandonment } from '@/lib/useFormAbandonment';
 
 /**
  * Home Value intake — plan item 4.2, from Hamed's specification.
@@ -51,10 +52,14 @@ const EMPTY: Partial<HomeValueRequestBody> = {};
 const HOME_VALUE_PATH = '/home-value';
 
 export function HomeValueForm() {
+  const { markStarted, markSucceeded, markPaused, markResumed } = useFormAbandonment('home_value');
   const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
 
   const [step, setStep] = useState<Step>('form');
+  useEffect(() => {
+    if (accessToken) markResumed();
+  }, [accessToken, markResumed]);
 
   /*
    * Restore the saved draft without breaking server rendering.
@@ -110,6 +115,7 @@ export function HomeValueForm() {
     key: K,
     value: HomeValueRequestBody[K] | undefined,
   ) {
+    markStarted();
     setEdits((current) => {
       const next = { ...(restoredDraft ?? {}), ...current, [key]: value };
       // Persisted on every change rather than only at the sign-in step: the
@@ -135,6 +141,7 @@ export function HomeValueForm() {
     // The sign-in step is inserted here, not at the top of the page. Asking
     // someone to create an account before they have seen what they are filling
     // in is how a form gets abandoned on its first screen.
+    if (!accessToken) markPaused(); // Intentional sign-in handoff is not a lost form.
     setStep(accessToken ? 'confirm' : 'signin');
   }
 
@@ -144,6 +151,7 @@ export function HomeValueForm() {
       // The draft has served its purpose. Clearing it keeps a property's
       // details out of browser storage on a shared machine.
       clearHomeValueDraft();
+      markSucceeded();
       return {
         ok: true,
         status: created.status,
@@ -214,7 +222,7 @@ export function HomeValueForm() {
 
         <button
           type="button"
-          onClick={() => setStep('form')}
+          onClick={() => { markResumed(); setStep('form'); }}
           className="text-sm text-zinc-500 hover:text-zinc-800 dark:text-zinc-400"
         >
           Back to the form

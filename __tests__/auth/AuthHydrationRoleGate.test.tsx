@@ -128,6 +128,28 @@ test('persisted Super Admin session hydrates and mounts admin content', () => {
   }
 });
 
+test('MFA enrolment-only tokens survive a full reload without granting admin access', () => {
+  localStorage.setItem('lucy-auth', JSON.stringify({
+    state: { accessToken: 'enrolment-access', refreshToken: 'enrolment-refresh', user: null },
+    version: 0,
+  }));
+  mockPath = '/admin';
+  const modules = loadRealStoreAndGate();
+
+  expect(modules.useAuthStore.persist.hasHydrated()).toBe(true);
+  expect(modules.useAuthStore.getState().accessToken).toBe('enrolment-access');
+  expect(modules.useAuthStore.getState().refreshToken).toBe('enrolment-refresh');
+  expect(modules.useAuthStore.getState().user).toBeNull();
+
+  const view = renderGate(modules, 'superadmin');
+  try {
+    expect(view.container.querySelector('[data-testid="protected-content"]')).toBeNull();
+    expect(mockReplace).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
 test('hydrated wrong role retains the existing redirect and does not mount content', () => {
   persistedSession(agent);
   mockPath = '/admin';
@@ -216,4 +238,13 @@ test('a structurally invalid persisted identity cannot authenticate', () => {
   const modules = loadRealStoreAndGate();
   expect(modules.useAuthStore.persist.hasHydrated()).toBe(true);
   expect(modules.useAuthStore.getState().accessToken).toBeNull();
+});
+
+test('a persisted user without both tokens is discarded', () => {
+  localStorage.setItem('lucy-auth', JSON.stringify({
+    state: { accessToken: null, refreshToken: null, user: admin }, version: 0,
+  }));
+  const modules = loadRealStoreAndGate();
+  expect(modules.useAuthStore.getState().user).toBeNull();
+  expect(localStorage.getItem('lucy-auth')).toBeNull();
 });

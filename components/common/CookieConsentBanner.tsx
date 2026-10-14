@@ -10,9 +10,9 @@ import {
 import { PrivacyLink } from '@/components/common/PrivacyLink';
 
 /**
- * Cookie consent for visitor analytics (Task 17). Gates PostHog ONLY —
- * declining changes nothing about leads, showings, chat, or any feature.
- * The choice is sticky (localStorage); the banner never re-appears.
+ * Device-level optional analytics choice for PostHog and first-party browser
+ * events. Domain features remain available when declined. The banner closes
+ * after a choice; the privacy page retains the preference controls.
  */
 export default function CookieConsentBanner() {
   // `'unknown'` on the server keeps the banner out of prerendered HTML; the
@@ -37,8 +37,9 @@ export default function CookieConsentBanner() {
     >
       <div className="mx-auto flex max-w-4xl flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-zinc-700 dark:text-zinc-300">
-          We use cookies to understand how visitors use the site — pages viewed and features used.
-          No personal details are collected. You can decline and everything still works.
+          Optional analytics helps us understand pages viewed and features used.
+          It stays off unless you accept. You can decline or change your choice later;
+          necessary requests and feedback still work.
                 <PrivacyLink />
       </p>
         <div className="flex shrink-0 gap-2">

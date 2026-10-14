@@ -17,8 +17,19 @@ import type {
 
 const LONG_READ_MS = 60_000;
 
-export async function fetchSuperadminDashboard(): Promise<SuperadminDashboardSummary> {
+export type AnalyticsDashboardFilters = {
+  analytics_start?: string;
+  analytics_end?: string;
+  analytics_event_name?: string;
+  analytics_event_version?: number;
+  analytics_producer?: 'client' | 'server';
+};
+
+export async function fetchSuperadminDashboard(
+  filters: AnalyticsDashboardFilters = {},
+): Promise<SuperadminDashboardSummary> {
   const res = await api.get<SuperadminDashboardSummary>('/superadmin/insights/dashboard', {
+    params: filters,
     timeout: LONG_READ_MS,
   });
   return res.data;

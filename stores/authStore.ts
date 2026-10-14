@@ -92,7 +92,11 @@ export const useAuthStore = create<AuthState>()(
                   (state.user !== null && (!state.user || typeof state.user.user_id !== 'string' ||
                     !['client', 'agent', 'superadmin'].includes(state.user.role ?? ''))) ||
                   Boolean(state.accessToken) !== Boolean(state.refreshToken) ||
-                  Boolean(state.accessToken) !== Boolean(state.user)) {
+                  // Staff MFA enrolment deliberately persists a token pair
+                  // before /users/me is permitted to return a user. A reload
+                  // on /security must retain that limited session; a user
+                  // identity without a token pair is still invalid.
+                  (Boolean(state.user) && !state.accessToken)) {
                   throw new Error('Invalid saved authentication');
                 }
                 return value;

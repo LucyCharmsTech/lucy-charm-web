@@ -15,6 +15,7 @@ import {
 } from '@/services/leadCaptureService';
 import type { ContactFormReceipt } from '@/types/api';
 import { PrivacyLink } from '@/components/common/PrivacyLink';
+import { useFormAbandonment } from '@/lib/useFormAbandonment';
 
 /**
  * The public contact form.
@@ -37,6 +38,7 @@ import { PrivacyLink } from '@/components/common/PrivacyLink';
  * "Omit a fixed response-time promise for now".
  */
 export function ContactForm() {
+  const { markStarted, markSucceeded } = useFormAbandonment('contact_form');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -62,6 +64,7 @@ export function ContactForm() {
         message: message.trim(),
         lead_type: TOPIC_LEAD_TYPE[topic],
       });
+      markSucceeded();
       setReceipt(result);
     } catch (err: unknown) {
       // Nothing is cleared here. A 503 is retryable, and retyping the message
@@ -145,7 +148,7 @@ export function ContactForm() {
             maxLength={120}
             autoComplete="given-name"
             value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
+            onChange={(e) => { markStarted(); setFirstName(e.target.value); }}
           />
         </div>
         <div className="space-y-1.5">
@@ -159,7 +162,7 @@ export function ContactForm() {
             maxLength={120}
             autoComplete="family-name"
             value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
+            onChange={(e) => { markStarted(); setLastName(e.target.value); }}
           />
         </div>
       </div>
@@ -175,7 +178,7 @@ export function ContactForm() {
           required
           autoComplete="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => { markStarted(); setEmail(e.target.value); }}
         />
       </div>
 
@@ -190,7 +193,7 @@ export function ContactForm() {
           maxLength={64}
           autoComplete="tel"
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          onChange={(e) => { markStarted(); setPhone(e.target.value); }}
         />
       </div>
 
@@ -203,7 +206,7 @@ export function ContactForm() {
           name="topic"
           required
           value={topic}
-          onChange={(e) => setTopic(e.target.value as ContactTopic)}
+          onChange={(e) => { markStarted(); setTopic(e.target.value as ContactTopic); }}
           className="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
         >
           {CONTACT_TOPICS.map((option) => (
@@ -225,7 +228,7 @@ export function ContactForm() {
           rows={6}
           maxLength={8000}
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={(e) => { markStarted(); setMessage(e.target.value); }}
         />
       </div>
 

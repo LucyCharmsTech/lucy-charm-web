@@ -1,5 +1,5 @@
 /**
- * PostHog analytics — the single tracking module (Task 17, reduced scope).
+ * Consent-gated browser analytics: independent PostHog and first-party sinks.
  *
  * Rules encoded here, do not relax them:
  * - Nothing loads or sends until the visitor ACCEPTS the cookie banner. This
@@ -11,17 +11,21 @@
  * - Events carry NO PII — anonymous id + event name + safe context (listing id,
  *   city). Names, emails, scores, and chat text never go to PostHog; business
  *   truth stays in our own database.
- * - Every function is a safe no-op without consent, without a key, or on the
- *   server — a tracking failure must never break a product flow. This also
+ * - Every function is a safe no-op without consent or on the server; the
+ *   first-party sink still works without a PostHog key. Failures never break a product flow. This also
  *   covers storage: a browser with blocked/full localStorage must not throw
  *   out of the consent banner.
  */
 
 import type { PostHog } from 'posthog-js';
+import { isApprovedBrowserAnalyticsEvent } from '@/lib/analyticsContract';
+import { getOrCreateAnalyticsAnonymousId, registerAnalyticsAnonymousIdentity } from '@/lib/analyticsIdentity';
+import { analyticsRouteFamily } from '@/lib/analyticsRoutes';
+import api from '@/lib/axios';
 
 const CONSENT_KEY = 'lucy-analytics-consent';
 
-/** Loaded lazily by `initAnalytics()`; `track()` is a no-op until it lands. */
+/** Loaded lazily by `initAnalytics()`; the first-party sink is independent. */
 let posthogInstance: PostHog | null = null;
 
 /** Never throw out of a storage read — a locked-down browser reads as "no consent yet." */
@@ -33,13 +37,12 @@ function safeGetItem(key: string): string | null {
   }
 }
 
-/** Never throw out of a storage write — consent still applies for this session even if it can't persist. */
+/** Never throw out of a storage write; blocked storage fails closed for optional telemetry. */
 function safeSetItem(key: string, value: string): void {
   try {
     localStorage.setItem(key, value);
   } catch {
-    // Storage blocked or full. The in-memory choice for this page load still
-    // stands; it just won't survive a reload.
+    // Storage blocked or full. No persisted consent means no optional capture.
   }
 }
 
@@ -112,7 +115,12 @@ export function getConsentServerSnapshot(): 'unknown' {
 export function setAnalyticsConsent(consent: 'accepted' | 'declined'): void {
   if (typeof window === 'undefined') return;
   safeSetItem(CONSENT_KEY, consent);
-  if (consent === 'accepted') void initAnalytics();
+  if (consent === 'declined') {
+    try { posthogInstance?.opt_out_capturing(); } catch { /* Optional SDK failure. */ }
+  } else {
+    try { posthogInstance?.opt_in_capturing({ captureEventName: false }); } catch { /* Optional SDK failure. */ }
+    void initAnalytics();
+  }
   consentListeners.forEach((listener) => listener());
 }
 
@@ -125,8 +133,12 @@ export function setAnalyticsConsent(consent: 'accepted' | 'declined'): void {
  * init the SDK exactly once between them.
  */
 export function initAnalytics(): Promise<void> {
-  if (initialized || typeof window === 'undefined') return Promise.resolve();
+  if (typeof window === 'undefined') return Promise.resolve();
   if (getAnalyticsConsent() !== 'accepted') return Promise.resolve();
+  if (initialized) return Promise.resolve();
+  // This uses the same consent boundary as PostHog and is deliberately
+  // best-effort. It does not create browser identity when consent is absent.
+  void registerAnalyticsAnonymousIdentity();
   const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
   if (!key) return Promise.resolve();
 
@@ -141,11 +153,12 @@ async function loadAndInit(key: string): Promise<void> {
       api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com',
       autocapture: false,
       capture_pageview: false, // manual — App Router route changes, see trackPageview()
-      capture_pageleave: true,
+      capture_pageleave: false,
       persistence: 'localStorage',
     });
     posthogInstance = posthog;
     initialized = true;
+    if (getAnalyticsConsent() !== 'accepted') posthog.opt_out_capturing();
   } catch {
     // Analytics must never break the product — the SDK failing to load or
     // init just means tracking stays off. Clear the memo so a later call
@@ -155,19 +168,51 @@ async function loadAndInit(key: string): Promise<void> {
 }
 
 /**
- * Fire a named event. Safe no-op without consent/key/init.
+ * Fire a named event. Safe no-op without current consent.
  * Audience segment is merged in automatically and last, so a call-site
  * property can never overwrite it — call sites never pass it themselves.
  */
 export function track(event: string, properties?: Record<string, unknown>): void {
-  if (!initialized || !posthogInstance) return;
+  if (getAnalyticsConsent() !== 'accepted') return;
+  // These two fields are owned by this module.  Ignore any accidental caller
+  // values before validation so they remain protected rather than becoming an
+  // escape hatch around the event-property allowlist.
+  const eventProperties = { ...(properties ?? {}) };
+  delete eventProperties.is_authenticated;
+  delete eventProperties.user_role;
+  if (!isApprovedBrowserAnalyticsEvent(event, eventProperties)) return;
   try {
-    posthogInstance.capture(event, { ...properties, ...audience });
+    const anonymousId = getOrCreateAnalyticsAnonymousId();
+    const eventId = crypto.randomUUID();
+    const payload = {
+      event_id: eventId,
+      event_name: event,
+      event_version: 1,
+      properties: eventProperties,
+      ...(anonymousId ? { anonymous_id: anonymousId } : {}),
+    };
+    // A pagehide/unmount abandonment signal needs the browser's keepalive
+    // transport; ordinary events continue through the project's API client.
+    if (event === 'form_abandoned' && typeof fetch === 'function') {
+      const base = api.defaults?.baseURL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1';
+      void fetch(`${base.replace(/\/$/, '')}/analytics/events`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload), keepalive: true,
+      }).catch(() => { /* Optional analytics. */ });
+    } else {
+      void api.post('/analytics/events', payload).catch(() => { /* Optional analytics. */ });
+    }
+  } catch { /* First-party analytics is optional. */ }
+  try {
+    if (initialized && posthogInstance) {
+      posthogInstance.capture(event, { ...eventProperties, ...audience });
+    }
   } catch {
     // Analytics must never break the product.
   }
 }
 
 export function trackPageview(path: string): void {
-  track('$pageview', { $current_url: window.location.origin + path });
+  const family = analyticsRouteFamily(path);
+  if (family) track('$pageview', { $current_url: window.location.origin + family });
 }
