@@ -11,6 +11,7 @@ import { useAuthStore } from '@/stores/authStore';
 import RequestShowingIdUploadStep from '@/components/listings/detail/RequestShowingIdUploadStep';
 import { useListingChatSession } from '@/components/listings/detail/ListingChatSessionContext';
 import { track } from '@/lib/analytics';
+import { useFormAbandonment } from '@/lib/useFormAbandonment';
 import { submitShowingRequest } from '@/services/showingService';
 import {
   ConfirmSubmission,
@@ -45,6 +46,8 @@ const DURATIONS = [
 
 export default function RequestShowingModal({ open, listingId, listingTitle, onClose }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const { markStarted, markSucceeded, markAbandoned, reset } = useFormAbandonment('showing_request');
+  const wasOpen = useRef(false);
   const { user, accessToken } = useAuthStore(
     useShallow((s) => ({ user: s.user, accessToken: s.accessToken })),
   );
@@ -79,6 +82,8 @@ export default function RequestShowingModal({ open, listingId, listingTitle, onC
 
   // Sync dialog open state
   useEffect(() => {
+    if (open && !wasOpen.current) reset();
+    wasOpen.current = open;
     const el = dialogRef.current;
     if (!el) return;
     if (open) {
@@ -86,15 +91,15 @@ export default function RequestShowingModal({ open, listingId, listingTitle, onC
     } else if (el.open) {
       el.close();
     }
-  }, [open]);
+  }, [open, reset]);
 
   useEffect(() => {
     const el = dialogRef.current;
     if (!el) return;
-    const handleClose = () => onClose();
+    const handleClose = () => { markAbandoned(); onClose(); };
     el.addEventListener('close', handleClose);
     return () => el.removeEventListener('close', handleClose);
-  }, [onClose]);
+  }, [onClose, markAbandoned]);
 
   // Pre-fill when user changes (e.g. logs in while modal was open)
   useEffect(() => {
@@ -209,7 +214,8 @@ export default function RequestShowingModal({ open, listingId, listingTitle, onC
         ai_session_id: aiSessionId ?? undefined,
       });
       setSubmittedRequest(created);
-      track('showing_requested', { listing_id: listingId });
+      markSucceeded();
+      try { track('showing_requested', { listing_id: listingId }); } catch { /* Optional telemetry. */ }
       if (created.was_duplicate) {
         return {
           ok: true,
@@ -287,7 +293,7 @@ export default function RequestShowingModal({ open, listingId, listingTitle, onC
               onBack={() => setStep('form')}
             />
           ) : (
-            <form onSubmit={handleReview} className="space-y-5" noValidate>
+            <form onSubmit={handleReview} onChange={markStarted} className="space-y-5" noValidate>
               {/* Contact */}
               <fieldset className="space-y-3">
                 <legend className="text-xs font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
@@ -354,7 +360,7 @@ export default function RequestShowingModal({ open, listingId, listingTitle, onC
                     <button
                       key={t.value}
                       type="button"
-                      onClick={() => setShowingType(t.value)}
+                      onClick={() => { if (showingType !== t.value) markStarted(); setShowingType(t.value); }}
                       className={`rounded-full border px-4 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor ${
                         showingType === t.value
                           ? 'border-primarycolor bg-primarycolor/10 text-primarycolor-text'
@@ -423,7 +429,7 @@ export default function RequestShowingModal({ open, listingId, listingTitle, onC
                       <button
                         key={d.value}
                         type="button"
-                        onClick={() => setDuration(d.value)}
+                        onClick={() => { if (duration !== d.value) markStarted(); setDuration(d.value); }}
                         className={`rounded-full border px-3 py-1.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor ${
                           duration === d.value
                             ? 'border-primarycolor bg-primarycolor/10 text-primarycolor-text'

@@ -2,6 +2,8 @@
 
 import { usePathname } from 'next/navigation';
 import Footer from '@/components/Footer';
+import { ProductFeedbackPrompt } from '@/components/common/ProductFeedbackPrompt';
+import { feedbackContextForPath } from '@/lib/productFeedback';
 
 // The two consoles get no footer. They are working surfaces with their own
 // chrome, and the footer's job here is public disclosure — brokerage identity,
@@ -23,5 +25,6 @@ export default function SiteFooter() {
 
   if (inConsole) return null;
 
-  return <Footer />;
+  const context = feedbackContextForPath(pathname);
+  return <>{context && <ProductFeedbackPrompt key={context} context={context} />}<Footer /></>;
 }

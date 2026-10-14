@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { leadStageLabel } from '@/components/common/LeadStageSelect';
 import type {
   SuperadminDashboardSummary,
-  SuperadminFunnelStage,
   SuperadminNamedCount,
 } from '@/types/api';
 
@@ -39,15 +38,6 @@ function BarRow({ label, count, max }: { label: string; count: number; max: numb
   );
 }
 
-function funnelDropLabel(stages: SuperadminFunnelStage[], index: number): string {
-  if (index <= 0) return '';
-  const prev = stages[index - 1]?.count ?? 0;
-  const cur = stages[index]?.count ?? 0;
-  if (prev <= 0) return '';
-  const drop = Math.round((1 - cur / prev) * 100);
-  return `−${drop}% vs prior`;
-}
-
 export default function SuperadminDashboardView({ data }: { data: SuperadminDashboardSummary }) {
   const funnel = data.lead_funnel_by_stage;
   const maxFunnel = Math.max(...funnel.map((s) => s.count), 1);
@@ -56,9 +46,68 @@ export default function SuperadminDashboardView({ data }: { data: SuperadminDash
   const h = data.handoff_timing;
   const pipeline = data.pipeline;
   const maxPipeline = Math.max(...pipeline.by_stage.map((s) => s.count), 1);
+  const analytics = data.section13_analytics;
 
   return (
     <div className="space-y-10">
+      {analytics ? (
+        <section aria-labelledby="analytics-heading">
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+            <div>
+              <h2 id="analytics-heading" className="text-sm font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                Section 13 first-party analytics
+              </h2>
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                Selected date range. Browser signals, server events, and authoritative conversions remain distinct.
+              </p>
+            </div>
+            <span className={`rounded-full px-2 py-1 text-xs font-bold ${analytics.reconciliation_status === 'exact' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300' : 'bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-300'}`}>
+              Reconciliation: {analytics.reconciliation_status}
+            </span>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Events in selected range</h3>
+              {analytics.event_metrics.length === 0 ? <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">No matching first-party events.</p> : (
+                <ul className="mt-3 space-y-2" role="list">
+                  {analytics.event_metrics.map((metric) => (
+                    <li key={`${metric.event_name}:${metric.event_version}:${metric.producer}`} className="flex items-center justify-between gap-3 text-sm">
+                      <span className="min-w-0 truncate text-zinc-700 dark:text-zinc-200" title={metric.event_name}>
+                        {metric.event_name} v{metric.event_version}{' '}
+                        <span className="text-xs text-zinc-500">{metric.producer === 'client' ? 'browser signal' : metric.authoritative_conversion ? 'authoritative conversion' : 'server event'}</span>
+                      </span>
+                      <span className="shrink-0 font-bold tabular-nums">{metric.count}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Authoritative conversion reconciliation (selected date range)</h3>
+              <div className="mt-3 space-y-3">
+                {analytics.reconciliation.map((row) => (
+                  <div key={row.conversion_type} className="rounded-lg bg-zinc-50 p-3 text-xs dark:bg-zinc-800/60">
+                    <div className="flex justify-between gap-2 font-semibold text-zinc-800 dark:text-zinc-100"><span>{row.conversion_type.replaceAll('_', ' ')}</span><span>{row.status}</span></div>
+                    <p className="mt-1 text-zinc-600 dark:text-zinc-300">{row.authoritative_records} authoritative · {row.matching_analytics_conversions} matched · {row.missing_analytics_conversions} missing · {row.orphan_analytics_conversions} orphan · {row.duplicate_conversion_anomalies} duplicate · {row.definition_mismatch_anomalies} definition mismatch</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <details className="mt-4 rounded-2xl border border-zinc-200 bg-white p-4 text-sm shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
+            <summary className="cursor-pointer font-semibold text-zinc-800 dark:text-zinc-100">Metric definitions</summary>
+            <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">{analytics.range_semantics}</p>
+            <ul className="mt-3 grid gap-2 md:grid-cols-2" role="list">
+              {analytics.definitions.map((definition) => (
+                <li key={definition.event_name} className="rounded bg-zinc-50 p-2 text-xs dark:bg-zinc-800/60">
+                  <strong>{definition.event_name} v{definition.version}</strong> — {definition.description}{' '}
+                  <span className="text-zinc-500">({definition.category}; {definition.producers.join('/')}; {definition.essential ? 'essential' : 'non-essential'}{definition.authoritative_conversion ? '; authoritative conversion' : ''})</span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        </section>
+      ) : null}
       {/* Current pipeline position of every lead — distinct from the event
           funnel below, which counts things that happened. */}
       <section aria-labelledby="pipeline-heading">
@@ -66,7 +115,7 @@ export default function SuperadminDashboardView({ data }: { data: SuperadminDash
           id="pipeline-heading"
           className="mb-3 text-sm font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
         >
-          Lead pipeline (current stage)
+          Lead pipeline (current snapshot)
         </h2>
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
@@ -125,6 +174,9 @@ export default function SuperadminDashboardView({ data }: { data: SuperadminDash
         >
           Agent handoff (escalations)
         </h2>
+        <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
+          All retained assigned escalations; deleted records are excluded.
+        </p>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
             <p className="text-xs font-semibold uppercase text-zinc-500 dark:text-zinc-400">
@@ -169,6 +221,9 @@ export default function SuperadminDashboardView({ data }: { data: SuperadminDash
           >
             Top user intents (from AI intent events)
           </h2>
+          <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
+            All retained non-deleted AI intent events.
+          </p>
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
             {data.top_intent_types.length === 0 ? (
               <p className="text-sm text-zinc-500 dark:text-zinc-400">No intent events yet.</p>
@@ -191,23 +246,17 @@ export default function SuperadminDashboardView({ data }: { data: SuperadminDash
           >
             Lead funnel (immutable events)
           </h2>
+          <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
+            All retained lead events, counted independently rather than as a linked cohort.
+          </p>
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
             <ul className="space-y-3" role="list">
-              {funnel.map((row, i) => {
-                const drop = funnelDropLabel(funnel, i);
-                return (
-                  <li key={row.event_type} className="space-y-0.5">
-                    <BarRow label={row.event_type} count={row.count} max={maxFunnel} />
-                    {drop ? (
-                      <p className="pl-0.5 text-[11px] text-zinc-500 dark:text-zinc-400">{drop}</p>
-                    ) : null}
-                  </li>
-                );
-              })}
+              {funnel.map((row) => (
+                <li key={row.event_type}>
+                  <BarRow label={row.event_type} count={row.count} max={maxFunnel} />
+                </li>
+              ))}
             </ul>
-            <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
-              Drop-off labels compare each stage to the prior stage in this ordered funnel.
-            </p>
           </div>
         </section>
       </div>
@@ -220,6 +269,9 @@ export default function SuperadminDashboardView({ data }: { data: SuperadminDash
           >
             CTA volume (key lead events)
           </h2>
+          <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
+            All retained qualifying lead events.
+          </p>
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
             {data.cta_event_counts.length === 0 ? (
               <p className="text-sm text-zinc-500 dark:text-zinc-400">No CTA events recorded.</p>
@@ -242,6 +294,9 @@ export default function SuperadminDashboardView({ data }: { data: SuperadminDash
           >
             Top listings by engagement
           </h2>
+          <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
+            All retained qualifying lead events linked to currently non-deleted leads.
+          </p>
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
             {data.top_listings_by_engagement.length === 0 ? (
               <p className="text-sm text-zinc-500 dark:text-zinc-400">

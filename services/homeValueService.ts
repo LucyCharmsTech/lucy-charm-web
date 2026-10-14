@@ -3,6 +3,8 @@
  */
 
 import api from '@/lib/axios';
+import { getAnalyticsConsent } from '@/lib/analytics';
+import { analyticsAttributionHeaders } from '@/lib/analyticsIdentity';
 import type { PaginatedItems } from '@/types/api';
 import type {
   HomeValueDraftBody,
@@ -24,7 +26,9 @@ import type {
 export async function submitHomeValueRequest(
   payload: HomeValueRequestBody,
 ): Promise<HomeValueRequestRead> {
-  const res = await api.post<HomeValueRequestRead>('/home_value/requests', payload);
+  const res = await api.post<HomeValueRequestRead>('/home_value/requests', payload, {
+    headers: analyticsAttributionHeaders(getAnalyticsConsent() === 'accepted'),
+  });
   return res.data;
 }
 

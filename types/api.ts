@@ -613,6 +613,47 @@ export type SuperadminPipelineSummary = {
   by_stage: SuperadminPipelineStage[];
 };
 
+export type AnalyticsEventDefinitionSummary = {
+  event_name: string;
+  description: string;
+  version: number;
+  category: string;
+  producers: string[];
+  essential: boolean;
+  authoritative_conversion: boolean;
+};
+
+export type AnalyticsEventMetric = {
+  event_name: string;
+  event_version: number;
+  producer: 'client' | 'server';
+  count: number;
+  category: string;
+  essential: boolean;
+  authoritative_conversion: boolean;
+};
+
+export type ConversionReconciliation = {
+  conversion_type: string;
+  authoritative_records: number;
+  matching_analytics_conversions: number;
+  missing_analytics_conversions: number;
+  orphan_analytics_conversions: number;
+  duplicate_conversion_anomalies: number;
+  definition_mismatch_anomalies: number;
+  status: 'exact' | 'discrepancies';
+};
+
+export type Section13AnalyticsSummary = {
+  range_start: string;
+  range_end: string;
+  range_semantics: string;
+  event_metrics: AnalyticsEventMetric[];
+  definitions: AnalyticsEventDefinitionSummary[];
+  reconciliation: ConversionReconciliation[];
+  reconciliation_status: 'exact' | 'discrepancies';
+};
+
 /** Mirrors SuperadminDashboardSummary from GET /superadmin/insights/dashboard */
 export type SuperadminDashboardSummary = {
   top_intent_types: SuperadminNamedCount[];
@@ -621,6 +662,8 @@ export type SuperadminDashboardSummary = {
   top_listings_by_engagement: SuperadminListingEngagement[];
   handoff_timing: SuperadminHandoffTiming;
   pipeline: SuperadminPipelineSummary;
+  /** Optional while API/web deployments roll independently. */
+  section13_analytics?: Section13AnalyticsSummary;
 };
 
 export type LeadInternalNoteRead = {

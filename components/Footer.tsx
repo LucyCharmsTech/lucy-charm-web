@@ -40,6 +40,7 @@ const COLUMNS: FooterColumn[] = [
       { label: 'About', href: '/about' },
       { label: 'Contact', href: '/contact' },
       { label: 'Privacy policy', href: '/privacy' },
+      { label: 'Analytics preferences', href: '/privacy#analytics-preferences' },
     ],
   },
 ];
