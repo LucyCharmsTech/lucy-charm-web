@@ -64,6 +64,30 @@ it('opens the exact document from Admin Daily Work', async () => {
   expect((await screen.findByRole('link', { name: 'Open context' })).getAttribute('href')).toBe('/documents/doc-1');
 });
 
+it('routes explicitly linked work assignment to the lead while retaining deadline controls', async () => {
+  (fetchMyWorkPage as jest.Mock).mockResolvedValueOnce({
+    page: 1, page_size: 25, total: 1,
+    items: [{ ...work, source_type: 'home_value_request', source_id: 'request-1', linked_lead_id: 'lead-1' }],
+  });
+  render(<AdminWorkPage />);
+  const leadLink = await screen.findByRole('link', { name: 'Change agent on lead' });
+  expect(leadLink.getAttribute('href')).toBe('/admin/inquiries/lead-1');
+  expect(screen.queryByRole('button', { name: 'Reassign' })).toBeNull();
+  expect(screen.queryByRole('combobox', { name: /Assign staff/ })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Set deadline' })).toBeTruthy();
+});
+
+it.each(['done', 'cancelled'])('offers historical correction only for %s linked work', async (status) => {
+  (fetchMyWorkPage as jest.Mock).mockResolvedValueOnce({
+    page: 1, page_size: 25, total: 1,
+    items: [{ ...work, status, source_type: 'home_value_request', source_id: 'request-1', linked_lead_id: 'lead-1' }],
+  });
+  render(<AdminWorkPage />);
+  expect(await screen.findByRole('button', { name: 'Correct history' })).toBeTruthy();
+  expect(screen.getByRole('combobox', { name: /Assign staff/ })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Reassign' })).toBeNull();
+});
+
 it('shows an authorized staff document and submits its real review action', async () => {
   render(<DocumentDetailPage />);
   expect(await screen.findByText('Review document')).toBeTruthy();

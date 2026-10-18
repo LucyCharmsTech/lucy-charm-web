@@ -776,6 +776,7 @@ export type ShowingRequest = {
   id: string;
   user_id: string | null;
   listing_id: string;
+  lead_id?: string | null;
   agent_id: string | null;
   first_name: string;
   last_name: string;

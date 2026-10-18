@@ -54,7 +54,7 @@ export async function fetchLeadById(leadId: string): Promise<LeadRead> {
 }
 
 /** Assign/reassign a lead to an agent — superadmin only on the backend. */
-export async function assignLeadAgent(leadId: string, agentId: string): Promise<LeadRead> {
+export async function assignLeadAgent(leadId: string, agentId: string | null): Promise<LeadRead> {
   const res = await api.patch<LeadRead>(`/leads/${leadId}`, { assigned_agent_id: agentId });
   return res.data;
 }
