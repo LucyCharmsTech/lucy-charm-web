@@ -12,6 +12,8 @@
 
 import api from '@/lib/axios';
 import { getOrCreateAnonymousSessionToken } from '@/lib/anonymousSession';
+import { getAnalyticsConsent } from '@/lib/analytics';
+import { analyticsAttributionHeaders } from '@/lib/analyticsIdentity';
 import { useAuthStore } from '@/stores/authStore';
 import { ANONYMOUS_SESSION_HEADER } from '@/types/api';
 import type { ContactFormSubmission, ContactFormReceipt } from '@/types/api';
@@ -52,7 +54,12 @@ export async function submitContactForm(
   const res = await api.post<ContactFormReceipt>(
     '/lead_capture/contact_form',
     submission,
-    { headers: anonRequestHeaders() },
+    {
+      headers: {
+        ...anonRequestHeaders(),
+        ...analyticsAttributionHeaders(getAnalyticsConsent() === 'accepted'),
+      },
+    },
   );
   return res.data;
 }

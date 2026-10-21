@@ -17,8 +17,19 @@ import type {
 
 const LONG_READ_MS = 60_000;
 
-export async function fetchSuperadminDashboard(): Promise<SuperadminDashboardSummary> {
+export type AnalyticsDashboardFilters = {
+  analytics_start?: string;
+  analytics_end?: string;
+  analytics_event_name?: string;
+  analytics_event_version?: number;
+  analytics_producer?: 'client' | 'server';
+};
+
+export async function fetchSuperadminDashboard(
+  filters: AnalyticsDashboardFilters = {},
+): Promise<SuperadminDashboardSummary> {
   const res = await api.get<SuperadminDashboardSummary>('/superadmin/insights/dashboard', {
+    params: filters,
     timeout: LONG_READ_MS,
   });
   return res.data;
@@ -43,7 +54,7 @@ export async function fetchLeadById(leadId: string): Promise<LeadRead> {
 }
 
 /** Assign/reassign a lead to an agent — superadmin only on the backend. */
-export async function assignLeadAgent(leadId: string, agentId: string): Promise<LeadRead> {
+export async function assignLeadAgent(leadId: string, agentId: string | null): Promise<LeadRead> {
   const res = await api.patch<LeadRead>(`/leads/${leadId}`, { assigned_agent_id: agentId });
   return res.data;
 }

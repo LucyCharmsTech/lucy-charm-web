@@ -11,11 +11,16 @@
  * claims them.
  */
 import { claimAnonymousSaves } from '@/services/savedListingsService';
+import { getAnalyticsConsent } from '@/lib/analytics';
+import { linkAnalyticsAnonymousIdentity } from '@/lib/analyticsIdentity';
 
 export async function completeSignIn(): Promise<void> {
   try {
     await claimAnonymousSaves();
   } catch {
     // Non-fatal by design. See above.
+  }
+  if (getAnalyticsConsent() === 'accepted') {
+    await linkAnalyticsAnonymousIdentity();
   }
 }

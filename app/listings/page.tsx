@@ -345,12 +345,12 @@ function ListingsPageContent() {
           setStatus={(value) => setFilters({ status: value })}
           country={filters.country}
           setCountry={(value) => {
-            if (value.trim()) track('search_performed', { country: value.trim() });
+            if (value.trim()) track('search_performed');
             setFilters({ country: value.trim().toLowerCase() });
           }}
           city={filters.city}
           setCity={(value) => {
-            if (value.trim()) track('search_performed', { city: value.trim() });
+            if (value.trim()) track('search_performed');
             setFilters({ city: value.trim() });
           }}
           propertyTypes={filters.propertyTypes}

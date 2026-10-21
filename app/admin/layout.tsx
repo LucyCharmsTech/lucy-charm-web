@@ -7,6 +7,7 @@ import PortalSidebar from '@/components/portals/PortalSidebar';
 const NAV_LINKS = [
   { href: '/admin', label: 'Overview' },
   { href: '/admin/insights', label: 'Insights' },
+  { href: '/admin/product-feedback', label: 'Product feedback' },
   { href: '/admin/inquiries', label: 'Inquiries' },
   { href: '/admin/chat-logs', label: 'Chat logs' },
   { href: '/admin/escalations', label: 'AI escalations' },

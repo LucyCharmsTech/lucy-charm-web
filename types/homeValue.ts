@@ -160,6 +160,7 @@ export type HomeValueRequestRead = {
  */
 export type HomeValueRequestStaff = HomeValueRequestRead & {
   user_id: string;
+  lead_id?: string | null;
   assigned_agent_id: string | null;
   internal_notes: string | null;
   compliance_cleared_at: string | null;

@@ -95,3 +95,11 @@ export async function fetchStaffAccounts(
   });
   return res.data;
 }
+
+/** Super Admin-only agent deactivation; linked active work returns to the central queue. */
+export async function deactivateAgentAccount(userId: string): Promise<{ detail: string; deactivated_at: string }> {
+  const res = await api.post<{ detail: string; deactivated_at: string }>(
+    `/users/${userId}/deactivate-agent`,
+  );
+  return res.data;
+}

@@ -1,6 +1,6 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { StaffAccountsList } from '@/components/admin/StaffAccountsList';
-import { fetchStaffAccounts } from '@/services/userService';
+import { deactivateAgentAccount, fetchStaffAccounts } from '@/services/userService';
 import type { StaffAccount } from '@/types/api';
 
 /**
@@ -12,10 +12,50 @@ import type { StaffAccount } from '@/types/api';
  * without a workable alternative behind it.
  */
 
-jest.mock('@/services/userService', () => ({ fetchStaffAccounts: jest.fn() }));
+jest.mock('@/services/userService', () => ({
+  fetchStaffAccounts: jest.fn(),
+  deactivateAgentAccount: jest.fn(),
+}));
 jest.mock('@/services/mfaService', () => ({ resetMfaForUser: jest.fn() }));
 
 const mockFetch = fetchStaffAccounts as jest.MockedFunction<typeof fetchStaffAccounts>;
+const mockDeactivate = deactivateAgentAccount as jest.MockedFunction<typeof deactivateAgentAccount>;
+
+test('Super Admin confirms agent deactivation and refreshes inactive status', async () => {
+  mockFetch
+    .mockResolvedValueOnce(page([account()]))
+    .mockResolvedValueOnce(page([account({ deactivated_at: '2026-10-19T00:00:00Z' })]));
+  mockDeactivate.mockResolvedValue({ detail: 'Deactivated', deactivated_at: '2026-10-19T00:00:00Z' });
+  render(<StaffAccountsList />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Deactivate agent' }));
+  expect(screen.getByText(/move their assigned leads and unfinished linked work to the central queue/i)).toBeTruthy();
+  expect(mockDeactivate).not.toHaveBeenCalled();
+  fireEvent.click(screen.getAllByRole('button', { name: 'Deactivate agent' })[1]);
+  await waitFor(() => expect(mockDeactivate).toHaveBeenCalledWith('u1'));
+  await waitFor(() => expect(screen.getByText('Account inactive')).toBeTruthy());
+  expect(screen.queryByRole('button', { name: 'Deactivate agent' })).toBeNull();
+});
+
+test('deactivation is unavailable for administrators or inactive agents', async () => {
+  mockFetch.mockResolvedValue(page([
+    account({ id: 'admin', role: 'superadmin' }),
+    account({ id: 'inactive', deactivated_at: '2026-10-19T00:00:00Z' }),
+  ]));
+  render(<StaffAccountsList />);
+  await screen.findByText('Account inactive');
+  expect(screen.queryByRole('button', { name: 'Deactivate agent' })).toBeNull();
+});
+
+test('failed deactivation reports an error without changing staff status', async () => {
+  mockFetch.mockResolvedValue(page([account()]));
+  mockDeactivate.mockRejectedValue(new Error('request failed'));
+  render(<StaffAccountsList />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Deactivate agent' }));
+  fireEvent.click(screen.getAllByRole('button', { name: 'Deactivate agent' })[1]);
+  await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy());
+  expect(screen.getByText('Two-step on')).toBeTruthy();
+  expect(mockFetch).toHaveBeenCalledTimes(1);
+});
 
 function account(overrides: Partial<StaffAccount> = {}): StaffAccount {
   return {

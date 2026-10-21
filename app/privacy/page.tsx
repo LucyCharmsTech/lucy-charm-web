@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ContentSection } from '@/components/content/ContentSection';
 import { PRIVACY_CONTENT, isPublished } from '@/content/siteContent';
 import { siteUrl } from '@/lib/siteUrl';
+import AnalyticsPreferences from '@/components/common/AnalyticsPreferences';
 
 /**
  * The privacy notice.
@@ -68,16 +69,17 @@ export default function PrivacyPage() {
             and we will answer directly.
           </p>
           {/*
-            The one thing worth saying without approval, because it is a
-            verifiable fact about this software rather than a policy claim: the
-            site runs no analytics unless the visitor agrees.
+            Describe the implemented optional browser boundary without
+            claiming that necessary first-party request records disappear.
           */}
           <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">
-            We do not run any visitor analytics unless you accept the cookie
-            notice, and you can decline it without losing any part of the site.
+            Optional browsing analytics runs only when you accept it. You can
+            decline or withdraw without losing access to the site; necessary
+            records are still created when you submit a request or feedback.
           </p>
         </>
       )}
+      <AnalyticsPreferences />
     </main>
   );
 }

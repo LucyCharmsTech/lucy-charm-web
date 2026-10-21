@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { LoaderIcon, ShieldAlertIcon, ShieldCheckIcon, ShieldOffIcon } from 'lucide-react';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { MfaAdminReset } from '@/components/security/MfaAdminReset';
 import { serverMessage } from '@/lib/formStates';
-import { fetchStaffAccounts } from '@/services/userService';
+import { deactivateAgentAccount, fetchStaffAccounts } from '@/services/userService';
 import type { StaffAccount } from '@/types/api';
 
 /**
@@ -146,6 +147,26 @@ function StaffRow({
 }) {
   const state = stateOf(account);
   const name = `${account.first_name} ${account.last_name}`.trim() || account.email;
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  async function deactivate() {
+    setBusy(true);
+    setError(null);
+    try {
+      await deactivateAgentAccount(account.id);
+      setConfirmOpen(false);
+      setSuccess(true);
+      onChanged();
+    } catch (err) {
+      setError(serverMessage(err, 'Could not deactivate this agent.'));
+      setConfirmOpen(false);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <li className="rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
@@ -197,6 +218,30 @@ function StaffRow({
           />
         </div>
       )}
+      {account.role === 'agent' && state !== 'inactive' && (
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={() => setConfirmOpen(true)}
+            disabled={busy}
+            className="rounded-lg border border-red-300 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950/30"
+          >
+            Deactivate agent
+          </button>
+          <ConfirmDialog
+            open={confirmOpen}
+            title={`Deactivate ${name}?`}
+            description="This will revoke the agent's access and move their assigned leads and unfinished linked work to the central queue. Completed work keeps its historical owner."
+            confirmLabel="Deactivate agent"
+            tone="danger"
+            busy={busy}
+            onConfirm={deactivate}
+            onCancel={() => { if (!busy) setConfirmOpen(false); }}
+          />
+        </div>
+      )}
+      {error && <p role="alert" className="mt-2 text-sm text-red-600">{error}</p>}
+      {success && <p role="status" className="mt-2 text-sm text-emerald-700">Agent deactivated. Staff list refreshed.</p>}
     </li>
   );
 }

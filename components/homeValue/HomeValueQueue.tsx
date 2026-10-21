@@ -442,6 +442,11 @@ function HomeValueQueueItem({
               Unassigned — in the central brokerage queue
             </p>
           )}
+          {role === 'admin' && item.lead_id && (
+            <Link href={`/admin/inquiries/${item.lead_id}`} className="mt-1 block text-xs font-semibold text-primarycolor-text hover:underline">
+              Change agent on linked lead
+            </Link>
+          )}
           {item.representation_review_status === 'required' && (role === 'admin' || item.assigned_agent_id) && (
             <div className="mt-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200">
               Another representative was reported. Review and acknowledge this neutral relationship status before any relationship-oriented follow-up.

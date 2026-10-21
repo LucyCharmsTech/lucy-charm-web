@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import {
   CheckCircleIcon,
   ClockIcon,
@@ -183,7 +184,12 @@ export default function AdminShowingsPage() {
                     <ShowingDateTime value={r.scheduled_at ?? r.proposed_scheduled_at ?? r.preferred_date} />
                 </td>
                 <td data-label="Assigned agent" className="block px-4 py-3 before:mb-1 before:block before:text-xs before:font-semibold before:uppercase before:tracking-wide before:text-zinc-500 before:content-[attr(data-label)] lg:table-cell lg:before:content-none">
-                  {['requested', 'being_arranged', 'awaiting_confirmation', 'reschedule_needed'].includes(r.status) ? (
+                  {r.lead_id ? (
+                    <div className="space-y-1 text-xs text-zinc-700 dark:text-zinc-300">
+                      <p>{agents.find((agent) => agent.id === r.agent_id)?.name ?? 'Unassigned'}</p>
+                      <Link href={`/admin/inquiries/${r.lead_id}`} className="font-semibold text-primarycolor-text hover:underline">Change agent on lead</Link>
+                    </div>
+                  ) : ['requested', 'being_arranged', 'awaiting_confirmation', 'reschedule_needed'].includes(r.status) ? (
                     <select
                       aria-label="Assign agent"
                       value={r.agent_id ?? ''}

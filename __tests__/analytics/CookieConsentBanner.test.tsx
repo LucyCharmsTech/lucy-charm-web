@@ -6,6 +6,10 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import CookieConsentBanner from '@/components/common/CookieConsentBanner';
 
+jest.mock('@/lib/analyticsIdentity', () => ({
+  registerAnalyticsAnonymousIdentity: jest.fn().mockResolvedValue(null),
+}));
+
 beforeEach(() => {
   localStorage.clear();
 });

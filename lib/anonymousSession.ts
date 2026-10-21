@@ -15,10 +15,16 @@ export function getOrCreateAnonymousSessionToken(): string {
   if (typeof window === 'undefined') {
     return '';
   }
-  let token = (localStorage.getItem(STORAGE_KEY) || '').trim();
-  if (token.length < MIN_LEN) {
-    token = crypto.randomUUID();
-    localStorage.setItem(STORAGE_KEY, token);
+  try {
+    let token = (localStorage.getItem(STORAGE_KEY) || '').trim();
+    if (token.length < MIN_LEN) {
+      token = crypto.randomUUID();
+      localStorage.setItem(STORAGE_KEY, token);
+    }
+    return token;
+  } catch {
+    // Analytics and anonymous correlation are optional. A privacy-hardened
+    // browser that blocks storage must still be able to use the product.
+    return '';
   }
-  return token;
 }

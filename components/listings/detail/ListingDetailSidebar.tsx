@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { CalendarIcon } from 'lucide-react';
 
 import type { ListingDetail } from '@/components/listings/listingDetailData';
@@ -18,11 +19,12 @@ type ListingDetailSidebarProps = {
 
 export default function ListingDetailSidebar({ listing }: ListingDetailSidebarProps) {
   const { open, openModal, closeModal } = useShowingRequestModal();
+  const hasBackendListing = isUuid(listing.id);
 
   return (
     <>
       <aside className="space-y-4 lg:sticky lg:top-4 lg:self-start">
-        {isUuid(listing.id) ? (
+        {hasBackendListing ? (
           <div className="rounded-xl border border-zinc-300/80 bg-white px-4 py-4 dark:border-zinc-600 dark:bg-zinc-900/30">
             <h2 className="text-[11px] font-bold uppercase tracking-widest text-zinc-800 dark:text-zinc-200">
               Save this home
@@ -66,23 +68,35 @@ export default function ListingDetailSidebar({ listing }: ListingDetailSidebarPr
 
         <ListingDetailAgentCard agent={listing.agent} idxAgent={listing.idxAgent} idxOffice={listing.idxOffice} />
 
-        {/* Book a showing CTA */}
-        <Button
-          type="button"
-          onClick={openModal}
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primarycolor text-sm font-semibold text-primarycolor-foreground shadow-md transition hover:bg-primarycolor/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
-        >
-          <CalendarIcon className="size-4" aria-hidden="true" />
-          Request a Showing
-        </Button>
+        {hasBackendListing ? (
+          <Button
+            type="button"
+            onClick={openModal}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primarycolor text-sm font-semibold text-primarycolor-foreground shadow-md transition hover:bg-primarycolor/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
+          >
+            <CalendarIcon className="size-4" aria-hidden="true" />
+            Request a Showing
+          </Button>
+        ) : (
+          <div className="rounded-xl border border-zinc-200 bg-white p-4 text-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <p className="text-zinc-600 dark:text-zinc-300">
+              This is a preview listing, so a showing cannot be requested for it.
+            </p>
+            <Link href="/listings" className="mt-2 inline-block font-semibold text-primarycolor-text hover:underline">
+              Browse available listings
+            </Link>
+          </div>
+        )}
       </aside>
 
-      <RequestShowingModal
-        open={open}
-        listingId={listing.id}
-        listingTitle={listing.title ?? listing.address}
-        onClose={closeModal}
-      />
+      {hasBackendListing && (
+        <RequestShowingModal
+          open={open}
+          listingId={listing.id}
+          listingTitle={listing.title ?? listing.address}
+          onClose={closeModal}
+        />
+      )}
     </>
   );
 }

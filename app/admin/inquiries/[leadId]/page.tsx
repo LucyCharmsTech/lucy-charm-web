@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ArrowLeftIcon } from 'lucide-react';
 import LeadNotesTagsPanel from '@/components/admin/LeadNotesTagsPanel';
@@ -16,6 +16,7 @@ import type { AgentProfile, LeadRead } from '@/types/api';
 
 export default function AdminLeadDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const leadId = typeof params.leadId === 'string' ? params.leadId : '';
   const [lead, setLead] = useState<LeadRead | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -44,8 +45,30 @@ export default function AdminLeadDetailPage() {
     try {
       const updated = await assignLeadAgent(lead.id, agentId);
       setLead(updated);
+      router.refresh();
     } catch (err: unknown) {
       setActionError(getApiErrorMessage(err, 'Could not assign the agent.'));
+    } finally {
+      setAssigning(false);
+    }
+  }
+
+  async function handleUnassign() {
+    if (!lead?.assigned_agent_id || !window.confirm('Return this lead and its unfinished linked work to the central queue?')) return;
+    setAssigning(true);
+    setActionError(null);
+    try {
+      const updated = await assignLeadAgent(lead.id, null);
+      setLead(updated);
+      router.refresh();
+      try {
+        setLead(await fetchLeadById(lead.id));
+      } catch {
+        // The assignment succeeded; retain its authoritative response if a
+        // follow-up read is briefly unavailable.
+      }
+    } catch (err: unknown) {
+      setActionError(getApiErrorMessage(err, 'Could not unassign the lead.'));
     } finally {
       setAssigning(false);
     }
@@ -164,6 +187,12 @@ export default function AdminLeadDetailPage() {
                 </option>
               ))}
             </select>
+            {lead.assigned_agent_id && (
+              <button type="button" disabled={assigning} onClick={() => void handleUnassign()}
+                className="ml-2 rounded-xl border border-zinc-300 px-3 py-1.5 text-sm font-medium disabled:opacity-50 dark:border-zinc-700">
+                {assigning ? 'Updating…' : 'Unassign to central queue'}
+              </button>
+            )}
           </div>
         </div>
       </section>

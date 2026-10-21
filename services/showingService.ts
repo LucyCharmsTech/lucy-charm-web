@@ -5,6 +5,8 @@
  */
 
 import api from '@/lib/axios';
+import { getAnalyticsConsent } from '@/lib/analytics';
+import { analyticsAttributionHeaders } from '@/lib/analyticsIdentity';
 import type {
   ShowingRequest,
   ShowingRequestCreate,
@@ -17,7 +19,9 @@ import type {
 export async function submitShowingRequest(
   payload: ShowingRequestCreate,
 ): Promise<ShowingRequest> {
-  const res = await api.post<ShowingRequest>('/showing_requests/', payload);
+  const res = await api.post<ShowingRequest>('/showing_requests/', payload, {
+    headers: analyticsAttributionHeaders(getAnalyticsConsent() === 'accepted'),
+  });
   return res.data;
 }
 

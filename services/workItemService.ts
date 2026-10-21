@@ -4,6 +4,7 @@ export type WorkItem = {
   id: string;
   source_type: string;
   source_id: string;
+  linked_lead_id?: string | null;
   queue: string;
   title: string;
   priority: 'normal' | 'high' | 'urgent';
