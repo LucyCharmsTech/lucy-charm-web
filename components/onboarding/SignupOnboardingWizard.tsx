@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { track } from '@/lib/analytics';
 import { getApiErrorMessage } from '@/lib/apiErrorMessage';
+import { afterOnboardingDestination } from '@/lib/sellerReturn';
 import { fetchCurrentUserOnboarding, submitCurrentUserOnboarding } from '@/services/userService';
 import { useAuthStore } from '@/stores/authStore';
 import type {
@@ -86,7 +87,7 @@ export default function SignupOnboardingWizard() {
       .then((result) => {
         if (!active) return;
         if (result.completed) {
-          router.replace('/');
+          router.replace(afterOnboardingDestination());
         }
       })
       .catch(() => {
@@ -210,7 +211,7 @@ export default function SignupOnboardingWizard() {
         wants_listing_alerts: wantsListingAlerts,
       });
       track('signup_completed');
-      router.replace('/');
+      router.replace(afterOnboardingDestination());
     } catch (err: unknown) {
       setError(
         getApiErrorMessage(err, 'Could not save your onboarding profile. Please try again.'),

@@ -346,7 +346,9 @@ export function EmailCodeAuthForm({
             <p className="text-xs text-zinc-600 dark:text-zinc-400">
               Check the spelling, or{' '}
               <Link
-                href="/register"
+                href={redirectPath?.startsWith('/') && !redirectPath.startsWith('//')
+                  ? `/register?redirect=${encodeURIComponent(redirectPath)}`
+                  : '/register'}
                 className="font-semibold text-primarycolor-text hover:underline"
               >
                 create an account

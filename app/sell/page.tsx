@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
+import { rememberSellerReturn } from '@/lib/sellerReturn';
 import { useAuthStore } from '@/stores/authStore';
 import {
   createSellerJourney,
@@ -65,7 +67,7 @@ const EMPTY_REVIEW_FORM: ReviewForm = {
   request: '',
 };
 
-const STEP_LABELS = ['Your home', 'Your situation', 'Your snapshot'];
+const STEP_LABELS = ['Your home', 'Your situation', 'Your next steps'];
 
 const PROPERTY_SCHEMA = z.object({
   address: z
@@ -148,15 +150,30 @@ export default function SellPage() {
   const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
   const [step, setStep] = useState<ExplorerStep>('welcome');
-  const [journey, setJourney] = useState<SellerJourney | null>(null);
+  const [loadedJourney, setLoadedJourney] = useState<{
+    value: SellerJourney;
+    accessToken: string | null;
+  } | null>(null);
+  const journey = loadedJourney?.accessToken === accessToken ? loadedJourney.value : null;
   const [form, setForm] = useState<ExplorerForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [signInPrompt, setSignInPrompt] = useState<'save' | 'plan' | null>(null);
+  const visibleStep: ExplorerStep | 'loading' =
+    loadedJourney !== null && loadedJourney.accessToken !== accessToken
+      ? 'loading'
+      : step;
 
   function applyJourney(nextJourney: SellerJourney) {
-    setJourney(nextJourney);
+    setLoadedJourney({ value: nextJourney, accessToken });
     setForm(formFromJourney(nextJourney));
+  }
+
+  function signInToSaveJourney() {
+    rememberSellerReturn();
+    setSignInPrompt(null);
+    router.push('/login?redirect=%2Fsell');
   }
 
   useEffect(() => {
@@ -165,18 +182,31 @@ export default function SellPage() {
       return;
     }
 
+    let active = true;
     const load = async () => {
       try {
         const restored = accessToken
           ? await resumeSellerJourney(journeyId)
           : await fetchSellerJourney(journeyId);
-        applyJourney(restored);
+        if (!active) return;
+        setLoadedJourney({ value: restored, accessToken });
+        setForm(formFromJourney(restored));
         setStep(stepFromStatus(restored.status));
       } catch {
-        // A new session should still be able to start a private exploration.
+        if (active) {
+          setLoadedJourney(null);
+          setForm(EMPTY_FORM);
+          setStep('welcome');
+          setSignInPrompt(null);
+          setNotice(null);
+          setError(accessToken
+            ? 'We could not attach that saved exploration to this account. Start a new exploration below, or sign in with the account that owns it.'
+            : 'We could not open that saved exploration on this device. Start a new exploration below or try again later.');
+        }
       }
     };
     void load();
+    return () => { active = false; };
   }, [accessToken]);
 
   function setField<K extends keyof ExplorerForm>(
@@ -267,16 +297,45 @@ export default function SellPage() {
     setSaving(true);
     setError(null);
     try {
+      let current = journey;
+      if (step === 'property') {
+        const validated = PROPERTY_SCHEMA.safeParse(form);
+        if (!validated.success) {
+          setError(validated.error.issues[0]?.message ?? 'Check your property details.');
+          return;
+        }
+        current = await updateSellerJourney(journey.id, {
+          property_address: validated.data.address,
+          property_unit: validated.data.unit || undefined,
+          property_city: validated.data.city,
+          property_region: validated.data.region,
+          property_postal_code: validated.data.postalCode.toUpperCase(),
+          relationship_to_property: validated.data.relationship,
+        });
+      } else if (step === 'situation') {
+        const validated = SITUATION_SCHEMA.safeParse(form);
+        if (!validated.success) {
+          setError(validated.error.issues[0]?.message ?? 'Check your situation details.');
+          return;
+        }
+        current = await updateSellerJourney(journey.id, {
+          selling_timeline: validated.data.timeline || undefined,
+          property_condition: validated.data.condition || undefined,
+          renovations_upgrades: validated.data.renovations || undefined,
+          primary_goal: validated.data.goal || undefined,
+        });
+      }
       const saved =
-        journey.status === 'paused_inactive'
-          ? journey
-          : await updateSellerJourneyStatus(journey.id, 'paused_inactive');
+        current.status === 'paused_inactive'
+          ? current
+          : await updateSellerJourneyStatus(current.id, 'paused_inactive');
       applyJourney(saved);
       setNotice(
         accessToken
           ? 'Your private exploration is saved. You can return whenever you are ready.'
           : 'Your progress is saved on this device. Sign in to attach it to your account and continue on another device.',
       );
+      if (!accessToken) setSignInPrompt('save');
     } catch (saveError) {
       setError(errorMessage(saveError));
     } finally {
@@ -286,6 +345,14 @@ export default function SellPage() {
 
   async function requestReview(payload: ProfessionalReviewCreateRequest) {
     if (!journey) return;
+    if (!accessToken || !user) {
+      setSignInPrompt('plan');
+      return;
+    }
+    if (journey.user_id !== user.user_id) {
+      setError('Your exploration must be attached to this account before you can request a Seller Plan. Please refresh and try again.');
+      return;
+    }
     setSaving(true);
     setError(null);
     setNotice(null);
@@ -294,8 +361,8 @@ export default function SellPage() {
       applyJourney({ ...journey, status: 'professional_review_requested' });
       setNotice(
         review.assigned_agent_id
-          ? 'Your request was routed to your Lucy Charms agent. This is not a listing or representation agreement.'
-          : 'Your request was sent to the Lucy Charms seller team. This is not a listing or representation agreement.',
+          ? 'Your free Seller Plan request was routed to your Lucy Charms agent. Staff will prepare the plan; this is not a listing or representation agreement.'
+          : 'Your free Seller Plan request was sent to the Lucy Charms seller team. Staff will prepare the plan; this is not a listing or representation agreement.',
       );
     } catch (requestError) {
       setError(errorMessage(requestError));
@@ -305,7 +372,7 @@ export default function SellPage() {
   }
 
   const currentProgress =
-    step === 'property' ? 0 : step === 'situation' ? 1 : 2;
+    visibleStep === 'property' ? 0 : visibleStep === 'situation' ? 1 : 2;
   return (
     <main className="min-h-screen bg-zinc-50 px-4 py-8 dark:bg-zinc-950 sm:px-6 sm:py-12">
       <div className="mx-auto max-w-3xl">
@@ -328,7 +395,7 @@ export default function SellPage() {
           )}
         </div>
 
-        {step !== 'welcome' && (
+        {visibleStep !== 'welcome' && visibleStep !== 'loading' && (
           <ol
             aria-label="Seller Explorer progress"
             className="mt-8 grid grid-cols-3 gap-2 text-center text-xs font-semibold sm:text-sm"
@@ -352,6 +419,11 @@ export default function SellPage() {
         )}
 
         <section className="mt-8 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-8">
+          {visibleStep === 'loading' && (
+            <p role="status" className="text-sm text-zinc-600 dark:text-zinc-300">
+              Checking your saved exploration…
+            </p>
+          )}
           {error && (
             <div
               role="alert"
@@ -368,7 +440,7 @@ export default function SellPage() {
               {notice}
               {!accessToken && (
                 <button
-                  onClick={() => router.push('/login?redirect=/sell')}
+                  onClick={signInToSaveJourney}
                   className="ml-2 font-semibold text-primarycolor-text hover:underline"
                 >
                   Sign in to save to your account
@@ -377,7 +449,7 @@ export default function SellPage() {
             </div>
           )}
 
-          {step === 'welcome' && (
+          {visibleStep === 'welcome' && (
             <Welcome
               onStart={() => setStep('property')}
               onResume={() =>
@@ -386,7 +458,7 @@ export default function SellPage() {
               hasJourney={Boolean(journey)}
             />
           )}
-          {step === 'property' && (
+          {visibleStep === 'property' && (
             <PropertyStep
               form={form}
               saving={saving}
@@ -394,7 +466,7 @@ export default function SellPage() {
               onSubmit={saveProperty}
             />
           )}
-          {step === 'situation' && (
+          {visibleStep === 'situation' && (
             <SituationStep
               form={form}
               saving={saving}
@@ -403,17 +475,30 @@ export default function SellPage() {
               onBack={() => setStep('property')}
             />
           )}
-          {step === 'plan' && (
+          {visibleStep === 'plan' && (
             <PlanStep
               journey={journey}
               form={form}
               saving={saving}
               onReview={requestReview}
+              onSignInRequired={() => setSignInPrompt('plan')}
               user={user}
               onEdit={() => setStep('property')}
             />
           )}
         </section>
+        <ConfirmDialog
+          open={signInPrompt !== null}
+          layout="mobile-sheet"
+          title={signInPrompt === 'plan' ? 'Sign in to request your free Seller Plan' : 'Save your progress to your account'}
+          description={signInPrompt === 'plan'
+            ? 'Your answers will stay on this device while you sign in. Return here to review and explicitly submit your request. Signing in does not start representation.'
+            : 'You can keep exploring on this device without signing in. Sign in to attach your saved answers to your account.'}
+          confirmLabel="Sign in"
+          cancelLabel="Keep exploring"
+          onCancel={() => setSignInPrompt(null)}
+          onConfirm={signInToSaveJourney}
+        />
       </div>
     </main>
   );
@@ -651,7 +736,7 @@ function SituationStep({
           disabled={saving}
           className="rounded-full bg-primarycolor px-5 py-3 text-sm font-semibold text-primarycolor-foreground hover:bg-primarycolor/90 disabled:opacity-50"
         >
-          {saving ? 'Saving…' : 'View my seller snapshot'}
+          {saving ? 'Saving…' : 'See my next steps'}
         </button>
       </div>
     </form>
@@ -663,6 +748,7 @@ function PlanStep({
   form,
   saving,
   onReview,
+  onSignInRequired,
   user,
   onEdit,
 }: {
@@ -670,6 +756,7 @@ function PlanStep({
   form: ExplorerForm;
   saving: boolean;
   onReview: (payload: ProfessionalReviewCreateRequest) => Promise<void>;
+  onSignInRequired: () => void;
   user: AuthUser | null;
   onEdit: () => void;
 }) {
@@ -678,11 +765,11 @@ function PlanStep({
     ? 'A Home Value result is connected to this exploration.'
     : journey?.home_value_request_id
       ? 'Your Home Value request is in progress.'
-      : 'A Home Value request or result will appear here when it is available through Lucycharms’ existing Home Value workflow.';
+      : 'A personalized valuation is optional. Staff will include property-specific advice only after the required review and compliance checks.';
   return (
     <div>
       <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primarycolor-text">
-        Your Seller Snapshot
+        Your Seller Explorer summary
       </p>
       <h1 className="mt-2 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
         A calm place to start
@@ -763,32 +850,19 @@ function PlanStep({
             <>
               <button
                 type="button"
-                disabled={saving}
-                onClick={() => setHandoffOpen(true)}
+                disabled={saving || (Boolean(user) && journey.user_id !== user?.user_id)}
+                onClick={() => {
+                  if (!user) onSignInRequired();
+                  else setHandoffOpen(true);
+                }}
                 className="rounded-full bg-primarycolor px-5 py-3 text-sm font-semibold text-primarycolor-foreground hover:bg-primarycolor/90 disabled:opacity-50"
               >
-                Request Professional Review
-              </button>
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() => setHandoffOpen(true)}
-                className="rounded-full px-5 py-3 text-sm font-semibold text-primarycolor-text hover:bg-primarycolor/5"
-              >
-                I’m Ready to Discuss Selling
-              </button>
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() => setHandoffOpen(true)}
-                className="rounded-full px-5 py-3 text-sm font-semibold text-primarycolor-text hover:bg-primarycolor/5"
-              >
-                Talk to a Professional
+                Request a free Seller Plan
               </button>
             </>
           ) : journey?.status === 'professional_review_requested' ? (
             <p className="text-sm font-semibold text-primarycolor-text">
-              Professional review requested — the seller team will follow up.
+              Seller Plan requested — the seller team will follow up.
             </p>
           ) : null}
           <button
@@ -862,10 +936,10 @@ function ProfessionalReviewForm({
       className="mt-7 rounded-xl border border-primarycolor/20 bg-primarycolor/5 p-4 sm:p-5"
     >
       <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primarycolor-text">
-        Professional Review
+        Free Seller Plan
       </p>
       <h2 className="mt-2 text-xl font-bold text-zinc-900 dark:text-zinc-50">
-        Talk with the seller team
+        Request a staff-prepared Seller Plan
       </h2>
       <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
         We already have the property at {journey.property_address},{' '}
@@ -930,7 +1004,7 @@ function ProfessionalReviewForm({
           disabled={saving}
           className="rounded-full bg-primarycolor px-5 py-3 text-sm font-semibold text-primarycolor-foreground hover:bg-primarycolor/90 disabled:opacity-50"
         >
-          {saving ? 'Sending…' : 'Request Professional Review'}
+          {saving ? 'Sending…' : 'Submit Seller Plan request'}
         </button>
       </div>
     </form>
