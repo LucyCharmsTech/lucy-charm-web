@@ -12,6 +12,24 @@ import type {
   PaginatedItems,
 } from '@/types/api';
 
+/** The fields this admin form sends to POST /listings/. The API supplies active/mock defaults. */
+export type PublicListingCreate = {
+  title: string;
+  price: number;
+  agent_id: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+  country: 'CA';
+  unit?: string;
+};
+
+export async function createPublicListing(payload: PublicListingCreate): Promise<ApiListing> {
+  const response = await api.post<ApiListing>('/listings/', payload);
+  return response.data;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------

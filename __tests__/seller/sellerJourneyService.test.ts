@@ -9,9 +9,11 @@ jest.mock('@/lib/anonymousSession', () => ({
 }));
 
 import {
+  clearStoredSellerJourneyId,
   createSellerJourney,
   fetchSellerJourney,
   getStoredSellerJourneyId,
+  listMySellerJourneys,
   requestProfessionalReview,
   resumeSellerJourney,
   updateSellerJourney,
@@ -68,6 +70,22 @@ test('creates an anonymous journey, persists its id, and sends the anonymous own
     },
   );
   expect(getStoredSellerJourneyId()).toBe('journey-1');
+});
+
+test('discovers account-owned journeys without a browser journey key or anonymous token', async () => {
+  const page = { items: [], total: 0, page: 1, page_size: 20 };
+  mockApi.get.mockResolvedValueOnce({ data: page });
+  await expect(listMySellerJourneys()).resolves.toEqual(page);
+  expect(mockApi.get).toHaveBeenCalledWith('/seller-journeys/mine', {
+    params: { page: 1, size: 20 },
+  });
+  expect(getStoredSellerJourneyId()).toBeNull();
+});
+
+test('starting another property clears only the device journey pointer', () => {
+  localStorage.setItem('lucy-seller-explorer-journey-id', 'journey-1');
+  clearStoredSellerJourneyId();
+  expect(getStoredSellerJourneyId()).toBeNull();
 });
 
 test('uses the same anonymous token to retrieve, update, and attach a journey after login', async () => {

@@ -324,6 +324,19 @@ export type StaffAccount = {
   created_at: string;
 };
 
+/** Fields exposed by Super Admin GET /users/ for explicit account selection.
+ * The API does not expose email verification or deleted status here.
+ */
+export type SellerAccountLookup = {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: UserRole;
+  is_anonymous: boolean;
+  deactivated_at: string | null;
+};
+
 /** Mirrors `users.role` in lucy-charm-api */
 export type UserRole = 'client' | 'agent' | 'superadmin';
 
@@ -1278,6 +1291,21 @@ export type SellerJourney = {
   home_value_request_id: string | null;
   home_value_result_id: string | null;
   status: SellerJourneyStatus;
+  professional_review_status?: SellerLeadStatus | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SellerJourneySummary = {
+  id: string;
+  property_id: string;
+  property_address: string;
+  property_unit: string | null;
+  property_city: string;
+  property_region: string;
+  status: SellerJourneyStatus;
+  professional_review_status: SellerLeadStatus | null;
+  seller_plan_status?: 'requested' | 'in_preparation' | 'needs_information' | 'ready' | null;
   created_at: string;
   updated_at: string;
 };
@@ -1327,7 +1355,9 @@ export type ProfessionalReview = {
 export type SellerLead = {
   id: string;
   user_id: string | null;
+  seller_journey_id?: string | null;
   assigned_agent_id: string | null;
+  canonical_lead_id?: string | null;
   first_name: string;
   last_name: string | null;
   email: string | null;
@@ -1350,20 +1380,21 @@ export type SellerLead = {
 };
 
 export type SellerLeadCreateRequest = {
+  seller_user_id?: string;
   first_name: string;
-  last_name?: string;
+  last_name: string;
   email?: string;
   phone?: string;
   agent_email?: string;
-  inquiry_type: string;
+  inquiry_type?: 'valuation' | 'consultation' | 'process' | 'marketing' | 'agent_contact';
   source?: string;
   notes?: string;
-  property_address?: string;
+  property_address: string;
   property_unit?: string;
-  property_city?: string;
-  property_region?: string;
-  property_postal_code?: string;
-  property_country: string;
+  property_city: string;
+  property_region: string;
+  property_postal_code: string;
+  property_country?: 'CA' | 'US';
 };
 
 export type SellerLeadUpdateRequest = {

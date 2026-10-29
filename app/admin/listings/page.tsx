@@ -1,49 +1,37 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import ListingCard from '@/components/ListingCard';
 import IdxFeedHealth from '@/components/admin/IdxFeedHealth';
+import AddPublicListingForm from '@/components/admin/AddPublicListingForm';
 import { apiListingToItem } from '@/lib/listingAdapter';
+import { getApiErrorMessage } from '@/lib/apiErrorMessage';
 import { fetchAllListingsAdmin } from '@/services/portalService';
 import type { ApiListing, ApiPaginated } from '@/types/api';
 
 export default function AdminListingsPage() {
   const [listings, setListings] = useState<ApiPaginated<ApiListing> | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let cancelled = false;
-    fetchAllListingsAdmin(1, 100)
-      .then((page) => {
-        if (cancelled) return;
-        setError(null);
-        setListings(page);
-      })
-      .catch((e: unknown) => {
-        const msg =
-          (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
-          'Could not load listings.';
-        if (!cancelled) setError(String(msg));
-      });
-    return () => {
-      cancelled = true;
-    };
+  const loadListings = useCallback(async () => {
+    setLoading(true);
+    try {
+      const page = await fetchAllListingsAdmin(1, 100);
+      setListings(page);
+      setError(null);
+    } catch (loadError) {
+      setError(getApiErrorMessage(loadError, 'Could not load listings.'));
+      throw loadError;
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  if (error) {
-    return (
-      <div
-        className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300"
-        role="alert"
-      >
-        {error}
-      </div>
-    );
-  }
-
-  if (!listings) {
-    return <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading listings…</p>;
-  }
+  useEffect(() => {
+    const timer = window.setTimeout(() => void loadListings().catch(() => undefined), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadListings]);
 
   return (
     <div className="space-y-6">
@@ -60,10 +48,13 @@ export default function AdminListingsPage() {
             Full brokerage catalog. Open a listing to see client intents and summaries.
           </p>
         </div>
-        <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{listings.total} total</p>
+        <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{listings?.total ?? 0} total</p>
       </div>
 
-      {listings.items.length === 0 ? (
+      <AddPublicListingForm onCreated={loadListings} />
+
+      {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">{error}</div>}
+      {!listings && loading ? <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading listings…</p> : !listings ? null : listings.items.length === 0 ? (
         <p className="rounded-xl border border-zinc-200 bg-white px-4 py-8 text-center text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900/40 dark:text-zinc-400">
           No listings in the catalog.
         </p>

@@ -9,7 +9,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useAuthHydrated } from '@/lib/useAuthHydrated';
 
 type RoleGateProps = {
-  allowed: Extract<UserRole, 'agent' | 'superadmin'>;
+  allowed: Extract<UserRole, 'agent' | 'superadmin'> | readonly Extract<UserRole, 'agent' | 'superadmin'>[];
   children: React.ReactNode;
 };
 
@@ -27,6 +27,9 @@ export default function RoleGate({ allowed, children }: RoleGateProps) {
     })),
   );
   const hydrated = useAuthHydrated();
+  const isAllowed = user?.role === 'agent' || user?.role === 'superadmin'
+    ? (typeof allowed === 'string' ? user.role === allowed : allowed.includes(user.role))
+    : false;
   useEffect(() => {
     if (!hydrated) return;
     if (!accessToken) {
@@ -37,10 +40,10 @@ export default function RoleGate({ allowed, children }: RoleGateProps) {
     if (!user?.role) {
       return;
     }
-    if (user.role !== allowed) {
+    if (!isAllowed) {
       router.replace(getPostLoginPath(user.role, null));
     }
-  }, [hydrated, accessToken, user, allowed, router, pathname]);
+  }, [hydrated, accessToken, user, isAllowed, router, pathname]);
 
   if (!hydrated) {
     return (
@@ -66,7 +69,7 @@ export default function RoleGate({ allowed, children }: RoleGateProps) {
     );
   }
 
-  if (user.role !== allowed) {
+  if (!isAllowed) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center bg-zinc-50 dark:bg-zinc-950">
         <p className="text-sm text-zinc-500 dark:text-zinc-400">Redirecting…</p>
