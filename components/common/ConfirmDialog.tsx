@@ -13,6 +13,8 @@ type ConfirmDialogProps = {
   cancelLabel?: string;
   /** `danger` styles the confirm action red and focuses Cancel first. */
   tone?: 'default' | 'danger';
+  /** Present as a bottom sheet on narrow screens and a dialog on desktop. */
+  layout?: 'center' | 'mobile-sheet';
   /** Disables both actions while an in-flight request settles. */
   busy?: boolean;
   onConfirm: () => void;
@@ -29,6 +31,7 @@ export default function ConfirmDialog({
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   tone = 'default',
+  layout = 'center',
   busy = false,
   onConfirm,
   onCancel,
@@ -97,7 +100,12 @@ export default function ConfirmDialog({
     // "click inside my portalled modal" apart from "click outside me".
     <div
       data-modal-root="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
+      className={cn(
+        'fixed inset-0 z-50 flex justify-center bg-black/45',
+        layout === 'mobile-sheet'
+          ? 'items-end sm:items-center sm:p-4'
+          : 'items-center p-4',
+      )}
       // Backdrop only — a mousedown that started on the card itself must not cancel.
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onCancel();
@@ -109,7 +117,10 @@ export default function ConfirmDialog({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
-        className="w-full max-w-md rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-xl dark:border-zinc-800/80 dark:bg-zinc-900"
+        className={cn(
+          'w-full max-w-md border border-zinc-200/80 bg-white p-6 shadow-xl dark:border-zinc-800/80 dark:bg-zinc-900',
+          layout === 'mobile-sheet' ? 'rounded-t-2xl sm:rounded-2xl' : 'rounded-2xl',
+        )}
       >
         <div className="flex items-start gap-3">
           {tone === 'danger' && (

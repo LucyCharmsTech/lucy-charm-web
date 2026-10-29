@@ -45,7 +45,7 @@ function loadRealStoreAndGate() {
 
 function renderGate(
   modules: ReturnType<typeof loadRealStoreAndGate>,
-  allowed: 'agent' | 'superadmin',
+  allowed: 'agent' | 'superadmin' | readonly ('agent' | 'superadmin')[],
 ) {
   const { React, createRoot, RoleGate } = modules;
   const container = document.createElement('div');
@@ -125,6 +125,23 @@ test('persisted Super Admin session hydrates and mounts admin content', () => {
     expect(mockReplace).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
+  }
+});
+
+test('shared Seller Plan gate admits Agent and Super Admin but not a buyer', () => {
+  mockPath = '/seller-plans/lead-1';
+  for (const user of [agent, admin, { ...agent, user_id: 'buyer-id', role: 'client' as const }]) {
+    localStorage.clear();
+    mockReplace.mockClear();
+    persistedSession(user);
+    const modules = loadRealStoreAndGate();
+    const view = renderGate(modules, ['agent', 'superadmin']);
+    try {
+      expect(view.container.querySelector('[data-testid="protected-content"]') !== null)
+        .toBe(user.role !== 'client');
+    } finally {
+      view.cleanup();
+    }
   }
 });
 

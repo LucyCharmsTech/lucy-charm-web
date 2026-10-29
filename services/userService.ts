@@ -7,6 +7,7 @@ import type {
   UserDataRequestType,
   PaginatedItems,
   StaffAccount,
+  SellerAccountLookup,
   UserMe,
   UserOnboardingRead,
   UserOnboardingSubmitRequest,
@@ -92,6 +93,19 @@ export async function fetchStaffAccounts(
 ): Promise<PaginatedItems<StaffAccount>> {
   const res = await api.get<PaginatedItems<StaffAccount>>('/users/', {
     params: { page, size, staff_only: true },
+  });
+  return res.data;
+}
+
+/** Super Admin account picker. Selection uses the returned user ID;
+ * verification itself is enforced only by the lead-creation API.
+ */
+export async function fetchSellerAccountsAdmin(
+  page = 1,
+  size = 100,
+): Promise<PaginatedItems<SellerAccountLookup>> {
+  const res = await api.get<PaginatedItems<SellerAccountLookup>>('/users/', {
+    params: { page, size, staff_only: false },
   });
   return res.data;
 }

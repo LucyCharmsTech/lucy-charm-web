@@ -59,7 +59,7 @@ export default function ClientShowingScheduleSection() {
   const [listingTitlesById, setListingTitlesById] = useState<Record<string, string>>({});
   const [activeFeedbackRequest, setActiveFeedbackRequest] = useState<ShowingRequest | null>(null);
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
-  const [feedbackEligibilityCheckedAt] = useState(() => Date.now());
+  const [feedbackEligibilityCheckedAt, setFeedbackEligibilityCheckedAt] = useState(() => Date.now());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const highlightedShowingId = useShowingDeepLink(!loading);
@@ -146,6 +146,28 @@ export default function ClientShowingScheduleSection() {
     refetch: () => void refreshRows(),
   });
 
+  // Wake at the next showing time instead of polling or requiring a new sign-in.
+  useEffect(() => {
+    const nextStart = items
+      .filter((item) => !item.feedback_submitted_at &&
+        (item.status === 'confirmed' || item.status === 'completed'))
+      .map((item) => Date.parse(item.scheduled_at ?? item.preferred_date))
+      .filter((time) => Number.isFinite(time) && time > feedbackEligibilityCheckedAt)
+      .sort((a, b) => a - b)[0];
+    if (nextStart === undefined) return;
+    const timer = window.setTimeout(
+      () => setFeedbackEligibilityCheckedAt(Date.now()),
+      Math.min(nextStart - feedbackEligibilityCheckedAt, 2_147_483_647),
+    );
+    return () => window.clearTimeout(timer);
+  }, [items, feedbackEligibilityCheckedAt]);
+
+  useEffect(() => {
+    const refreshClock = () => setFeedbackEligibilityCheckedAt(Date.now());
+    window.addEventListener('focus', refreshClock);
+    return () => window.removeEventListener('focus', refreshClock);
+  }, []);
+
   function canLeaveFeedback(item: ShowingRequest): boolean {
     if (item.feedback_submitted_at) return false;
     if (
@@ -154,7 +176,8 @@ export default function ClientShowingScheduleSection() {
     ) {
       return false;
     }
-    return new Date(item.scheduled_at ?? item.preferred_date).getTime() <= feedbackEligibilityCheckedAt;
+    const showingTime = Date.parse(item.scheduled_at ?? item.preferred_date);
+    return Number.isFinite(showingTime) && showingTime <= feedbackEligibilityCheckedAt;
   }
 
   function handleFeedbackClick(item: ShowingRequest) {
@@ -248,6 +271,12 @@ export default function ClientShowingScheduleSection() {
                   verificationRequested={item.id_verification_requested}
                   verificationStatus={item.id_verification_status}
                 />
+                {item.status === 'completed' && !item.feedback_submitted_at &&
+                  !canLeaveFeedback(item) && (
+                    <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-300">
+                      Feedback will be available after the scheduled showing time: {formatShowingDateTime(item.scheduled_at ?? item.preferred_date)}.
+                    </p>
+                  )}
                 {canLeaveFeedback(item) && (
                   <button
                     type="button"

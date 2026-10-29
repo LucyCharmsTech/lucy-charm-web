@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ContactForm } from '@/components/contact/ContactForm';
+import ContactPage from '@/app/contact/page';
 import { submitContactForm } from '@/services/leadCaptureService';
 import { setAnalyticsConsent } from '@/lib/analytics';
 
@@ -48,6 +49,22 @@ test('offers exactly the four topics the client specified', () => {
     'Existing request',
     'General question',
   ]);
+});
+
+test('seller contact entry preselects a seller enquiry and offers a return path', async () => {
+  render(await ContactPage({ searchParams: Promise.resolve({ from: 'sell' }) }));
+  expect((screen.getByLabelText('What is your message about?') as HTMLSelectElement).value).toBe('Selling/Home Value');
+  expect(screen.getByRole('link', { name: 'Back to Seller Explorer' }).getAttribute('href')).toBe('/sell');
+  expect(screen.getByText(/mention the home or Seller Plan request/i)).toBeTruthy();
+  fillIn();
+  fireEvent.click(screen.getByRole('button', { name: 'Send message' }));
+  await waitFor(() => expect(mockSubmit).toHaveBeenCalledWith(expect.objectContaining({ lead_type: 'seller' })));
+});
+
+test('ordinary contact entry keeps the existing buyer default and no seller return link', async () => {
+  render(await ContactPage({ searchParams: Promise.resolve({}) }));
+  expect((screen.getByLabelText('What is your message about?') as HTMLSelectElement).value).toBe('Buying');
+  expect(screen.queryByRole('link', { name: 'Back to Seller Explorer' })).toBeNull();
 });
 
 test('name, email, topic and message are required; phone is not', () => {

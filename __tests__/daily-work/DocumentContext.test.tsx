@@ -59,6 +59,16 @@ it('opens the exact document from Agent My Work', async () => {
   expect((await screen.findByRole('link', { name: 'Open context' })).getAttribute('href')).toBe('/documents/doc-1');
 });
 
+it('links seller lead work to its potentially multiple Plan requests', async () => {
+  (fetchMyWorkPage as jest.Mock).mockResolvedValueOnce({
+    page: 1, page_size: 25, total: 1,
+    items: [{ ...work, source_type: 'lead', source_id: 'canonical-1', title: 'Existing inquiry follow-up' }],
+  });
+  render(<AgentWorkView />);
+  expect((await screen.findByRole('link', { name: 'Seller Plans (if any)' })).getAttribute('href'))
+    .toBe('/seller-plans/by-lead/canonical-1');
+});
+
 it('opens the exact document from Admin Daily Work', async () => {
   render(<AdminWorkPage />);
   expect((await screen.findByRole('link', { name: 'Open context' })).getAttribute('href')).toBe('/documents/doc-1');

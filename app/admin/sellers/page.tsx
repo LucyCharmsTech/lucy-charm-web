@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import IndependentSellerLeadForm from '@/components/seller/IndependentSellerLeadForm';
+import PublicListingAssociation from '@/components/seller/PublicListingAssociation';
 import { fetchAllAgents } from '@/services/portalService';
 import {
   convertSellerLead,
@@ -28,11 +30,14 @@ const STATUS_OPTIONS: SellerLeadStatus[] = [
 ];
 
 function errorMessage(error: unknown): string {
-  const detail = (error as { response?: { data?: { detail?: string } } })
-    ?.response?.data?.detail;
-  return typeof detail === 'string'
-    ? detail
-    : 'The request could not be completed.';
+  const response = (error as { response?: { status?: number; data?: { detail?: unknown } } })
+    ?.response;
+  const detail = response?.data?.detail;
+  if (typeof detail === 'string') return detail;
+  if (response?.status === 401 || response?.status === 403) {
+    return 'Your account is not authorized for this action.';
+  }
+  return 'The request could not be completed.';
 }
 
 function addressFor(lead: SellerLead): string {
@@ -61,6 +66,7 @@ export default function AdminSellersPage() {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [convertingId, setConvertingId] = useState<string | null>(null);
+  const [conversionErrors, setConversionErrors] = useState<Record<string, string>>({});
   const [representationTypes, setRepresentationTypes] = useState<
     Record<string, SellerRepresentationType | ''>
   >({});
@@ -69,6 +75,7 @@ export default function AdminSellersPage() {
   >({});
   const [error, setError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [associationTransactionId, setAssociationTransactionId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -126,12 +133,14 @@ export default function AdminSellersPage() {
   async function convertLead(leadId: string) {
     const representationType = representationTypes[leadId];
     if (!representationType || !complianceApproved[leadId]) {
-      setError(
-        'Choose the representation type and confirm compliance approval before activating this client.',
-      );
+      setConversionErrors((current) => ({
+        ...current,
+        [leadId]: 'Choose the representation type and confirm compliance approval before activating this client.',
+      }));
       return;
     }
     setConvertingId(leadId);
+    setConversionErrors((current) => ({ ...current, [leadId]: '' }));
     setActionMessage(null);
     try {
       const transaction = await convertSellerLead(leadId, {
@@ -143,7 +152,10 @@ export default function AdminSellersPage() {
       );
       await load();
     } catch (conversionError) {
-      setError(errorMessage(conversionError));
+      setConversionErrors((current) => ({
+        ...current,
+        [leadId]: errorMessage(conversionError),
+      }));
     } finally {
       setConvertingId(null);
     }
@@ -157,6 +169,10 @@ export default function AdminSellersPage() {
     );
   }
 
+  const associationTransaction = transactions?.items.find(
+    (transaction) => transaction.id === associationTransactionId,
+  );
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -168,8 +184,8 @@ export default function AdminSellersPage() {
             Seller pipeline
           </h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Assign the right agent, qualify the request, and convert only when
-            the client process is ready.
+            Assign linked Seller Plan requests in Inquiries, qualify the request,
+            and convert only when the client process is ready.
           </p>
         </div>
         <button
@@ -181,6 +197,8 @@ export default function AdminSellersPage() {
           Refresh
         </button>
       </div>
+
+      <IndependentSellerLeadForm onCreated={load} />
 
       {error && (
         <div
@@ -278,30 +296,53 @@ export default function AdminSellersPage() {
                       </select>
                     </td>
                     <td className="px-4 py-3 align-top">
-                      <select
-                        value={lead.assigned_agent_id ?? ''}
-                        disabled={
-                          savingId === lead.id || lead.status === 'converted'
-                        }
-                        onChange={(event) =>
-                          saveLead(lead.id, {
+                      {lead.canonical_lead_id ? (
+                        <div className="flex flex-col gap-1">
+                          <span>{agents.find((agent) => agent.id === lead.assigned_agent_id)?.name ?? (lead.assigned_agent_id ? 'Assigned agent' : 'Admin queue')}</span>
+                          <Link href={`/admin/inquiries/${lead.canonical_lead_id}`} className="font-semibold text-primarycolor-text hover:underline">
+                            Change agent on lead
+                          </Link>
+                          {lead.inquiry_type === 'professional_review' && (
+                            <Link href={`/seller-plans/${lead.id}`} className="font-semibold text-primarycolor-text hover:underline">
+                              Manage Plan progress
+                            </Link>
+                          )}
+                        </div>
+                      ) : lead.seller_journey_id && lead.inquiry_type === 'professional_review' ? (
+                        <div className="flex flex-col gap-1">
+                          <span>Legacy Plan — canonical lead not linked</span>
+                          <Link href={`/seller-plans/${lead.id}`} className="font-semibold text-primarycolor-text hover:underline">
+                            Manage Plan progress (Super Admin)
+                          </Link>
+                        </div>
+                      ) : (
+                        <select
+                          value={lead.assigned_agent_id ?? ''}
+                          disabled={savingId === lead.id || lead.status === 'converted'}
+                          onChange={(event) => saveLead(lead.id, {
                             assigned_agent_id: event.target.value || null,
-                          })
-                        }
-                        className="min-w-[180px] rounded-lg border border-zinc-300 bg-white px-2 py-2 text-xs outline-none focus:border-primarycolor dark:border-zinc-700 dark:bg-zinc-900"
-                      >
-                        <option value="">Admin queue — select agent</option>
-                        {agents.map((agent) => (
-                          <option key={agent.id} value={agent.id}>
-                            {agent.name}
-                          </option>
-                        ))}
-                      </select>
+                          })}
+                          className="min-w-[180px] rounded-lg border border-zinc-300 bg-white px-2 py-2 text-xs outline-none focus:border-primarycolor dark:border-zinc-700 dark:bg-zinc-900"
+                        >
+                          <option value="">Admin queue — select agent</option>
+                          {agents.map((agent) => (
+                            <option key={agent.id} value={agent.id}>
+                              {agent.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 align-top text-xs text-zinc-500 dark:text-zinc-400">
                       {new Date(lead.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3 align-top">
+                      {lead.seller_journey_id ? (
+                        <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                          Seller Plan request — representation is a separate workflow.
+                        </span>
+                      ) : (
+                      <>
                       <label className="mb-2 block text-[11px] font-medium text-zinc-600 dark:text-zinc-300">
                         Representation
                         <select
@@ -360,6 +401,13 @@ export default function AdminSellersPage() {
                             ? 'Converted'
                             : 'Convert'}
                       </button>
+                      {conversionErrors[lead.id] && (
+                        <p role="alert" className="mt-2 max-w-56 text-xs text-red-700 dark:text-red-300">
+                          {conversionErrors[lead.id]}
+                        </p>
+                      )}
+                      </>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -384,7 +432,7 @@ export default function AdminSellersPage() {
           </div>
         ) : (
           <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
-            <table className="w-full min-w-[720px] text-left text-sm">
+            <table className="w-full min-w-[840px] text-left text-sm">
               <thead className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
                 <tr>
                   <th className="px-4 py-3">Transaction</th>
@@ -392,6 +440,7 @@ export default function AdminSellersPage() {
                   <th className="px-4 py-3">Representation</th>
                   <th className="px-4 py-3">Created</th>
                   <th className="px-4 py-3">Portal</th>
+                  <th className="px-4 py-3">Public listing</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -427,11 +476,31 @@ export default function AdminSellersPage() {
                         </span>
                       )}
                     </td>
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        aria-expanded={associationTransactionId === transaction.id}
+                        onClick={() => setAssociationTransactionId(
+                          associationTransactionId === transaction.id ? null : transaction.id,
+                        )}
+                        className="text-xs font-semibold text-primarycolor-text underline hover:text-primarycolor"
+                      >
+                        Public listing association
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+        )}
+        {associationTransaction && (
+          <PublicListingAssociation
+            key={associationTransaction.id}
+            transaction={associationTransaction}
+            onChanged={load}
+            onClose={() => setAssociationTransactionId(null)}
+          />
         )}
       </section>
     </div>

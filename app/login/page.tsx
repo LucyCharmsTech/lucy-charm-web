@@ -82,7 +82,9 @@ function LoginPageContent() {
           <p className="mt-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
             Don&apos;t have an account?{' '}
             <Link
-              href="/register"
+              href={redirectParam?.startsWith('/') && !redirectParam.startsWith('//')
+                ? `/register?redirect=${encodeURIComponent(redirectParam)}`
+                : '/register'}
               className="font-semibold text-primarycolor-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor"
             >
               Create one

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import ClientShowingScheduleSection from '@/components/profile/ClientShowingScheduleSection';
 import { fetchMyShowingRequests } from '@/services/showingService';
 import { fetchListingById } from '@/services/listingsService';
@@ -64,4 +64,50 @@ test('only a confirmed showing is presented as a confirmed visit', async () => {
 
   await waitFor(() => expect(screen.getByText('Visit confirmed')).toBeTruthy());
   expect(screen.getByText(/Confirmed for/)).toBeTruthy();
+});
+
+test('a prematurely completed future showing explains when buyer feedback opens', async () => {
+  const future = new Date(Date.now() + 60_000).toISOString();
+  mockFetchShowings.mockResolvedValue([
+    request({ status: 'completed', scheduled_at: future }),
+  ]);
+  render(<ClientShowingScheduleSection />);
+
+  await waitFor(() => expect(screen.getByText('Visit completed')).toBeTruthy());
+  expect(screen.getByText(/Feedback will be available after the scheduled showing time/)).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Leave showing feedback' })).toBeNull();
+});
+
+test('buyer feedback becomes available at the showing time without reloading', async () => {
+  jest.useFakeTimers();
+  try {
+    const future = new Date(Date.now() + 60_000).toISOString();
+    mockFetchShowings.mockResolvedValue([
+      request({ status: 'completed', scheduled_at: future }),
+    ]);
+
+    await act(async () => {
+      render(<ClientShowingScheduleSection />);
+    });
+    expect(screen.queryByRole('button', { name: 'Leave showing feedback' })).toBeNull();
+
+    act(() => jest.advanceTimersByTime(60_000));
+    expect(screen.getByRole('button', { name: 'Leave showing feedback' })).toBeTruthy();
+    expect(screen.queryByText(/Feedback will be available after/)).toBeNull();
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+test('already submitted feedback is not offered again', async () => {
+  mockFetchShowings.mockResolvedValue([
+    request({
+      status: 'completed', scheduled_at: '2026-10-10T15:00:00Z',
+      feedback_submitted_at: '2026-10-10T16:00:00Z',
+    }),
+  ]);
+  render(<ClientShowingScheduleSection />);
+
+  await waitFor(() => expect(screen.getByText('Feedback saved')).toBeTruthy());
+  expect(screen.queryByRole('button', { name: 'Leave showing feedback' })).toBeNull();
 });

@@ -3,6 +3,8 @@ import { getOrCreateAnonymousSessionToken } from '@/lib/anonymousSession';
 import { ANONYMOUS_SESSION_HEADER } from '@/types/api';
 import type {
   SellerJourney,
+  SellerJourneySummary,
+  PaginatedItems,
   SellerJourneyCreateRequest,
   SellerJourneyStatus,
   SellerJourneyUpdateRequest,
@@ -26,6 +28,23 @@ export function storeSellerJourneyId(journeyId: string): void {
   if (typeof window !== 'undefined') {
     localStorage.setItem(JOURNEY_STORAGE_KEY, journeyId);
   }
+}
+
+export function clearStoredSellerJourneyId(): void {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(JOURNEY_STORAGE_KEY);
+  }
+}
+
+export async function listMySellerJourneys(
+  page = 1,
+  size = 20,
+): Promise<PaginatedItems<SellerJourneySummary>> {
+  const response = await api.get<PaginatedItems<SellerJourneySummary>>(
+    '/seller-journeys/mine',
+    { params: { page, size } },
+  );
+  return response.data;
 }
 
 export async function createSellerJourney(

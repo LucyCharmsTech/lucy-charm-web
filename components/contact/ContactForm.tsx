@@ -37,13 +37,13 @@ import { useFormAbandonment } from '@/lib/useFormAbandonment';
  * to be supplied", "Do not invent values or imply walk-in availability",
  * "Omit a fixed response-time promise for now".
  */
-export function ContactForm() {
+export function ContactForm({ initialTopic = CONTACT_TOPICS[0] }: { initialTopic?: ContactTopic }) {
   const { markStarted, markSucceeded } = useFormAbandonment('contact_form');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [topic, setTopic] = useState<ContactTopic>(CONTACT_TOPICS[0]);
+  const [topic, setTopic] = useState<ContactTopic>(initialTopic);
   const [message, setMessage] = useState('');
 
   const [submitting, setSubmitting] = useState(false);

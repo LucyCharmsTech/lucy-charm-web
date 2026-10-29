@@ -16,6 +16,7 @@ import { showingAnchorId, useShowingDeepLink } from '@/lib/useShowingDeepLink';
 import { formatShowingDateTime, showingStatusLabel } from '@/lib/showingPresentation';
 import { fetchMyAgentProfile } from '@/services/portalService';
 import { fetchShowingRequestsByAgent, updateShowingRequest } from '@/services/showingService';
+import { getAgentShowingAccess, type AgentShowingAccess } from '@/services/sellerBuyerShowingService';
 import type {
   AgentProfile,
   ShowingRequest,
@@ -24,6 +25,12 @@ import type {
 
 function isActiveBookedStatus(status: ShowingRequestStatus): boolean {
   return status === 'confirmed';
+}
+
+function canCompleteShowing(request: ShowingRequest, now: number): boolean {
+  if (!request.scheduled_at) return false;
+  const scheduledAt = Date.parse(request.scheduled_at);
+  return Number.isFinite(scheduledAt) && scheduledAt <= now;
 }
 
 const STATUS_STYLES: Record<ShowingRequestStatus, string> = {
@@ -60,6 +67,7 @@ function StatusBadge({ status }: { status: ShowingRequestStatus }) {
 function AgentShowingsPageContent() {
   const [agent, setAgent] = useState<AgentProfile | null>(null);
   const [requests, setRequests] = useState<ShowingRequest[]>([]);
+  const [access, setAccess] = useState<Record<string, AgentShowingAccess>>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
@@ -67,7 +75,22 @@ function AgentShowingsPageContent() {
   const [rescheduleValue, setRescheduleValue] = useState('');
   const [reviewRequest, setReviewRequest] = useState<ShowingRequest | null>(null);
   const [flaggedRequest, setFlaggedRequest] = useState<ShowingRequest | null>(null);
+  const [completionClock, setCompletionClock] = useState(() => Date.now());
   const highlightedShowingId = useShowingDeepLink(!loading);
+
+  useEffect(() => {
+    const nextStart = requests
+      .filter((request) => request.status === 'confirmed' && request.scheduled_at)
+      .map((request) => Date.parse(request.scheduled_at!))
+      .filter((time) => Number.isFinite(time) && time > completionClock)
+      .sort((a, b) => a - b)[0];
+    if (nextStart === undefined) return;
+    const timer = window.setTimeout(
+      () => setCompletionClock(Date.now()),
+      Math.min(nextStart - completionClock, 2_147_483_647),
+    );
+    return () => window.clearTimeout(timer);
+  }, [requests, completionClock]);
 
   const load = useCallback(async () => {
     try {
@@ -78,6 +101,13 @@ function AgentShowingsPageContent() {
         (x, y) => new Date(x.preferred_date).getTime() - new Date(y.preferred_date).getTime(),
       );
       setRequests(items);
+      const pending = items.filter((item) => item.status === 'awaiting_confirmation');
+      const results = await Promise.allSettled(pending.map((item) => getAgentShowingAccess(item.id)));
+      const next: Record<string, AgentShowingAccess> = {};
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled') next[pending[index].id] = result.value;
+      });
+      setAccess(next);
     } catch (e: unknown) {
       const msg =
         (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
@@ -129,8 +159,12 @@ function AgentShowingsPageContent() {
     try {
       const updated = await updateShowingRequest(id, payload);
       setRequests((prev) => prev.map((r) => (r.id === id ? updated : r)));
-    } catch {
-      /* surface error inline if needed */
+      await load();
+      setError(null);
+    } catch (failure) {
+      const detail = (failure as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setError(detail || 'The showing changed. Refresh and review the access decision.');
+      await load();
     } finally {
       setUpdating(null);
     }
@@ -174,7 +208,9 @@ function AgentShowingsPageContent() {
           </h2>
           <ShowingTable
             rows={pending}
+            access={access}
             updating={updating}
+            completionClock={completionClock}
             onChangeStatus={changeStatus}
             onReschedule={openReschedule}
             onReviewDocuments={setReviewRequest}
@@ -192,7 +228,9 @@ function AgentShowingsPageContent() {
           </h2>
           <ShowingTable
             rows={rest}
+            access={access}
             updating={updating}
+            completionClock={completionClock}
             onChangeStatus={changeStatus}
             onReschedule={openReschedule}
             onReviewDocuments={setReviewRequest}
@@ -228,7 +266,9 @@ function AgentShowingsPageContent() {
 
 function ShowingTable({
   rows,
+  access,
   updating,
+  completionClock,
   onChangeStatus,
   onReschedule,
   onReviewDocuments,
@@ -236,7 +276,9 @@ function ShowingTable({
   highlightId,
 }: {
   rows: ShowingRequest[];
+  access: Record<string, AgentShowingAccess>;
   updating: string | null;
+  completionClock: number;
   onChangeStatus: (id: string, status: ShowingRequestStatus) => void;
   onReschedule: (request: ShowingRequest) => void;
   onReviewDocuments: (request: ShowingRequest) => void;
@@ -342,12 +384,25 @@ function ShowingTable({
                         />
                       )}
                       {r.status === 'awaiting_confirmation' && (
-                        <ActionButton
-                          label="Confirm"
-                          busy={updating === r.id}
-                          onClick={() => onChangeStatus(r.id, 'confirmed')}
-                          className="bg-emerald-600 text-white hover:bg-emerald-700"
-                        />
+                        <>
+                          <ActionButton
+                            label="Confirm"
+                            busy={updating === r.id}
+                            disabled={access[r.id]?.can_confirm !== true}
+                            onClick={() => onChangeStatus(r.id, 'confirmed')}
+                            className="bg-emerald-600 text-white hover:bg-emerald-700"
+                          />
+                          {access[r.id]?.can_confirm !== true && <p className="text-xs text-amber-800">
+                            {access[r.id]?.state === 'unset' ? 'Super Admin must set the property access policy.' :
+                              access[r.id]?.state === 'share_required' ? 'Associate and share this showing with the seller first.' :
+                              access[r.id]?.state === 'change_requested' ? 'Seller requested a different time. Coordinate a new proposal.' :
+                              access[r.id]?.state === 'stale' ? 'Seller access approval is stale. Request renewed approval.' :
+                              access[r.id]?.state === 'awaiting_response' ? 'Awaiting seller property access approval.' :
+                              'Checking seller property access. Refresh before confirming.'}
+                          </p>}
+                          {access[r.id]?.change_explanation && <p className="text-xs text-zinc-600">Seller request: {access[r.id].change_explanation}</p>}
+                          {access[r.id]?.transaction_id && <a className="text-xs font-semibold text-primarycolor-text underline" href={`/seller-portal/${access[r.id].transaction_id}?workspace=showings`}>Open represented seller showings</a>}
+                        </>
                       )}
                       <ActionButton
                         label="Reschedule"
@@ -374,9 +429,16 @@ function ShowingTable({
                       <ActionButton
                         label="Mark complete"
                         busy={updating === r.id}
+                        disabled={!canCompleteShowing(r, completionClock)}
+                        describedBy={!canCompleteShowing(r, completionClock) ? `complete-hint-${r.id}` : undefined}
                         onClick={() => onChangeStatus(r.id, 'completed')}
                         className="bg-violet-600 text-white hover:bg-violet-700"
                       />
+                      {!canCompleteShowing(r, completionClock) && (
+                        <p id={`complete-hint-${r.id}`} className="text-xs text-zinc-600 dark:text-zinc-300">
+                          Available after the scheduled showing time.
+                        </p>
+                      )}
                       <ActionButton
                         label="Cancel"
                         busy={updating === r.id}
@@ -422,18 +484,23 @@ function ShowingTable({
 function ActionButton({
   label,
   busy,
+  disabled = false,
+  describedBy,
   onClick,
   className,
 }: {
   label: string;
   busy: boolean;
+  disabled?: boolean;
+  describedBy?: string;
   onClick: () => void;
   className: string;
 }) {
   return (
     <button
       type="button"
-      disabled={busy}
+      disabled={busy || disabled}
+      aria-describedby={describedBy}
       onClick={onClick}
       className={`inline-flex h-7 w-full items-center justify-center rounded-full px-3 text-xs font-semibold transition disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primarycolor ${className}`}
     >
